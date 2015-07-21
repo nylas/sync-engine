@@ -73,6 +73,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         return any(m.is_starred for m in self.messages if not m.is_draft)
 
     @property
+    def has_attachments(self):
+        return any(m.attachments for m in self.messages if not m.is_draft)
+
+    @property
     def versioned_relationships(self):
         return ['messages']
 

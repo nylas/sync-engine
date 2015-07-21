@@ -143,6 +143,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'snippet': obj.snippet,
             'unread': obj.unread,
             'starred': obj.starred,
+            'has_attachments': obj.has_attachments,
             'version': obj.version,
             # For backwards-compatibility -- remove after deprecating tags API
             'tags': obj.tags
