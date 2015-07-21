@@ -9,10 +9,10 @@ final class PytestTestEngine extends ArcanistUnitTestEngine {
 
   public function run() {
     $working_copy = $this->getWorkingCopy();
-    $this->project_root = $working_copy->getProjectRoot();
+    $project_root = $working_copy->getProjectRoot();
 
-    $test_output = $this->project_root . '/tests/output';
-    $cover_output = $this->project_root . '/tests/coverage';
+    $test_output = $project_root . '/tests/output';
+    $cover_output = $project_root . '/tests/coverage';
 
     $future = $this->buildTestFuture($test_output, $cover_output);
     while (!$future->isReady()) {
