@@ -11,23 +11,36 @@ from inbox.models import Category
 
 def update_message(message, request_data, db_session):
     accept_labels = message.namespace.account.provider == 'gmail'
-    unread, starred, label_public_ids, folder_public_id = parse(
-        request_data, accept_labels)
+    unread, starred = parse_flags(request_data)
     update_message_flags(message, db_session, unread, starred)
-    if label_public_ids is not None:
-        update_message_labels(message, db_session, label_public_ids)
-    elif folder_public_id is not None:
-        update_message_folder(message, db_session, folder_public_id)
+    if accept_labels:
+        labels = parse_labels(request_data, db_session, message.namespace_id)
+        if labels is not None:
+            added_labels = labels - set(message.categories)
+            removed_labels = set(message.categories) - labels
+            update_message_labels(message, db_session, added_labels,
+                                  removed_labels)
+    else:
+        folder = parse_folder(request_data, db_session, message.namespace_id)
+        if folder is not None:
+            update_message_folder(message, db_session, folder)
 
 
 def update_thread(thread, request_data, db_session):
     accept_labels = thread.namespace.account.provider == 'gmail'
-    # Backwards-compatibility shim
+    # -- Begin tags API shim
     added_tags = request_data.pop('add_tags', [])
     removed_tags = request_data.pop('remove_tags', [])
+    # -- End tags API shim
 
-    unread, starred, label_public_ids, folder_public_id = parse(
-        request_data, accept_labels)
+    unread, starred, = parse_flags(request_data)
+    if accept_labels:
+        labels = parse_labels(request_data, db_session, thread.namespace_id)
+    else:
+        folder = parse_folder(request_data, db_session, thread.namespace_id)
+    if request_data:
+        raise InputError(u'Unexpected attribute {}'.
+                         format(request_data.keys[0]))
 
     # -- Begin tags API shim
     if 'unread' in added_tags:
@@ -42,43 +55,46 @@ def update_thread(thread, request_data, db_session):
 
     if 'inbox' in removed_tags:
         if accept_labels:
-            label_public_ids = [c.public_id for c in thread.categories]
+            labels = {c for c in thread.categories}
             inbox_category = next(
                 c for c in thread.categories if c.name == 'inbox')
-            label_public_ids.remove(inbox_category.public_id)
+            labels.discard(inbox_category)
         else:
-            archive_category = db_session.query(Category).filter(
+            folder = db_session.query(Category).filter(
                 Category.namespace_id == thread.namespace_id,
                 Category.name == 'archive').first()
-            folder_public_id = archive_category.public_id
 
     elif 'inbox' in added_tags:
         inbox_category = db_session.query(Category).filter(
             Category.namespace_id == thread.namespace_id,
             Category.name == 'inbox').first()
         if accept_labels:
-            inbox_category = db_session.query(Category).filter(
-                Category.namespace_id == thread.namespace_id,
-                Category.name == 'inbox').first()
-            label_public_ids = {c.public_id for c in thread.categories}
-            label_public_ids.add(inbox_category.public_id)
-            label_public_ids = list(label_public_ids)
+            labels = {c for c in thread.categories}
+            labels.add(inbox_category)
         else:
-            folder_public_id = inbox_category.public_id
-
-    for message in thread.messages:
-        if message.is_draft:
-            continue
-        update_message_flags(message, db_session, unread, starred)
-        if label_public_ids is not None:
-            update_message_labels(message, db_session, label_public_ids)
-        elif folder_public_id is not None:
-            update_message_folder(message, db_session, folder_public_id)
-
+            folder = inbox_category
     # -- End tags API shim
 
+    if accept_labels:
+        new_labels = labels - set(thread.categories)
+        removed_labels = set(thread.categories) - labels
 
-def parse(request_data, accept_labels):
+        for message in thread.messages:
+            if not message.is_draft:
+                update_message_labels(message, db_session, new_labels,
+                                      removed_labels)
+
+    elif folder is not None:
+        for message in thread.messages:
+            if not message.is_draft:
+                update_message_folder(message, db_session, folder)
+
+    for message in thread.messages:
+        if not message.is_draft:
+            update_message_flags(message, db_session, unread, starred)
+
+
+def parse_flags(request_data):
     unread = request_data.pop('unread', None)
     if unread is not None and not isinstance(unread, bool):
         raise InputError('"unread" must be true or false')
@@ -86,31 +102,44 @@ def parse(request_data, accept_labels):
     starred = request_data.pop('starred', None)
     if starred is not None and not isinstance(starred, bool):
         raise InputError('"starred" must be true or false')
+    return unread, starred
 
-    label_public_ids = None
-    folder_public_id = None
 
-    if accept_labels:
-        label_public_ids = request_data.pop('labels', None)
-        if (label_public_ids is not None and
-                not isinstance(label_public_ids, list)):
-            raise InputError('"labels" must be a list of strings')
-        if (label_public_ids is not None and
-                not all(isinstance(l, basestring) for l in label_public_ids)):
-            raise InputError('"labels" must be a list of strings')
-        if request_data:
-            raise InputError('Only the "unread", "starred" and "labels" '
-                             'attributes can be changed')
+def parse_labels(request_data, db_session, namespace_id):
+    label_public_ids = request_data.pop('labels', None)
+    if label_public_ids is None:
+        return
+    # TODO(emfree): Use a real JSON schema validator for this sort of thing.
+    if not isinstance(label_public_ids, list):
+        raise InputError('"labels" must be a list of strings')
+    if not all(isinstance(l, basestring) for l in label_public_ids):
+        raise InputError('"labels" must be a list of strings')
 
-    else:
-        folder_public_id = request_data.pop('folder', None)
-        if (folder_public_id is not None and
-                not isinstance(folder_public_id, basestring)):
-            raise InputError('"folder" must be a string')
-        if request_data:
-            raise InputError('Only the "unread", "starred" and "folder" '
-                             'attributes can be changed')
-    return (unread, starred, label_public_ids, folder_public_id)
+    labels = set()
+    for id_ in label_public_ids:
+        try:
+            cat = db_session.query(Category).filter(
+                Category.namespace_id == namespace_id,
+                Category.public_id == id_).one()
+            labels.add(cat)
+        except NoResultFound:
+            raise InputError(u'The label {} does not exist'.format(id_))
+    return labels
+
+
+def parse_folder(request_data, db_session, namespace_id):
+    folder_public_id = request_data.pop('folder', None)
+    if folder_public_id is None:
+        return
+    if not isinstance(folder_public_id, basestring):
+        raise InputError('"folder" must be a string')
+    try:
+        return db_session.query(Category). \
+            filter(Category.namespace_id == namespace_id,
+                   Category.public_id == folder_public_id).one()
+    except NoResultFound:
+        raise InputError(u'The folder {} does not exist'.
+                         format(folder_public_id))
 
 
 def update_message_flags(message, db_session, unread=None, starred=None):
@@ -125,22 +154,8 @@ def update_message_flags(message, db_session, unread=None, starred=None):
                         db_session, starred=starred)
 
 
-def update_message_labels(message, db_session, label_public_ids):
-    categories = set()
-    for id_ in label_public_ids:
-        try:
-            category = db_session.query(Category).filter(
-                Category.namespace_id == message.namespace_id,
-                Category.public_id == id_).one()
-            categories.add(category)
-        except NoResultFound:
-            raise InputError(u'Label {} does not exist'.format(id_))
-
-    added_categories = categories - set(message.categories)
-    removed_categories = set(message.categories) - categories
-
-    added_labels = []
-    removed_labels = []
+def update_message_labels(message, db_session, added_categories,
+                          removed_categories):
     special_label_map = {
         'inbox': '\\Inbox',
         'important': '\\Important',
@@ -148,6 +163,8 @@ def update_message_labels(message, db_session, label_public_ids):
         'trash': '\\Trash',
         'spam': '\\Spam'
     }
+    added_labels = []
+    removed_labels = []
     for category in added_categories:
         if category.name in special_label_map:
             added_labels.append(special_label_map[category.name])
@@ -167,7 +184,10 @@ def update_message_labels(message, db_session, label_public_ids):
             removed_labels.append(category.display_name)
 
     # Optimistically update message state.
-    message.categories = categories
+    for cat in added_categories:
+        message.categories.add(cat)
+    for cat in removed_categories:
+        message.categories.discard(cat)
     if removed_labels or added_labels:
         schedule_action('change_labels', message, message.namespace_id,
                         removed_labels=removed_labels,
@@ -175,15 +195,7 @@ def update_message_labels(message, db_session, label_public_ids):
                         db_session=db_session)
 
 
-def update_message_folder(message, db_session, folder_public_id):
-    try:
-        category = db_session.query(Category).filter(
-            Category.namespace_id == message.namespace_id,
-            Category.public_id == folder_public_id).one()
-    except NoResultFound:
-        raise InputError(u'Folder {} does not exist'.
-                         format(folder_public_id))
-
+def update_message_folder(message, db_session, category):
     # STOPSHIP(emfree): what about sent/inbox duality?
     if category not in message.categories:
         message.categories = [category]
