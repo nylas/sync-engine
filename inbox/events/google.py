@@ -5,8 +5,10 @@ import random
 import urllib
 import gevent
 import requests
+import uuid
 
 from inbox.basicauth import AccessNotEnabledError
+from inbox.config import config
 from inbox.log import get_logger
 from inbox.models import Calendar, Account
 from inbox.models.event import Event, EVENT_STATUSES
@@ -20,6 +22,17 @@ log = get_logger()
 CALENDARS_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
 STATUS_MAP = {'accepted': 'yes', 'needsAction': 'noreply',
               'declined': 'no', 'tentative': 'maybe'}
+
+URL_PREFIX = config.get('API_URL', 'https://api.nylas.com')
+
+PUSH_ENABLED_CLIENT_IDS = config.get('PUSH_ENABLED_CLIENT_IDS', [])
+
+CALENDAR_LIST_WEBHOOK_URL = URL_PREFIX + '/w/calendar_list_update/{}'
+EVENTS_LIST_WEHOOK_URL = URL_PREFIX + '/w/calendar_update/{}'
+
+WATCH_CALENDARS_URL = CALENDARS_URL + '/watch'
+WATCH_EVENTS_URL = \
+    'https://www.googleapis.com/calendar/v3/calendars/{}/events/watch'
 
 
 class GoogleEventsProvider(object):
@@ -237,6 +250,123 @@ class GoogleEventsProvider(object):
         else:
             # All other non-200 statuses are considered errors
             response.raise_for_status()
+
+    # -------- logic for push notification subscriptions -------- #
+
+    def _get_access_token_for_push_notifications(self,
+                                                 account,
+                                                 force_refresh=False):
+        # Raises an OAuthError if no such token exists
+        return g_token_manager.get_token_for_calendars_restrict_ids(
+            account, PUSH_ENABLED_CLIENT_IDS, force_refresh)
+
+    def push_notifications_enabled(self, account):
+        push_enabled_creds = next(
+            (creds for creds in account.valid_auth_credentials
+             if creds.client_id in PUSH_ENABLED_CLIENT_IDS),
+            None)
+        return push_enabled_creds is not None
+
+    def watch_calendar_list(self, account):
+        """
+        Subscribe to google push notifications for the calendar list.
+
+        Returns the expiration of the notification channel (as a
+        Unix timestamp in ms)
+
+        Raises an OAuthError if no credentials are authorized to
+        set up push notifications for this account.
+
+        Raises an AccessNotEnabled error if calendar sync is not enabled
+        """
+        token = self._get_access_token_for_push_notifications(account)
+        receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(account.public_id)
+        data = {
+            "id": uuid.uuid4().hex,
+            "type": "web_hook",
+            "address": receiving_url,
+        }
+        headers = {
+            'content-type': 'application/json'
+        }
+        r = requests.post(WATCH_CALENDARS_URL,
+                          data=json.dumps(data),
+                          headers=headers,
+                          auth=OAuth(token))
+
+        if r.status_code == 200:
+            data = r.json()
+            return data.get('expiration')
+        else:
+            self.handle_watch_errors(r)
+            return None
+
+    def watch_calendar(self, account, calendar):
+        """
+        Subscribe to google push notifications for a calendar.
+
+        Returns the expiration of the notification channel (as a
+        Unix timestamp in ms)
+
+        Raises an OAuthError if no credentials are authorized to
+        set up push notifications for this account.
+
+        Raises an AccessNotEnabled error if calendar sync is not enabled
+        """
+        token = self._get_access_token_for_push_notifications(account)
+        watch_url = WATCH_EVENTS_URL.format(calendar.uid)
+        receiving_url = EVENTS_LIST_WEHOOK_URL.format(calendar.public_id)
+        data = {
+            "id": uuid.uuid4().hex,
+            "type": "web_hook",
+            "address": receiving_url,
+        }
+        headers = {
+            'content-type': 'application/json'
+        }
+        r = requests.post(watch_url,
+                          data=json.dumps(data),
+                          headers=headers,
+                          auth=OAuth(token))
+
+        if r.status_code == 200:
+            data = r.json()
+            return data.get('expiration')
+        else:
+            self.handle_watch_errors(r)
+            return None
+
+    def handle_watch_errors(self, r):
+        self.log.warning(
+                'Error subscribing to Google push notifications', url=r.url,
+                response=r.content, status=r.status_code)
+
+        if r.status_code == 401:
+            self.log.warning(
+                'Invalid: could be invalid auth credentials',
+                url=r.url, response=r.content, status=r.status_code)
+
+        elif r.status_code in (500, 503):
+            log.warning('Backend error in calendar API; retrying')
+            gevent.sleep(30 + random.randrange(0, 60))
+
+        elif r.status_code == 403:
+            try:
+                reason = r.json()['error']['errors'][0]['reason']
+            except (KeyError, ValueError):
+                log.error("Couldn't parse API error response",
+                          response=r.content, status=r.status_code)
+
+            if reason == 'userRateLimitExceeded':
+                log.warning('API request was rate-limited; retrying')
+                gevent.sleep(30 + random.randrange(0, 60))
+            elif reason == 'accessNotConfigured':
+                log.warning('API not enabled; returning empty result')
+                raise AccessNotEnabledError()
+
+        else:
+            self.log.warning('Unexpected error', response=r.content,
+                             status=r.status_code)
 
 
 def parse_calendar_response(calendar):

@@ -6,7 +6,7 @@ from setproctitle import setproctitle
 from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
-from inbox.events.remote_sync import EventSync
+from inbox.events.remote_sync import EventSync, GoogleEventSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
@@ -16,6 +16,9 @@ from inbox.util.rdb import break_to_interpreter
 from inbox.heartbeat.status import clear_heartbeat_status
 
 from inbox.mailsync.backends import module_registry
+
+USE_GOOGLE_PUSH_NOTIFICATIONS = \
+    'GOOGLE_PUSH_NOTIFICATIONS' in config.get('FEATURE_FLAGS', [])
 
 
 class SyncService(object):
@@ -182,10 +185,17 @@ class SyncService(object):
                         contact_sync.start()
 
                     if info.get('events', None) and acc.sync_events:
-                        event_sync = EventSync(acc.email_address,
-                                               acc.provider,
-                                               acc.id,
-                                               acc.namespace.id)
+                        if (USE_GOOGLE_PUSH_NOTIFICATIONS and
+                                acc.provider == 'gmail'):
+                            event_sync = GoogleEventSync(acc.email_address,
+                                                         acc.provider,
+                                                         acc.id,
+                                                         acc.namespace.id)
+                        else:
+                            event_sync = EventSync(acc.email_address,
+                                                   acc.provider,
+                                                   acc.id,
+                                                   acc.namespace.id)
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
 

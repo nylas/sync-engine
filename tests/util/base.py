@@ -145,6 +145,23 @@ class TestAPIClient(object):
         return self.client.delete(path, data=json.dumps(data))
 
 
+@yield_fixture
+def webhooks_client(db):
+    from inbox.api.srv import app
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        yield TestWebhooksClient(c)
+
+
+class TestWebhooksClient(object):
+    def __init__(self, test_client):
+        self.client = test_client
+
+    def post_data(self, path, data, headers=''):
+        path = '/w' + path
+        return self.client.post(path, data=json.dumps(data), headers=headers)
+
+
 class TestDB(object):
     def __init__(self):
         from inbox.ignition import main_engine

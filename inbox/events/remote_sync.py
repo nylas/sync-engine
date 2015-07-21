@@ -1,15 +1,17 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from inbox.log import get_logger
 logger = get_logger()
 
-from inbox.basicauth import AccessNotEnabledError
+from inbox.basicauth import AccessNotEnabledError, OAuthError
 from inbox.config import config
 from inbox.sync.base_sync import BaseSyncMonitor
 from inbox.models import Event, Calendar
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.util.debug import bind_context
 from inbox.models.session import session_scope
+
+from inbox.models.account import Account
 
 from inbox.events.recurring import link_events
 from inbox.events.google import GoogleEventsProvider
@@ -18,6 +20,8 @@ from inbox.events.google import GoogleEventsProvider
 EVENT_SYNC_FOLDER_ID = -2
 EVENT_SYNC_FOLDER_NAME = 'Events'
 POLL_FREQUENCY = config.get('CALENDAR_POLL_FREQUENCY', 300)
+
+MAX_TIME_WITHOUT_SYNC = timedelta(seconds=3600)
 
 
 class EventSync(BaseSyncMonitor):
@@ -179,3 +183,95 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
              calendar_id=calendar_id,
              added=added_count,
              updated=updated_count)
+
+
+class GoogleEventSync(EventSync):
+
+    def sync(self):
+        """Query a remote provider for updates and persist them to the
+        database. This function runs every `self.poll_frequency`.
+
+        This function also handles refreshing google's push notifications
+        if they are enabled for this account. Sync is bypassed if we are
+        currently subscribed to push notificaitons and haven't heard anything
+        new from Google.
+        """
+        self.log.info('syncing events')
+
+        try:
+            self._refresh_gpush_subscriptions()
+        except AccessNotEnabledError:
+            self.log.warning(
+                'Access to provider calendar API not enabled; '
+                'cannot sign up for push notifications')
+        except OAuthError:
+            # Not enough of a reason to halt the sync!
+            self.log.warning(
+                'Not authorized to set up push notifications for account'
+                '(Safe to ignore this message if not recurring.)',
+                account_id=self.account_id)
+
+        try:
+            self._sync_data()
+        except AccessNotEnabledError:
+            self.log.warning(
+                'Access to provider calendar API not enabled; '
+                'bypassing sync')
+
+    def _refresh_gpush_subscriptions(self):
+
+        with session_scope() as db_session:
+            account = db_session.query(Account).get(self.account_id)
+
+            if not self.provider.push_notifications_enabled(account):
+                return
+
+            if account.needs_new_calendar_list_watch():
+                expir = self.provider.watch_calendar_list(account)
+                if expir is not None:
+                    account.new_calendar_list_watch(expir)
+
+            cals_to_update = (cal for cal in account.namespace.calendars
+                              if cal.needs_new_watch())
+            for cal in cals_to_update:
+                expir = self.provider.watch_calendar(account, cal)
+                if expir is not None:
+                    cal.new_event_watch(expir)
+
+    def _sync_data(self):
+        with session_scope() as db_session:
+
+            account = db_session.query(Account).get(self.account_id)
+            if account.should_update_calendars(MAX_TIME_WITHOUT_SYNC):
+                self._sync_calendar_list(account, db_session)
+
+            stale_calendars = (
+                cal for cal in account.namespace.calendars
+                if cal.should_update_events(MAX_TIME_WITHOUT_SYNC)
+            )
+            for cal in stale_calendars:
+                self._sync_calendar(cal, db_session)
+
+    def _sync_calendar_list(self, account, db_session):
+        sync_timestamp = datetime.utcnow()
+        deleted_uids, calendar_changes = self.provider.sync_calendars()
+
+        handle_calendar_deletes(self.namespace_id, deleted_uids,
+                                self.log, db_session)
+        handle_calendar_updates(self.namespace_id,
+                                calendar_changes,
+                                self.log,
+                                db_session)
+
+        account.last_calendar_list_sync = sync_timestamp
+        db_session.commit()
+
+    def _sync_calendar(self, calendar, db_session):
+        sync_timestamp = datetime.utcnow()
+        event_changes = self.provider.sync_events(
+            calendar.uid, sync_from_time=calendar.last_synced)
+
+        handle_event_updates(self.namespace_id, calendar.id,
+                             event_changes, self.log, db_session)
+        calendar.last_synced = sync_timestamp
+        db_session.commit()
