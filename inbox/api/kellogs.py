@@ -19,7 +19,8 @@ def format_categories(categories):
     if categories is None:
         return []
     return [{'id': category.public_id, 'name': category.name,
-             'display_name': category.display_name} for category in categories]
+             'display_name': category.api_display_name} for category in
+             categories]
 
 
 def encode(obj, namespace_public_id=None, expand=False):
@@ -282,7 +283,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'object': obj.type,
             'namespace_id': _get_namespace_public_id(obj),
             'name': obj.name,
-            'display_name': obj.display_name
+            'display_name': obj.api_display_name
         }
         return resp
 

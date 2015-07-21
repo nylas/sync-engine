@@ -66,5 +66,12 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
     def lowercase_name(cls):
         return CaseInsensitiveComparator(cls.display_name)
 
+    @property
+    def api_display_name(self):
+        if self.namespace.account.provider == 'gmail' and \
+                self.display_name.startswith('[Gmail]/'):
+            return self.display_name[8:]
+        return self.display_name
+
     __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name'),
                       UniqueConstraint('namespace_id', 'public_id'))
