@@ -88,6 +88,28 @@ def test_iphone_through_exchange(db, default_account):
     assert ev.end == arrow.get(2014, 12, 27, 16, 0)
 
 
+@pytest.mark.parametrize('from_value', [[], [["", ""]], [[""]]])
+def test_invalid_sender(from_value, db, default_account):
+    # Check that messages with an invalid from field get discarded.
+    data = None
+    event_count = db.session.query(Event).count()
+
+    with open(absolute_path(FIXTURES + 'iphone_through_exchange.ics')) as fd:
+        data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(db.session, default_account,
+                                          data)
+    msg.from_addr = from_value
+    db.session.add(msg)
+    db.session.commit()
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    event_count2 = db.session.query(Event).count()
+    assert event_count == event_count2, "The event shouldn't have been added"
+
+
 def test_event_update(db, default_account, message):
     add_fake_calendar(db.session, default_account.namespace.id,
                       name="Emailed events", read_only=True)
@@ -207,7 +229,6 @@ def test_icalendar_import(db, generic_account, message):
         assert participant['status'] == 'noreply'
 
 
-@pytest.mark.only
 def test_rsvp_merging(db, generic_account, message):
     # This test checks that RSVPs to invites we sent get merged.
     # It does some funky stuff around calendars because by default

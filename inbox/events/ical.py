@@ -374,9 +374,15 @@ def import_attached_events(db_session, account, message):
     # This is only a stopgap measure -- what we need to have instead is
     # smarter event merging (i.e: looking at whether the sender is the
     # event organizer or not, and if the sequence number got incremented).
-    if message.from_addr:
+    if message.from_addr is not None:
+        if len(message.from_addr) == 0 or len(message.from_addr[0]) == 1:
+            # We got a message without a from address --- this is either
+            # a message which hasn't been sent or a bogus message. Don't
+            # process it.
+            return
+
         from_addr = message.from_addr[0][1]
-        if from_addr == account.email_address:
+        if from_addr == account.email_address or from_addr == '':
             return
 
     for part in message.attached_event_files:
