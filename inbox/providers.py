@@ -412,6 +412,85 @@ get_default_providers = lambda: {
                        "mailstore1.asia.secureserver.net",
                        "mailstore1.europe.secureserver.net"]
     },
+    "163": {
+        "type": "generic",
+	"imap": ("imap.163.com", 993),
+	"smtp": ("smtp.163.com", 465),
+	"auth": "password",
+	"domains": ["163.com"],
+	"mx_servers": ["163mx00.mxmail.netease.com",
+			"163mx01.mxmail.netease.com",
+			"163mx02.mxmail.netease.com",
+			"163mx03.mxmail.netease.com"]
+    },
+    "163_ym": {
+	"type": "generic",
+	"imap": ("imap.ym.163.com", 993),
+	"smtp": ("smtp.ym.163.com", 994),
+	"auth": "password",
+	"mx_servers": ["mx.ym.163.com"]
+    },
+    "163_qiye": {
+	"type": "generic",
+	"imap": ("imap.qiye.163.com", 993),
+	"smtp": ("smtp.qiye.163.com", 994),
+	"auth": "password",
+	"mx_servers": ["qiye163mx01.mxmail.netease.com",
+			"qiye163mx02.mxmail.netease.com"]
+    },
+    "126": {
+	"type": "generic",
+	"imap": ("imap.126.com", 993),
+	"smtp": ("smtp.126.com", 465),
+	"auth": "password",
+	"domains": ["126.com"],
+	"mx_servers": ["126mx00.mxmail.netease.com",
+			"126mx01.mxmail.netease.com",
+			"126mx02.mxmail.netease.com"]
+    },
+    "yeah.net": {
+	"type": "generic",
+	"imap": ("imap.yeah.net",993),
+	"smtp": ("smtp.yeah.net",465),
+	"auth": "password",
+	"domains": ["yeah.net"],
+	"mx_servers": ["yeahmx00.mxmail.netease.com",
+			"yeahmx01.mxmail.netease.com"]
+    },
+    "qq" : {
+	"type": "generic",
+	"imap": ("imap.qq.com", 993),
+	"smtp": ("smtp.qq.com", 465),
+	"auth": "password",
+	"domains": ["qq.com", "vip.qq.com"],
+	"mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+    },
+    "qq_enterprise": {
+	"type":"generic",
+	"imap":("imap.exmail.qq.com", 993),
+	"smtp":("smtp.exmail.qq.com", 465),
+	"auth":"password",
+	"domains":["foxmail.com"],
+	"mx_servers":["mxbiz1.qq.com", "mxbiz2.qq.com"]
+    },
+    "aliyun":{
+	"type":"generic",
+	"imap":("imap.aliyun.com", 993),
+	"smtp":("smtp.aliyun.com", 465),
+	"auth":"password",
+	"domains":"password",
+	"mx_servers":["mx2.mail.aliyun.com"]
+    },
+    "139":{
+	"type":"generic",
+	"imap":("imap.139.com", 993),
+	"smtp":("smtp.139.com", 465),
+	"auth":"password",
+	"domains":["139.com"],
+	"mx_servers":["mx1.mail.139.com",
+			"mx2.mail.139.com",
+			"mx3.mail.139.com"]
+    },
     "custom": {
         "type": "generic",
         "auth": "password",
