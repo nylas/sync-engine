@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from inbox.models.thread import Thread
 from sqlalchemy import desc
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, load_only
 from inbox.util.misc import cleanup_subject
 
 
@@ -19,8 +19,10 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
         filter(Thread.namespace_id == namespace_id,
                Thread._cleaned_subject == clean_subject). \
         order_by(desc(Thread.id)). \
-        options(joinedload(Thread.messages).load_only(
-            'from_addr', 'to_addr', 'bcc_addr', 'cc_addr'))
+        options(load_only('id', 'discriminator'),
+                joinedload(Thread.messages).load_only(
+                    'from_addr', 'to_addr', 'bcc_addr', 'cc_addr'). \
+                    noload('namespace'))
 
     for thread in threads:
         for match in thread.messages:
