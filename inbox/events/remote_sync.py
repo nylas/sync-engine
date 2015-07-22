@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from requests.exceptions import HTTPError
 
 from inbox.log import get_logger
 logger = get_logger()
@@ -234,9 +235,20 @@ class GoogleEventSync(EventSync):
             cals_to_update = (cal for cal in account.namespace.calendars
                               if cal.needs_new_watch())
             for cal in cals_to_update:
-                expir = self.provider.watch_calendar(account, cal)
-                if expir is not None:
-                    cal.new_event_watch(expir)
+                try:
+                    expir = self.provider.watch_calendar(account, cal)
+                    if expir is not None:
+                        cal.new_event_watch(expir)
+                except HTTPError as exc:
+                    if exc.response.status_code == 404:
+                        self.log.warning(
+                            'Tried to subscribe to push notifications'
+                            'for a deleted calendar. Deleting local calendar',
+                            calendar_id=cal.id,
+                            calendar_uid=cal.uid)
+                        db_session.delete(cal)
+                    else:
+                        raise exc
 
     def _sync_data(self):
         with session_scope() as db_session:
@@ -250,7 +262,18 @@ class GoogleEventSync(EventSync):
                 if cal.should_update_events(MAX_TIME_WITHOUT_SYNC)
             )
             for cal in stale_calendars:
-                self._sync_calendar(cal, db_session)
+                try:
+                    self._sync_calendar(cal, db_session)
+                except HTTPError as exc:
+                    if exc.response.status_code == 404:
+                        self.log.warning(
+                            'Tried to sync a deleted calendar.'
+                            'Deleting local calendar.',
+                            calendar_id=cal.id,
+                            calendar_uid=cal.uid)
+                        db_session.delete(cal)
+                    else:
+                        raise exc
 
     def _sync_calendar_list(self, account, db_session):
         sync_timestamp = datetime.utcnow()

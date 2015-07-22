@@ -313,6 +313,9 @@ class GoogleEventsProvider(object):
         set up push notifications for this account.
 
         Raises an AccessNotEnabled error if calendar sync is not enabled
+
+        Raises an HTTPError if google gives us a 404 (which implies the
+        calendar was deleted)
         """
         token = self._get_access_token_for_push_notifications(account)
         watch_url = WATCH_EVENTS_URL.format(urllib.quote(calendar.uid))
@@ -365,6 +368,10 @@ class GoogleEventsProvider(object):
             elif reason == 'accessNotConfigured':
                 log.warning('API not enabled; returning empty result')
                 raise AccessNotEnabledError()
+
+        elif r.status_code == 404:
+            # resource deleted!
+            r.raise_for_status()
 
         else:
             self.log.warning('Unexpected error', response=r.content,
