@@ -280,7 +280,8 @@ class GoogleEventsProvider(object):
         Raises an AccessNotEnabled error if calendar sync is not enabled
         """
         token = self._get_access_token_for_push_notifications(account)
-        receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(account.public_id)
+        receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(
+                urllib.quote(account.public_id))
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
@@ -314,8 +315,9 @@ class GoogleEventsProvider(object):
         Raises an AccessNotEnabled error if calendar sync is not enabled
         """
         token = self._get_access_token_for_push_notifications(account)
-        watch_url = WATCH_EVENTS_URL.format(calendar.uid)
-        receiving_url = EVENTS_LIST_WEHOOK_URL.format(calendar.public_id)
+        watch_url = WATCH_EVENTS_URL.format(urllib.quote(calendar.uid))
+        receiving_url = EVENTS_LIST_WEHOOK_URL.format(
+                urllib.quote(calendar.public_id))
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
