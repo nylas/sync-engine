@@ -21,21 +21,21 @@ color() {
       }
 
 color '36;1' "
-      _____       _
-     |_   _|     | |
-       | |  _ __ | |__   _____  __
-       | | | '_ \| '_ \ / _ \ \/ /
-      _| |_| | | | |_) | (_) >  <
-     |_____|_| |_|_.__/ \___/_/\_\\
+      _   _       _
+     | \ | |_   _| | __ _ ___
+     |  \| | | | | |/ _` / __|
+     | |\  | |_| | | (_| \__ \
+     |_| \_|\__, |_|\__,_|___/
+            |___/
 
-     This script installs dependencies for Inbox.
+     This script installs dependencies for the Nylas Sync Engine.
 
      For more details, visit:
-     https://www.github.com/inboxapp/inbox
+     https://www.github.com/nylas/sync-engine
 "
 
 if ! [ -e ./setup.py ] || ! [ -e ./setup.sh ] ; then
-    color '31;1' "Error: setup.sh should be run from the inbox repo" >&2
+    color '31;1' "Error: setup.sh should be run from the sync-engine repo" >&2
     exit 1
 fi
 
@@ -193,10 +193,10 @@ color '35;1' 'Installing dependencies from pip...'
 SODIUM_INSTALL=system pip install -r requirements.txt
 
 pip install -e .
-if [ -d "../inbox-eas" ]; then
-    pip install -r ../inbox-eas/requirements.txt
-    pip install -e ../inbox-eas
-    python ../inbox-eas/bin/create-test-db
+if [ -d "../sync-engine-eas" ]; then
+    pip install -r ../sync-engine-eas/requirements.txt
+    pip install -e ../sync-engine-eas
+    python ../sync-engine-eas/bin/create-test-db
 fi
 
 color '35;1' 'Finished installing dependencies.'
@@ -215,7 +215,7 @@ elif [ $src -nt $dest ]; then
     different=$?
     set -e
     if [ $different -ne 0 ]; then
-        echo "Error: inbox config is newer and merging of configs not (yet) supported."
+        echo "Error: sync engine config is newer and merging of configs not (yet) supported."
         echo "Diffs:"
         echo "src: $src dest: $dest"
         diff $dest $src
@@ -238,7 +238,7 @@ elif [ $src -nt $dest ]; then
     different=$?
     set -e
     if [ $different -ne 0 ]; then
-        echo "Error: inbox secrets config is newer and merging of configs not (yet) supported."
+        echo "Error: sync engine secrets config is newer and merging of configs not (yet) supported."
         echo "Diffs:"
         echo "src: $src dest: $dest"
         diff $dest $src
@@ -263,7 +263,7 @@ if ! $prod; then
         different=$?
         set -e
         if [ $different -ne 0 ]; then
-            echo "Error: inbox config is newer and merging of configs not (yet) supported."
+            echo "Error: sync engine config is newer and merging of configs not (yet) supported."
             echo "Diffs:"
             echo "src: $src dest: $dest"
             diff $dest $src
