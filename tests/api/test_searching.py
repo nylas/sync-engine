@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from pytest import fixture
+from inbox.models.backends.imap import ImapUid
 from inbox.search.base import get_search_client
 from tests.util.base import (add_fake_message, add_fake_thread,
                              add_fake_imapuid, new_api_client,
@@ -23,67 +24,138 @@ def imap_folder(db, generic_account):
 
 
 @fixture
-def test_gmail_message(db, test_gmail_thread, default_account):
-    return add_fake_message(db.session, default_account.namespace.id,
-                             thread=test_gmail_thread,
-                             from_addr=[{'name': 'Foo Bar',
-                                         'email': 'foo@bar.com'}],
-                             to_addr=[{'name': 'Ben Bitdiddle',
-                                       'email': 'ben@bitdiddle.com'}],
-                             received_date=datetime.
-                             datetime(2015, 7, 9, 23, 50, 7),
-                             subject='YOO!')
+def sorted_gmail_threads(db, default_account):
+    thread1 = add_fake_thread(db.session, default_account.namespace.id)
+    thread2 = add_fake_thread(db.session, default_account.namespace.id)
+    thread3 = add_fake_thread(db.session, default_account.namespace.id)
+
+    return [thread1, thread2, thread3]
 
 
 @fixture
-def test_gmail_imap_uid(db, test_gmail_message, default_account, folder):
-    return add_fake_imapuid(db.session,
-                            default_account.id,
-                            test_gmail_message,
-                            folder,
-                            1337)
+def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
+    thread1, thread2, thread3 = sorted_gmail_threads
+    message1 = add_fake_message(db.session, default_account.namespace.id,
+                                 thread=thread1,
+                                 from_addr=[{'name': 'Ben Bitdiddle',
+                                             'email': 'ben@bitdiddle.com'}],
+                                 to_addr=[{'name': 'Barrack Obama',
+                                           'email': 'barrack@obama.com'}],
+                                 received_date=datetime.
+                                 datetime(2015, 7, 9, 23, 50, 7),
+                                 subject='YOO!')
+
+    add_fake_imapuid(db.session, default_account.id, message1,
+                     folder, 3000)
+
+    message2 = add_fake_message(db.session, default_account.namespace.id,
+                                 thread=thread2,
+                                 from_addr=[{'name': 'Ben Bitdiddle',
+                                             'email': 'ben@bitdiddle.com'}],
+                                 to_addr=[{'name': 'Barrack Obama',
+                                           'email': 'barrack@obama.com'}],
+                                 received_date=datetime.
+                                 datetime(2014, 7, 9, 23, 50, 7),
+                                 subject='Hey!')
+
+    add_fake_imapuid(db.session, default_account.id, message2,
+                     folder, 3001)
+
+    message3 = add_fake_message(db.session, default_account.namespace.id,
+                                 thread=thread3,
+                                 from_addr=[{'name': 'Ben Bitdiddle',
+                                             'email': 'ben@bitdiddle.com'}],
+                                 to_addr=[{'name': 'Barrack Obama',
+                                           'email': 'barrack@obama.com'}],
+                                 received_date=datetime.
+                                 datetime(2013, 7, 9, 23, 50, 7),
+                                 subject='Sup?')
+
+    add_fake_imapuid(db.session, default_account.id, message3,
+                     folder, 3002)
+
+    return [message1, message2, message3]
 
 
 @fixture
-def test_imap_thread(db, generic_account):
-    return add_fake_thread(db.session, generic_account.namespace.id)
+def sorted_imap_threads(db, generic_account):
+    thread1 = add_fake_thread(db.session, generic_account.namespace.id)
+    thread2 = add_fake_thread(db.session, generic_account.namespace.id)
+    thread3 = add_fake_thread(db.session, generic_account.namespace.id)
+
+    return [thread1, thread2, thread3]
 
 
 @fixture
-def test_imap_message(db, test_imap_thread, generic_account):
-    return add_fake_message(db.session, generic_account.namespace.id,
-                             thread=test_imap_thread,
-                             from_addr=[{'name': 'Foo Bar',
-                                         'email': 'foo@bar.com'}],
-                             to_addr=[{'name': 'Ben Bitdiddle',
-                                       'email': 'ben@bitdiddle.com'}],
-                             received_date=datetime.
-                             datetime(2015, 7, 9, 23, 50, 7),
-                             subject='YOO!')
+def sorted_imap_messages(db, generic_account, sorted_imap_threads, folder):
+    thread1, thread2, thread3 = sorted_imap_threads
+    message1 = add_fake_message(db.session, generic_account.namespace.id,
+                                 thread=thread1,
+                                 from_addr=[{'name': '',
+                                             'email':
+                                                'inboxapptest@example.com'}],
+                                 to_addr=[{'name': 'Ben Bitdiddle',
+                                           'email': 'ben@bitdiddle.com'}],
+                                 received_date=datetime.
+                                 datetime(2015, 7, 9, 23, 50, 7),
+                                 subject='YOO!')
+
+    add_fake_imapuid(db.session, generic_account.id, message1,
+                     folder, 2000)
+
+    message2 = add_fake_message(db.session, generic_account.namespace.id,
+                                 thread=thread2,
+                                 from_addr=[{'name': '',
+                                             'email':
+                                                'inboxapptest@example.com'}],
+                                 to_addr=[{'name': 'Ben Bitdiddle',
+                                           'email': 'ben@bitdiddle.com'}],
+                                 received_date=datetime.
+                                 datetime(2014, 7, 9, 23, 50, 7),
+                                 subject='Hey!')
+
+    add_fake_imapuid(db.session, generic_account.id, message2,
+                     folder, 2001)
+
+    message3 = add_fake_message(db.session, generic_account.namespace.id,
+                                 thread=thread3,
+                                 from_addr=[{'name': '',
+                                             'email':
+                                                'inboxapptest@example.com'}],
+                                 to_addr=[{'name': 'Ben Bitdiddle',
+                                           'email': 'ben@bitdiddle.com'}],
+                                 received_date=datetime.
+                                 datetime(2013, 7, 9, 23, 50, 7),
+                                 subject='Sup?')
+
+    add_fake_imapuid(db.session, generic_account.id, message3,
+                     folder, 2002)
+
+    return [message1, message2, message3]
 
 
 @fixture
-def test_imap_uid(db, test_imap_message, generic_account, imap_folder):
-    return add_fake_imapuid(db.session,
-                            generic_account.id,
-                            test_imap_message,
-                            imap_folder,
-                            2222)
-
-
-@fixture
-def patch_connection():
+def patch_connection(db, generic_account, default_account):
     class MockConnection(object):
         def __init__(self):
-            pass
+            self.db = db
+            self.generic_account_id = generic_account.id
+            self.default_account_id = default_account.id
 
         def gmail_search(self, *args, **kwargs):
-            return [1337]
+            # Get all ImapUids for gmail account
+            imap_uids = db.session.query(ImapUid). \
+                filter(ImapUid.account_id == self.default_account_id).all()
+
+            return [imap_uid.msg_uid for imap_uid in imap_uids]
 
         def search(self, *args, **kwargs):
+            # Get all ImapUids for imap account
+            imap_uids = db.session.query(ImapUid). \
+                filter(ImapUid.account_id == self.default_account_id).all()
             criteria = kwargs['criteria']
             assert criteria == 'TEXT blah blah blah'
-            return [2222]
+            return [imap_uid.msg_uid for imap_uid in imap_uids]
 
     return MockConnection()
 
@@ -133,55 +205,54 @@ def patch_crispin_client(monkeypatch, patch_connection):
                         MockCrispinClient)
 
 
-def test_gmail_message_search(api_client, test_gmail_message, default_account,
+def test_gmail_message_search(api_client, default_account,
                               patch_crispin_client,
                               patch_handler_from_provider,
-                              test_gmail_imap_uid):
+                              sorted_gmail_messages):
     search_client = get_search_client(default_account)
     assert search_client.__class__.__name__ == 'GmailSearchClient'
 
     messages = api_client.get_data('/messages/search?q=blah%20blah%20blah')
 
-    assert len(messages) == 1
-    assert messages[0]['id'] == test_gmail_message.public_id
+    for sorted_message, result_message in zip(sorted_gmail_messages, messages):
+        assert sorted_message.public_id == result_message['id']
 
 
 def test_gmail_thread_search(api_client, test_gmail_thread, default_account,
                              patch_crispin_client,
                              patch_handler_from_provider,
-                             test_gmail_imap_uid):
+                             sorted_gmail_threads):
     search_client = get_search_client(default_account)
     assert search_client.__class__.__name__ == 'GmailSearchClient'
 
     threads = api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
-    assert len(threads) == 1
-    assert threads[0]['id'] == test_gmail_thread.public_id
+    for sorted_thread, result_thread in zip(sorted_gmail_threads, threads):
+        assert sorted_thread.public_id == result_thread['id']
 
 
-def test_imap_message_search(imap_api_client, test_imap_message,
-                              generic_account,
+def test_imap_message_search(imap_api_client, generic_account,
                               patch_crispin_client,
                               patch_handler_from_provider,
-                              test_imap_uid):
+                              sorted_imap_messages):
     search_client = get_search_client(generic_account)
     assert search_client.__class__.__name__ == 'IMAPSearchClient'
 
     messages = imap_api_client.get_data('/messages/search?'
                                         'q=blah%20blah%20blah')
 
-    assert len(messages) == 1
-    assert messages[0]['id'] == test_imap_message.public_id
+    for sorted_message, result_message in zip(sorted_imap_messages, messages):
+        assert sorted_message.public_id == result_message['id']
 
 
-def test_imap_thread_search(imap_api_client, test_imap_thread, generic_account,
+def test_imap_thread_search(imap_api_client, generic_account,
                              patch_crispin_client,
                              patch_handler_from_provider,
-                             test_imap_uid):
+                             sorted_imap_threads):
     search_client = get_search_client(generic_account)
     assert search_client.__class__.__name__ == 'IMAPSearchClient'
 
     threads = imap_api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
-    assert len(threads) == 1
-    assert threads[0]['id'] == test_imap_thread.public_id
+    for sorted_thread, result_thread in zip(sorted_imap_threads, threads):
+        assert sorted_thread.public_id == result_thread['id']

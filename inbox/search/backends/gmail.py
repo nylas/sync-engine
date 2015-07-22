@@ -32,7 +32,8 @@ class GmailSearchClient(IMAPSearchClient):
 
         crispin_client.logout()
 
-        return sorted(all_messages, key=lambda msg: msg.received_date)
+        return sorted(all_messages, key=lambda msg: msg.received_date,
+                      reverse=True)
 
     def search_folder(self, db_session, crispin_client, folder, search_query):
         crispin_client.select_folder(folder.name, uidvalidity_cb)

@@ -55,7 +55,8 @@ class IMAPSearchClient(object):
 
         crispin_client.logout()
 
-        return sorted(all_messages, key=lambda msg: msg.received_date)
+        return sorted(all_messages, key=lambda msg: msg.received_date,
+                      reverse=True)
 
     def search_threads(self, db_session, search_query):
         messages = self.search_messages(db_session, search_query)
@@ -64,7 +65,8 @@ class IMAPSearchClient(object):
         self.log.debug('Found {} threads.'
                        .format(len(all_threads)))
 
-        return sorted(all_threads, key=lambda thread: thread.recentdate)
+        return sorted(all_threads, key=lambda thread: thread.recentdate,
+                      reverse=True)
 
     def search_folder(self, db_session, crispin_client, folder,
                         criteria):
