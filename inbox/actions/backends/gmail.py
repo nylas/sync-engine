@@ -16,8 +16,17 @@ __all__ = ['set_remote_starred', 'set_remote_unread', 'remote_save_draft',
            'remote_create_label', 'remote_update_label']
 
 
+# Lifted from imaplib. Quote arguments ourselves, pending fix in imapclient.
+def _quote(arg):
+    arg = arg.replace('\\', '\\\\')
+    arg = arg.replace('"', '\\"')
+    return u'"{}"'.format(arg)
+
+
 def remote_change_labels(account, message_id, db_session, removed_labels,
                          added_labels):
+    added_labels = map(_quote, added_labels)
+    removed_labels = map(_quote, removed_labels)
     uids_for_message = uids_by_folder(message_id, db_session)
     with writable_connection_pool(account.id).get() as crispin_client:
         for folder_name, uids in uids_for_message.items():
