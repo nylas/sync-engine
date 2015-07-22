@@ -38,6 +38,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     _cleaned_subject = Column(String(255), nullable=True)
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
+    receivedrecentdate = Column(DateTime, nullable=True, index=True)
     snippet = Column(String(191), nullable=True, default='')
     version = Column(Integer, nullable=True, server_default='0')
 
@@ -53,6 +54,12 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 # Don't change subjectdate, recentdate, or unread/unseen based
                 # on drafts
                 return message
+
+            if all(category.name != 'sent' for category in
+                        message.categories):
+                if not self.receivedrecentdate or \
+                        message.received_date > self.receivedrecentdate:
+                    self.receivedrecentdate = message.received_date
 
             if message.received_date > self.recentdate:
                 self.recentdate = message.received_date
@@ -154,3 +161,6 @@ Index('ix_thread_namespace_id_recentdate_deleted_at',
 # subject column is too long to be fully indexed with utf8mb4 collation.
 Index('ix_thread_subject', Thread.subject, mysql_length=191)
 Index('ix_cleaned_subject', Thread._cleaned_subject, mysql_length=191)
+# For sorting threads based on receivedrecentdate
+Index('ix_thread_namespace_id_receivedrecentdate', Thread.namespace_id,
+      Thread.receivedrecentdate)

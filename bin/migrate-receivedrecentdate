@@ -1,0 +1,54 @@
+import math
+import multiprocessing
+import click
+from sqlalchemy import desc, func
+from sqlalchemy.sql import not_
+from inbox.models import Message, Thread
+from inbox.models.session import session_scope
+from inbox.log import configure_logging, get_logger
+configure_logging()
+log = get_logger()
+
+
+CHUNK_SIZE = 1000
+
+
+def migrate_receivedrecentdate((start_id, end_id)):
+    with session_scope(versioned=False) as db_session:
+        for i in range(start_id, end_id, CHUNK_SIZE):
+            threads = db_session.query(Thread). \
+                filter(Thread.id > i,
+                       Thread.id <= i + min(CHUNK_SIZE, end_id))
+            for thread in threads:
+                last_message = db_session.query(Message). \
+                    filter(Message.thread_id == thread.id,
+                           not_(Message.categories.any(name="sent"))). \
+                    order_by(desc(Message.received_date)).first()
+                if last_message:
+                    thread.receivedrecentdate = last_message.received_date
+            db_session.commit()
+            log.info('Migrated threads', start=i + 1,
+                     end=min(i + CHUNK_SIZE, end_id))
+
+
+@click.command()
+@click.option('--jobs', '-j', type=int, default=1)
+@click.option('--max_id', '-m', type=int, default=-1)
+def main(jobs, max_id):
+    if max_id == -1:
+        with session_scope(versioned=False) as db_session:
+            q = db_session.query(func.max(Message.id).label("msg_count")).one()
+            max_id = q.msg_count
+    bucket_size = int(math.ceil(float(max_id + 1) / jobs))
+    log.info('{} threads will be migrated'.format(max_id))
+    buckets = [(i * bucket_size, (i + 1) * bucket_size + 1) for i in
+               range(jobs)]
+
+    pool = multiprocessing.Pool(jobs)
+
+    log.info('Pooling {} jobs.'.format(jobs))
+    pool.map(migrate_receivedrecentdate, buckets)
+
+
+if __name__ == '__main__':
+    main()
