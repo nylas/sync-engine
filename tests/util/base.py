@@ -509,6 +509,18 @@ def event(db, default_account):
     return add_fake_event(db.session, default_account.namespace.id)
 
 
+@fixture(scope='function')
+def imported_event(db, default_account, message):
+    ev = add_fake_event(db.session, default_account.namespace.id)
+    ev.message = message
+    message.from_addr = [['Mick Taylor', 'mick@example.com']]
+    ev.owner = 'Mick Taylor <mick@example.com>'
+    ev.participants = [{"email": "inboxapptest@gmail.com",
+                        "name": "Inbox Apptest", "status": "noreply"}]
+    db.session.commit()
+    return ev
+
+
 def full_path(relpath):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), relpath)
 

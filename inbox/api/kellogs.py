@@ -50,7 +50,7 @@ def encode(obj, namespace_public_id=None, expand=False):
         This function returns a dict with only the data we want to make
         public."""
         dct = {}
-        for attribute in ['name', 'status', 'email']:
+        for attribute in ['name', 'status', 'email', 'comment']:
             dct[attribute] = participant.get(attribute)
 
         return dct

@@ -5,7 +5,7 @@ import pytest
 from flanker import mime
 from inbox.basicauth import OAuthError
 from inbox.models import Message
-from tests.util.base import thread, message
+from tests.util.base import thread, message, imported_event
 
 __all__ = ['thread', 'message']
 
@@ -142,6 +142,15 @@ def example_draft(db, default_account):
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
                 'email': default_account.email_address}]
+    }
+
+
+@pytest.fixture
+def example_rsvp(imported_event):
+    return {
+        'event_id': imported_event.public_id,
+        'comment': 'I will come.',
+        'status': 'yes',
     }
 
 
@@ -542,3 +551,61 @@ def test_sending_from_email_multiple_aliases(patch_smtp, patch_token_manager,
                                 'subject': 'Banalities',
                                 'body': '<html>Hello there</html>'})
     assert res.status_code == 400
+
+
+def test_rsvp_invalid_credentials(disallow_auth, api_client, example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 403
+    assert json.loads(r.data)['message'] == 'Could not authenticate with ' \
+                                            'the SMTP server.'
+
+
+def test_rsvp_quota_exceeded(quota_exceeded, api_client, example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 429
+    assert json.loads(r.data)['message'] == 'Daily sending quota exceeded'
+
+
+def test_rsvp_server_disconnected(connection_closed, api_client, example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 503
+    assert json.loads(r.data)['message'] == 'The server unexpectedly closed ' \
+                                            'the connection'
+
+
+def test_rsvp_recipients_rejected(recipients_refused, api_client,
+                                  example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 402
+    assert json.loads(r.data)['message'] == 'Sending to all recipients failed'
+
+
+def test_rsvp_message_too_large(message_too_large, api_client, example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 402
+    assert json.loads(r.data)['message'] == 'Message too large'
+
+
+def test_rsvp_message_rejected_for_security(insecure_content, api_client,
+                                            example_rsvp):
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 402
+    assert json.loads(r.data)['message'] == \
+        'Message content rejected for security reasons'
+
+
+def test_rsvp_updates_status(patch_smtp, api_client, example_rsvp,
+                             imported_event):
+    assert len(imported_event.participants) == 1
+    assert imported_event.participants[0]['email'] == 'inboxapptest@gmail.com'
+    assert imported_event.participants[0]['status'] == 'noreply'
+
+    r = api_client.post_data('/send-rsvp', example_rsvp)
+    assert r.status_code == 200
+    dct = json.loads(r.data)
+
+    # Check that the event's status got updated
+    assert len(dct['participants']) == 1
+    assert dct['participants'][0]['email'] == 'inboxapptest@gmail.com'
+    assert dct['participants'][0]['status'] == 'yes'
+    assert dct['participants'][0]['comment'] == 'I will come.'

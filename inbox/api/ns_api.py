@@ -34,15 +34,17 @@ from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_counts, is_stale)
 import inbox.contacts.crud
 from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
-                                 create_draft_from_mime)
+                                 create_draft_from_mime, SendMailException)
 from inbox.log import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession, session_scope
 from inbox.search.base import get_search_client
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
-from inbox.api.err import (err, APIException, NotFoundError, InputError)
-from inbox.events.ical import (generate_icalendar_invite, send_invite)
+from inbox.api.err import err, APIException, NotFoundError, InputError
+from inbox.events.ical import (generate_icalendar_invite, send_invite,
+                               generate_rsvp, send_rsvp)
+
 from inbox.ignition import main_engine
 engine = main_engine()
 
@@ -726,6 +728,8 @@ def event_update_api(public_id):
         raise InputError('Cannot update a recurring event yet.')
 
     data = request.get_json(force=True)
+    account = g.namespace.account
+
     valid_event_update(data, g.namespace, g.db_session)
 
     if 'participants' in data:
@@ -744,9 +748,11 @@ def event_update_api(public_id):
     event.sequence_number += 1
     g.db_session.commit()
 
-    schedule_action('update_event', event, g.namespace.id, g.db_session,
-                    calendar_uid=event.calendar.uid,
-                    notify_participants=notify_participants)
+    # Don't sync back updates to autoimported events.
+    if event.calendar != account.emailed_events_calendar:
+        schedule_action('update_event', event, g.namespace.id, g.db_session,
+                        calendar_uid=event.calendar.uid,
+                        notify_participants=notify_participants)
 
     return g.encoder.jsonify(event)
 
@@ -791,6 +797,80 @@ def event_delete_api(public_id):
                     notify_participants=notify_participants)
 
     return g.encoder.jsonify(None)
+
+
+@app.route('/send-rsvp', methods=['POST'])
+def event_rsvp_api():
+    data = request.get_json(force=True)
+
+    event_id = data.get('event_id')
+    valid_public_id(event_id)
+    try:
+        event = g.db_session.query(Event).filter(
+            Event.public_id == event_id,
+            Event.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find event {0}".format(event_id))
+
+    if event.message is None:
+        raise InputError('This is not a message imported '
+                         'from an iCalendar invite.')
+
+    status = data.get('status')
+    if not status:
+        raise InputError('You must define a status to RSVP.')
+
+    if status not in ['yes', 'no', 'maybe']:
+        raise InputError('Invalid status %s' % status)
+
+    comment = data.get('comment', '')
+
+    # Note: this assumes that the email invite was directly addressed to us
+    # (i.e: that there's no email alias to redirect ben.bitdiddle@nylas
+    #  to ben@nylas.)
+    participants = {p["email"]: p for p in event.participants}
+
+    account = g.namespace.account
+    email = account.email_address
+
+    if email not in participants:
+        raise InputError('Cannot find %s among the participants' % email)
+
+    participant = {"email": email, "status": status, "comment": comment}
+
+    body_text = comment
+    ical_data = generate_rsvp(event, participant, account)
+
+    if ical_data is None:
+        raise APIException("Couldn't parse the attached iCalendar invite")
+
+    try:
+        send_rsvp(ical_data, event, body_text, status, account)
+    except SendMailException as exc:
+        kwargs = {}
+        if exc.failures:
+            kwargs['failures'] = exc.failures
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
+
+    # Update the participants status too.
+    new_participants = []
+    for participant in event.participants:
+        email = participant.get("email")
+        if email is not None and email == account.email_address:
+            participant["status"] = status
+            if comment != "":
+                participant["comment"] = comment
+
+        new_participants.append(participant)
+
+    event.participants = []
+    for participant in new_participants:
+        event.participants.append(participant)
+
+    g.db_session.commit()
+    return g.encoder.jsonify(event)
 
 
 #
