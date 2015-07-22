@@ -419,9 +419,9 @@ get_default_providers = lambda: {
 	"auth": "password",
 	"domains": ["163.com"],
 	"mx_servers": ["163mx00.mxmail.netease.com",
-			"163mx01.mxmail.netease.com",
-			"163mx02.mxmail.netease.com",
-			"163mx03.mxmail.netease.com"]
+		       "163mx01.mxmail.netease.com",
+		       "163mx02.mxmail.netease.com",
+		       "163mx03.mxmail.netease.com"]
     },
     "163_ym": {
 	"type": "generic",
@@ -436,7 +436,7 @@ get_default_providers = lambda: {
 	"smtp": ("smtp.qiye.163.com", 994),
 	"auth": "password",
 	"mx_servers": ["qiye163mx01.mxmail.netease.com",
-			"qiye163mx02.mxmail.netease.com"]
+		       "qiye163mx02.mxmail.netease.com"]
     },
     "126": {
 	"type": "generic",
@@ -445,8 +445,8 @@ get_default_providers = lambda: {
 	"auth": "password",
 	"domains": ["126.com"],
 	"mx_servers": ["126mx00.mxmail.netease.com",
-			"126mx01.mxmail.netease.com",
-			"126mx02.mxmail.netease.com"]
+		       "126mx01.mxmail.netease.com",
+		       "126mx02.mxmail.netease.com"]
     },
     "yeah.net": {
 	"type": "generic",
@@ -455,7 +455,7 @@ get_default_providers = lambda: {
 	"auth": "password",
 	"domains": ["yeah.net"],
 	"mx_servers": ["yeahmx00.mxmail.netease.com",
-			"yeahmx01.mxmail.netease.com"]
+		       "yeahmx01.mxmail.netease.com"]
     },
     "qq" : {
 	"type": "generic",
@@ -488,8 +488,8 @@ get_default_providers = lambda: {
 	"auth":"password",
 	"domains":["139.com"],
 	"mx_servers":["mx1.mail.139.com",
-			"mx2.mail.139.com",
-			"mx3.mail.139.com"]
+		      "mx2.mail.139.com",
+		      "mx3.mail.139.com"]
     },
     "custom": {
         "type": "generic",
