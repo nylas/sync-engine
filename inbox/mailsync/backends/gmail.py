@@ -21,6 +21,7 @@ user always gets the full thread when they look at mail.
 """
 from __future__ import division
 from collections import namedtuple
+from datetime import datetime
 from gevent import kill, spawn, sleep
 from sqlalchemy.orm import joinedload, load_only
 
@@ -300,6 +301,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         return new_uid
 
     def download_and_commit_uids(self, crispin_client, uids):
+        start = datetime.utcnow()
         raw_messages = crispin_client.uids(uids)
         if not raw_messages:
             return 0
@@ -324,6 +326,11 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                         db_session.flush()
                         new_uids.add(uid)
                 db_session.commit()
+
+        # If we downloaded uids, record message velocity (#uid / latency)
+        if self.state == "initial" and len(new_uids):
+            self._report_message_velocity(datetime.utcnow() - start,
+                                          len(new_uids))
 
         self.saved_uids.update(new_uids)
         return len(new_uids)

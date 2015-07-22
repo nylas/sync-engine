@@ -556,14 +556,18 @@ class FolderSyncEngine(Greenlet):
 
         # If we downloaded uids, record message velocity (#uid / latency)
         if self.state == 'initial' and len(new_uids):
-            latency = (datetime.utcnow() - start).total_seconds() * 1000
-            latency_per_uid = float(latency) / len(new_uids)
-            statsd_client.timing(
-                '.'.join(['providers', self.provider_name,
-                          'message_velocity']),
-                latency_per_uid)
+            self._report_message_velocity(datetime.utcnow() - start,
+                                          len(new_uids))
 
         return len(new_uids)
+
+    def _report_message_velocity(self, timedelta, num_uids):
+        latency = (timedelta).total_seconds() * 1000
+        latency_per_uid = float(latency) / num_uids
+        statsd_client.timing(
+            '.'.join(['providers', self.provider_name,
+                      'message_velocity']),
+            latency_per_uid)
 
     def update_metadata(self, crispin_client, updated):
         """ Update flags (the only metadata that can change). """
