@@ -14,7 +14,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
-                          DataProcessingCache, Category)
+                          DataProcessingCache, Category, MessageCategory)
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
@@ -165,7 +165,12 @@ def thread_query_api():
     args = strict_parse_args(g.parser, request.args)
 
     # For backwards-compatibility -- remove after deprecating tags API.
-    in_ = args['in'] or args['tag']
+    if args['tag'] == 'unread':
+        unread = True
+        in_ = None
+    else:
+        in_ = args['in'] or args['tag']
+        unread = args['unread']
 
     threads = filtering.threads(
         namespace_id=g.namespace.id,
@@ -181,7 +186,7 @@ def thread_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
-        unread=args['unread'],
+        unread=unread,
         starred=args['starred'],
         sort=args['sort'],
         in_=in_,
@@ -539,6 +544,9 @@ def folder_label_update_api(public_id):
     return g.encoder.jsonify(category)
 
 
+# -- Begin tags API shim
+
+
 @app.route('/tags')
 def tag_query_api():
     categories = g.db_session.query(Category). \
@@ -551,6 +559,54 @@ def tag_query_api():
          'readonly': False} for obj in categories
     ]
     return g.encoder.jsonify(resp)
+
+
+@app.route('/tags/<public_id>')
+def tag_detail_api(public_id):
+    # Interpret former special public ids for 'canonical' tags.
+    if public_id in ('inbox', 'sent', 'archive', 'important', 'trash', 'spam',
+                     'all'):
+        category = g.db_session.query(Category). \
+            filter(Category.namespace_id == g.namespace.id,
+                   Category.name == public_id).first()
+    else:
+        category = g.db_session.query(Category). \
+            filter(Category.namespace_id == g.namespace.id,
+                   Category.public_id == public_id).first()
+    if category is None:
+        raise NotFoundError('Category {} not found'.format(public_id))
+
+    message_subquery = g.db_session.query(Message.thread_id). \
+        join(MessageCategory). \
+        filter(
+            Message.namespace_id == g.namespace.id,
+            MessageCategory.category_id == category.id).subquery()
+    thread_count = g.db_session.query(func.count(1)). \
+        select_from(Thread).filter(
+            Thread.id.in_(message_subquery)).scalar()
+
+    unread_subquery = g.db_session.query(Message.thread_id). \
+        join(MessageCategory). \
+        filter(
+            Message.namespace_id == g.namespace.id,
+            MessageCategory.category_id == category.id,
+            Message.is_read == False).subquery()
+    unread_count = g.db_session.query(func.count(1)). \
+        select_from(Thread).filter(
+            Thread.id.in_(unread_subquery)).scalar()
+
+    return g.encoder.jsonify({
+        'object': 'tag',
+        'name': category.display_name,
+        'id': category.name or category.public_id,
+        'namespace_id': g.namespace.public_id,
+        'readonly': False,
+        'unread_count': unread_count,
+        'thread_count': thread_count
+    })
+
+
+# -- End tags API shim
 
 
 #
