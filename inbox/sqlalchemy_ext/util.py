@@ -1,7 +1,7 @@
 import abc
 import uuid
 import struct
-import time
+import weakref
 
 from bson import json_util, EPOCH_NAIVE
 # Monkeypatch to not include tz_info in decoded JSON.
@@ -21,32 +21,27 @@ from inbox.log import get_logger
 log = get_logger()
 
 
-SLOW_QUERY_THRESHOLD_MS = 5000
+MAX_SANE_QUERIES_PER_SESSION = 100
 MAX_TEXT_LENGTH = 65535
+
+
+query_counts = weakref.WeakKeyDictionary()
 
 
 @event.listens_for(Engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement,
                           parameters, context, executemany):
-    context._query_start_time = time.time()
+    if conn not in query_counts:
+        query_counts[conn] = 1
+    else:
+        query_counts[conn] += 1
 
 
-@event.listens_for(Engine, "after_cursor_execute")
-def after_cursor_execute(conn, cursor, statement,
-                         parameters, context, executemany):
-    total = int(1000 * (time.time() - context._query_start_time))
-    # We only care about slow reads here
-    if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
-        statement = ' '.join(statement.split())
-        try:
-            # Turn `parameters` into a string as a quick fix for easier
-            # downstream parsing (Elasticsearch has trouble with arrays of
-            # heterogeneous type such as [1, 'a']).
-            log.warning('slow query', query_time=total, statement=statement,
-                        parameters=str(parameters))
-        except UnicodeDecodeError:
-            log.warning('slow query', query_time=total)
-            log.error('logging UnicodeDecodeError')
+@event.listens_for(Engine, 'commit')
+def before_commit(conn):
+    if query_counts.get(conn, 0) > MAX_SANE_QUERIES_PER_SESSION:
+        log.warning('Dubiously many queries per session!',
+                    query_count=query_counts.get(conn))
 
 
 class SQLAlchemyCompatibleAbstractMetaClass(DeclarativeMeta, abc.ABCMeta):

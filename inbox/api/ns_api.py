@@ -47,6 +47,7 @@ from inbox.events.ical import (generate_icalendar_invite, send_invite,
 
 from inbox.ignition import main_engine
 engine = main_engine()
+log = get_logger()
 
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
@@ -82,8 +83,6 @@ def pull_lang_code(endpoint, values):
 @app.before_request
 def start():
     g.db_session = InboxSession(engine)
-
-    g.log = get_logger()
     try:
         valid_public_id(g.namespace_public_id)
         g.namespace = g.db_session.query(Namespace) \
@@ -93,6 +92,9 @@ def start():
     except NoResultFound:
         raise NotFoundError("Couldn't find namespace  `{0}` ".format(
             g.namespace_public_id))
+
+    g.log = log.new(endpoint=request.endpoint,
+                    account_id=g.namespace.account_id)
 
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
