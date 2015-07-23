@@ -551,10 +551,9 @@ class CrispinClient(object):
             if uid not in uid_set:
                 continue
             msg = raw_messages[uid]
-            if 'BODY[]' not in msg:
-                raise Exception(
-                    'No BODY[] element in IMAP response. Tags given: {}'
-                    .format(msg.keys()))
+            if msg.keys() == ['SEQ']:
+                log.error('No data returned for UID, skipping', uid=uid)
+                continue
 
             messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
