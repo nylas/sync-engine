@@ -119,6 +119,11 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
         If given, don't include transactions for these types of objects.
 
     """
+    # Begin backwards-compatibility shim -- suppress new object types for now,
+    # because clients may not be able to deal with them.
+    exclude_types = exclude_types or []
+    exclude_types.extend(('folder', 'label'))
+    # End backwards-compatibility shim.
     while True:
         # deleted_at condition included to allow this query to be satisfied via
         # the legacy index on (namespace_id, deleted_at) for performance.
