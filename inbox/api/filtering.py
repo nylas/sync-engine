@@ -460,21 +460,17 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
         return all_events
 
 
-def messages_for_contact_scores(db_session, namespace_id,
-                                from_email, starts_after=None):
-    query = db_session.query(
-        Message.to_addr, Message.cc_addr, Message.bcc_addr,
-        Message.id, Message.received_date.label('date'))
-    filters = [Message.namespace_id == namespace_id, ~Message.is_draft]
+def messages_for_contact_scores(db_session, namespace_id, starts_after=None):
+    query = (db_session.query(
+                Message.to_addr, Message.cc_addr, Message.bcc_addr,
+                Message.id, Message.received_date.label('date'))
+             .join(MessageCategory)
+             .join(Category)
+             .filter(Message.namespace_id == namespace_id)
+             .filter(Category.name == 'sent')
+             .filter(~Message.is_draft))
+
     if starts_after:
-        filters.append(Message.received_date > starts_after)
+        query = query.filter(Message.received_date > starts_after)
 
-    from_query = db_session.query(MessageContactAssociation.message_id). \
-        join(Contact).filter(
-            MessageContactAssociation.field == 'from_addr',
-            Contact.email_address == from_email,
-            Contact.namespace_id == namespace_id).subquery()
-
-    filters.append(Message.id.in_(from_query))
-    query = query.filter(*filters)
     return query.all()

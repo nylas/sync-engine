@@ -1338,7 +1338,6 @@ def stream_changes():
 def groups_intrinsic():
     g.parser.add_argument('force_recalculate', type=strict_bool,
                           location='args')
-    g.parser.add_argument('alias', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     try:
         dpcache = g.db_session.query(DataProcessingCache).filter(
@@ -1352,25 +1351,17 @@ def groups_intrinsic():
     use_cached_data = (not (is_stale(last_updated) or cached_data is None) and
                        args['force_recalculate'] is not True)
 
-    # With folders update, how we get these messages should change (?)
-    from_email = g.namespace.email_address
-
     if not use_cached_data:
         last_updated = None
 
     messages = filtering.messages_for_contact_scores(
-        g.db_session, g.namespace.id, from_email, last_updated)
-    if args['alias'] is not None:
-        messages.extend(
-            filtering.messages_for_contact_scores(
-                g.db_session, g.namespace.id, args['alias'], last_updated
-            )
-        )
+        g.db_session, g.namespace.id, last_updated)
+
+    from_email = g.namespace.email_address
 
     if use_cached_data:
         result = cached_data
         new_guys = calculate_group_counts(messages, from_email)
-        # result['use_cached_data'] = -1  # debug
         for k, v in new_guys.items():
             if k in result:
                 result[k] += v
@@ -1383,7 +1374,6 @@ def groups_intrinsic():
         g.db_session.commit()
 
     result = sorted(result.items(), key=lambda x: x[1], reverse=True)
-    # result.append(('total_messages_fetched', len(messages)))  # debug
     return g.encoder.jsonify(result)
 
 
@@ -1391,7 +1381,6 @@ def groups_intrinsic():
 def contact_rankings():
     g.parser.add_argument('force_recalculate', type=strict_bool,
                           location='args')
-    g.parser.add_argument('alias', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     try:
         dpcache = g.db_session.query(DataProcessingCache).filter(
@@ -1405,25 +1394,15 @@ def contact_rankings():
     use_cached_data = (not (is_stale(last_updated) or cached_data is None) and
                        args['force_recalculate'] is not True)
 
-    # With folders update, how we get these messages should change (?)
-    from_email = g.namespace.email_address
-
     if not use_cached_data:
         last_updated = None
 
     messages = filtering.messages_for_contact_scores(
-        g.db_session, g.namespace.id, from_email, last_updated)
-    if args['alias'] is not None:
-        messages.extend(
-            filtering.messages_for_contact_scores(
-                g.db_session, g.namespace.id, args['alias'], last_updated
-            )
-        )
+        g.db_session, g.namespace.id, last_updated)
 
     if use_cached_data:
         new_guys = calculate_contact_scores(messages, time_dependent=False)
         result = cached_data
-        # result['use_cached_data'] = -1  # debug
         for k, v in new_guys.items():
             if k in result:
                 result[k] += v
@@ -1436,5 +1415,4 @@ def contact_rankings():
         g.db_session.commit()
 
     result = sorted(result.items(), key=lambda x: x[1], reverse=True)
-    # result.append(('total messages fetched', len(messages)))  # debug
     return g.encoder.jsonify(result)

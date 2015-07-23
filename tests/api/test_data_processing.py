@@ -36,9 +36,8 @@ def test_contact_rankings(db, api_client, default_namespace):
         add_fake_message(db.session, namespace_id, fake_thread,
                          subject='Froop',
                          from_addr=[me],
-                         to_addr=recipients_list)
-
-    db.session.commit()
+                         to_addr=recipients_list,
+                         add_sent_category=True)
 
     # Check contact rankings
     resp = api_client.client.get(api_client.full_path(
@@ -117,9 +116,8 @@ def test_contact_groups(db, api_client, default_namespace):
         add_fake_message(db.session, namespace_id, fake_thread,
                          subject='Froop',
                          from_addr=[me],
-                         to_addr=recipients_list)
-
-    db.session.commit()
+                         to_addr=recipients_list,
+                         add_sent_category=True)
 
     # Check contact groups
     resp = api_client.client.get(api_client.full_path(
