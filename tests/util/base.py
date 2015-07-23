@@ -357,7 +357,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
                      received_date=None, subject='',
                      body='', snippet='', add_sent_category=False):
-    from inbox.models import Message
+    from inbox.models import Message, Category
     from inbox.contacts.process_mail import update_contacts_from_message
     m = Message()
     m.namespace_id = namespace_id
@@ -381,10 +381,10 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
         db_session.commit()
 
     if add_sent_category:
-        from inbox.models.category import Category
-        cat = Category.find_or_create(
+        category = Category.find_or_create(
             db_session, namespace_id, 'sent', 'sent', type_='folder')
-        m.add_category(cat)
+        if category not in m.categories:
+            m.categories.add(category)
         db_session.commit()
 
     return m
