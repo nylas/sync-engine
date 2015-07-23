@@ -511,15 +511,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         # TODO[k]: Update from pending actions here?
 
-    def add_category(self, category):
-        if category not in self.categories:
-            self.categories.add(category)
-
-    def remove_category(self, category):
-        if category not in self.categories:
-            return
-        self.categories.remove(category)
-
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
 Index('ix_message_subject', Message.subject, mysql_length=191)

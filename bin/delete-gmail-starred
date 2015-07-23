@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+from inbox.models import Label
+from inbox.models.backends.gmail import GmailAccount
+from inbox.models.session import session_scope
+
+
+def delete_starred_labels():
+    with session_scope() as db_session:
+        q = db_session.query(Label).filter(
+            Label.canonical_name == 'starred')
+
+        print 'Found {} "starred" labels for {} GmailAccounts'.format(
+            q.count(), db_session.query(GmailAccount).count())
+
+        for l in q.all():
+            print 'Deleting "starred" label for account_id: {}'.format(
+                l.account.id)
+            db_session.delete(l)
+            db_session.commit()
+
+
+if __name__ == '__main__':
+    delete_starred_labels()
