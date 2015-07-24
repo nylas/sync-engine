@@ -127,7 +127,12 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             query = query.options(
                 subqueryload(Thread.messages).
                 load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                          'cc_addr', 'bcc_addr'))
+                          'cc_addr', 'bcc_addr', 'is_read', 'is_starred')
+                .joinedload(Message.messagecategories)
+                .joinedload(MessageCategory.category),
+                subqueryload(Thread.messages)
+                .joinedload(Message.parts)
+                .joinedload(Part.block))
 
     if sort and sort == 'received_recent_date':
         query = query.order_by(desc(Thread.receivedrecentdate)).limit(limit)
