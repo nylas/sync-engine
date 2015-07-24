@@ -114,20 +114,22 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     # representations faster.
     if view != 'ids':
         if view == 'expanded':
-            query = query.options(
-                subqueryload(Thread.messages).
-                load_only('public_id', 'subject', 'is_draft', 'version',
-                          'from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
-                          'received_date', 'snippet', 'is_read',
-                          'reply_to_message_id', 'reply_to')
-                .joinedload(Message.parts)
-                .joinedload(Part.block))
-
+            load_only_columns = ('public_id', 'subject', 'is_draft', 'version',
+                                 'from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
+                                 'received_date', 'snippet', 'is_read',
+                                 'reply_to_message_id', 'reply_to')
         else:
-            query = query.options(
-                subqueryload(Thread.messages).
-                load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                          'cc_addr', 'bcc_addr'))
+            load_only_columns = ('public_id', 'is_draft', 'from_addr',
+                                 'to_addr', 'cc_addr', 'bcc_addr', 'is_read',
+                                 'is_starred')
+        query = query.options(
+            subqueryload(Thread.messages).
+            load_only(*load_only_columns)
+            .joinedload(Message.messagecategories)
+            .joinedload(MessageCategory.category),
+            subqueryload(Thread.messages)
+            .joinedload(Message.parts)
+            .joinedload(Part.block))
 
     if sort and sort == 'received_recent_date':
         query = query.order_by(desc(Thread.receivedrecentdate)).limit(limit)
