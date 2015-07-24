@@ -32,7 +32,6 @@ from nylas.logging import get_logger
 from inbox.models import Message, Folder, Namespace, Account, Label
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
-from inbox.models.constants import MAX_LABEL_NAME_LENGTH
 from inbox.mailsync.backends.base import (mailsync_session_scope,
                                           THROTTLE_WAIT)
 from inbox.mailsync.backends.imap.generic import UIDStack
@@ -72,20 +71,6 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
         """
         account = db_session.query(Account).get(self.account_id)
-        remote_label_names = {l.display_name.rstrip()[:MAX_LABEL_NAME_LENGTH]
-                              for l in raw_folders}
-
-        local_labels = {l.name: l for l in db_session.query(Label).filter(
-                        Label.account_id == self.account_id).all()}
-
-        # Delete labels no longer present on the remote.
-        # Note that the label with canonical_name='all' cannot be deleted;
-        # remote_label_names will always contain an entry corresponding to it.
-        discard = set(local_labels) - set(remote_label_names)
-        for name in discard:
-            log.info('Label deleted from remote',
-                     account_id=self.account_id, name=name)
-            db_session.delete(local_labels[name])
 
         # Create new labels, folders
         for raw_folder in raw_folders:
