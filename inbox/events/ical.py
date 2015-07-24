@@ -602,18 +602,13 @@ def _generate_rsvp(status, account, event):
     organizer_name, organizer_email = event.owner.split('<')
     organizer_email = organizer_email[:-1]
 
-    organizer = icalendar.vCalAddress("MAILTO:{}".format(organizer_email))
-    icalevent['organizer'] = organizer
-
     icalevent['sequence'] = event.sequence_number
     icalevent['X-MICROSOFT-CDO-APPT-SEQUENCE'] = icalevent['sequence']
 
     if event.status == 'confirmed':
         icalevent['status'] = 'CONFIRMED'
 
-    if event.last_modified is not None:
-        icalevent['last-modified'] = serialize_datetime(event.last_modified)
-        icalevent['dtstamp'] = icalevent['last-modified']
+    icalevent['dtstamp'] = serialize_datetime(datetime.utcnow())
 
     if event.start is not None:
         icalevent['dtstart'] = serialize_datetime(event.start)
@@ -662,17 +657,10 @@ def send_rsvp(ical_data, event, body_text, status, account):
 
     body = mime.create.multipart('alternative')
     body.append(
-        mime.create.text('html', body_text),
+        mime.create.text('plain', ''),
         mime.create.text('calendar;method=REPLY', ical_txt))
 
-    attachment = mime.create.attachment(
-                     'application/ics',
-                     ical_txt,
-                     'invite.ics',
-                     disposition='attachment')
-
     msg.append(body)
-    msg.append(attachment)
 
     msg.headers['Reply-To'] = account.email_address
     msg.headers['From'] = account.email_address
@@ -692,12 +680,14 @@ def send_rsvp(ical_data, event, body_text, status, account):
         msg.headers['To'] = rsvp_to
 
     assert status in ['yes', 'no', 'maybe']
+
     if status == 'yes':
-        msg.headers['Subject'] = 'Accepted: {}'.format(event.title)
+         msg.headers['Subject'] = 'Accepted: {}'.format(event.message.subject)
     elif status == 'maybe':
-        msg.headers['Subject'] = 'Tentatively accepted: {}'.format(event.title)
+        msg.headers['Subject'] = 'Tentatively accepted: {}'.format(
+            event.message.subject)
     elif status == 'no':
-        msg.headers['Subject'] = 'Declined: {}'.format(event.title)
+        msg.headers['Subject'] = 'Declined: {}'.format(event.message.subject)
 
     final_message = msg.to_string()
 
