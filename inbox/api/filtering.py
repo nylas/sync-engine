@@ -260,7 +260,10 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     # Eager-load related attributes to make constructing API representations
     # faster.
-    query = query.options(subqueryload(Message.parts).joinedload(Part.block))
+    query = query.options(
+                subqueryload(Message.messagecategories).
+                joinedload(MessageCategory.category),
+                subqueryload(Message.parts).joinedload(Part.block))
 
     return query.all()
 
