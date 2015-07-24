@@ -124,7 +124,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
                                  'is_starred')
         query = query.options(
             subqueryload(Thread.messages).
-            load_only(**load_only_columns)
+            load_only(*load_only_columns)
             .joinedload(Message.messagecategories)
             .joinedload(MessageCategory.category),
             subqueryload(Thread.messages)
