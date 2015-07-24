@@ -139,6 +139,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'subject': obj.subject,
             'participants': format_address_list(obj.participants),
             'last_message_timestamp': obj.recentdate,
+            'last_message_received_timestamp': obj.receivedrecentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
             'unread': obj.unread,
