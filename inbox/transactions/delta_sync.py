@@ -21,7 +21,9 @@ QUERY_OPTIONS = {
     Thread: (
         subqueryload('messages').load_only(
             'public_id', 'is_draft', 'from_addr', 'to_addr', 'cc_addr',
-            'bcc_addr'),
+            'bcc_addr', 'is_read', 'is_starred').
+        joinedload('messagecategories').joinedload('category'),
+        subqueryload('messages').joinedload('parts').joinedload('block')
     )
 }
 

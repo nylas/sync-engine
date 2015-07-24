@@ -263,7 +263,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     query = query.options(
                 subqueryload(Message.messagecategories).
                 joinedload(MessageCategory.category),
-                subqueryload(Message.parts).joinedload(Part.block))
+                subqueryload(Message.parts).joinedload(Part.block),
+                subqueryload(Message.events))
 
     return query.all()
 

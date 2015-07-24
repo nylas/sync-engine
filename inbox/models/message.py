@@ -41,7 +41,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                           index=True, nullable=False)
     namespace = relationship(
         'Namespace',
-        lazy='joined',
         load_on_pending=True)
 
     # Do delete messages if their associated thread is deleted.
