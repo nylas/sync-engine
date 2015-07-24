@@ -1,5 +1,5 @@
 from sqlalchemy import and_, or_, desc, asc, func
-from sqlalchemy.orm import subqueryload, contains_eager
+from sqlalchemy.orm import subqueryload, contains_eager, joinedload
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread,
                           Block, Part, MessageCategory, Category)
@@ -157,9 +157,6 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query = db_session.query(Message.public_id)
     else:
         query = db_session.query(Message)
-        query = query.options(contains_eager(Message.thread))
-
-    query = query.join(Thread)
 
     filters = [Message.namespace_id == namespace_id]
     if drafts:
@@ -176,6 +173,11 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if starred is not None:
         filters.append(Message.is_starred == starred)
+
+    if any([thread_public_id, started_before, started_after,
+            last_message_before, last_message_after]):
+        query = query.options(contains_eager(Message.thread))
+        query = query.join(Thread)
 
     if thread_public_id is not None:
         filters.append(Thread.public_id == thread_public_id)
