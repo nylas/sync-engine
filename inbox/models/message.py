@@ -505,7 +505,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             categories.update(i.categories)
 
         if account.category_type == 'folder':
-            categories = [select_category(categories)]
+            categories = [select_category(categories)] if categories else []
 
         self.categories = categories
 
