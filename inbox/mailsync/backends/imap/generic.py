@@ -150,8 +150,11 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.provider_name = provider_name
+
+        # Metric flags for sync performance
         self.is_initial_sync = False
         self.is_first_sync = False
+        self.is_first_message = False
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
@@ -163,6 +166,7 @@ class FolderSyncEngine(Greenlet):
             if folder:
                 self.is_initial_sync = folder.initial_sync_end is None
                 self.is_first_sync = folder.initial_sync_start is None
+                self.is_first_message = self.is_first_sync
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -558,16 +562,38 @@ class FolderSyncEngine(Greenlet):
         if self.state == 'initial' and len(new_uids):
             self._report_message_velocity(datetime.utcnow() - start,
                                           len(new_uids))
+        if self.is_first_message:
+            self._report_first_message()
+            self.is_first_message = False
 
         return len(new_uids)
+
+    def _report_first_message(self):
+        now = datetime.utcnow()
+
+        with mailsync_session_scope() as db_session:
+            account = db_session.query(Account).get(self.account_id)
+            account_created = account.created_at
+
+        latency = (now - account_created).total_seconds() * 1000
+        metrics = [
+            '.'.join(['providers', self.provider_name, 'first_message']),
+            '.'.join(['providers', 'overall', 'first_message'])
+        ]
+
+        for metric in metrics:
+            statsd_client.timing(metric, latency)
 
     def _report_message_velocity(self, timedelta, num_uids):
         latency = (timedelta).total_seconds() * 1000
         latency_per_uid = float(latency) / num_uids
-        statsd_client.timing(
+        metrics = [
             '.'.join(['providers', self.provider_name,
                       'message_velocity']),
-            latency_per_uid)
+            '.'.join(['providers', 'overall', 'message_velocity'])
+        ]
+        for metric in metrics:
+            statsd_client.timing(metric, latency_per_uid)
 
     def update_metadata(self, crispin_client, updated):
         """ Update flags (the only metadata that can change). """

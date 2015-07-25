@@ -337,6 +337,10 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             self._report_message_velocity(datetime.utcnow() - start,
                                           len(new_uids))
 
+        if self.is_first_message:
+            self._report_first_message()
+            self.is_first_message = False
+
         self.saved_uids.update(new_uids)
         return len(new_uids)
 
