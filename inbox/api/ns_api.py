@@ -478,7 +478,7 @@ def folders_labels_api_impl(public_id):
     try:
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
-            Category.public_id == public_id).all()
+            Category.public_id == public_id).first()
     except NoResultFound:
         raise NotFoundError('Object not found')
     return g.encoder.jsonify(category)

@@ -39,8 +39,8 @@ def update_thread(thread, request_data, db_session):
     else:
         folder = parse_folder(request_data, db_session, thread.namespace_id)
     if request_data:
-        raise InputError(u'Unexpected attribute {}'.
-                         format(request_data.keys[0]))
+        raise InputError(u'Unexpected attribute: {}'.
+                         format(request_data.keys()[0]))
 
     # -- Begin tags API shim
     if 'unread' in added_tags:

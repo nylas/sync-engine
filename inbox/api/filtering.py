@@ -90,7 +90,8 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         category_query = db_session.query(Message.thread_id). \
             join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
-                   or_(Category.name == in_, Category.display_name == in_)). \
+                   or_(Category.name == in_, Category.display_name == in_,
+                       Category.public_id == in_)). \
             subquery()
         query = query.filter(Thread.id.in_(category_query))
 
