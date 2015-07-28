@@ -1267,10 +1267,20 @@ def sync_deltas():
                           location='args')
     g.parser.add_argument('timeout', type=int,
                           default=LONG_POLL_REQUEST_TIMEOUT, location='args')
+    # - Begin shim -
+    # Remove after folders and labels exposed in the Delta API for everybody,
+    # right now, only expose for Edgehill.
+    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
+    # - End shim -
     # TODO(emfree): should support `expand` parameter in delta endpoints.
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
+    # - Begin shim -
+    exclude_folders = args.get('exclude_folders')
+    if exclude_folders is None:
+        exclude_folders = True
+    # - End shim -
     cursor = args['cursor']
     timeout = args['timeout']
 
@@ -1297,7 +1307,7 @@ def sync_deltas():
         with session_scope() as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
-                exclude_types, include_types)
+                exclude_types, include_types, exclude_folders)
 
         response = {
             'cursor_start': cursor,
@@ -1353,12 +1363,24 @@ def stream_changes():
                           location='args')
     g.parser.add_argument('include_types', type=valid_delta_object_types,
                           location='args')
+    # - Begin shim -
+    # Remove after folders and labels exposed in the Delta API for everybody,
+    # right now, only expose for Edgehill.
+    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
+    # - End shim -
+
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 1800
     transaction_pointer = None
     cursor = args['cursor']
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
+
+    # Begin shim #
+    exclude_folders = args.get('exclude_folders')
+    if exclude_folders is None:
+        exclude_folders = True
+    # End shim #
 
     if include_types and exclude_types:
         return err(400, "Invalid Request. Cannot specify both include_types"
@@ -1382,7 +1404,7 @@ def stream_changes():
     generator = delta_sync.streaming_change_generator(
         g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=1, timeout=timeout, exclude_types=exclude_types,
-        include_types=include_types)
+        include_types=include_types, exclude_folders=exclude_folders)
     return Response(generator, mimetype='text/event-stream')
 
 
