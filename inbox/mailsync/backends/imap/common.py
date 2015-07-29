@@ -11,10 +11,13 @@ Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 
 """
+from datetime import datetime
+
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql.expression import func
 
 from inbox.contacts.process_mail import update_contacts_from_message
-from inbox.models import Message, Folder
+from inbox.models import Account, Message, Folder, ActionLog
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 from inbox.models.util import reconcile_message
 
@@ -28,9 +31,27 @@ def all_uids(account_id, session, folder_id):
         ImapUid.folder_id == folder_id)}
 
 
-def update_message_metadata(session, imapuid):
+def update_message_metadata(session, account, message, is_draft):
     # Update the message's metadata.
-    imapuid.message.update_metadata(imapuid.is_draft)
+    uids = message.imapuids
+
+    message.is_read = any(i.is_seen for i in uids)
+    message.is_starred = any(i.is_flagged for i in uids)
+    message.is_draft = is_draft
+
+    categories = set()
+    for i in uids:
+        categories.update(i.categories)
+
+    if account.category_type == 'folder':
+        categories = [_select_category(categories)] if categories else []
+
+    if not message.categories_change_count:
+        # No syncback actions scheduled, so there is no danger of
+        # overwriting modified local state.
+        message.categories = categories
+    else:
+        _update_categories(session, message, categories)
 
 
 def update_metadata(account_id, session, folder_name, folder_id, uids,
@@ -46,6 +67,8 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
     if not uids:
         return
 
+    account = session.query(Account).get(account_id)
+
     for item in session.query(ImapUid).filter(
             ImapUid.account_id == account_id,
             ImapUid.msg_uid.in_(uids),
@@ -60,7 +83,8 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
             changed = True
 
         if changed:
-            update_message_metadata(session, item)
+            update_message_metadata(session, account, item.message,
+                                    item.is_draft)
 
 
 def remove_deleted_uids(account_id, session, uids, folder_id):
@@ -82,12 +106,15 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
             session.delete(uid)
         session.commit()
 
+        account = session.query(Account).get(account_id)
+
         for message in affected_messages:
             if not message.imapuids and message.is_draft:
                 # Synchronously delete drafts.
                 session.delete(message)
             else:
-                message.update_metadata(message.is_draft)
+                update_message_metadata(session, account, message,
+                                        message.is_draft)
                 if not message.imapuids:
                     # But don't outright delete messages. Just mark them as
                     # 'deleted' and wait for the asynchronous
@@ -166,8 +193,44 @@ def create_imap_message(db_session, log, account, folder, msg):
 
     # Update the message's metadata
     with db_session.no_autoflush:
-        new_message.update_metadata(imapuid.is_draft)
+        update_message_metadata(db_session, account, new_message,
+                                imapuid.is_draft)
 
     update_contacts_from_message(db_session, new_message, account.namespace)
 
     return imapuid
+
+
+def _select_category(categories):
+    # TODO[k]: Implement proper ranking function
+    return list(categories)[0]
+
+
+def _update_categories(db_session, message, synced_categories):
+    now = datetime.utcnow()
+
+    # We make the simplifying assumption that only the latest syncback action
+    # matters, since it reflects the current local state.
+    actionlog_id = db_session.query(func.max(ActionLog.id)).filter(
+        ActionLog.namespace_id == message.namespace_id,
+        ActionLog.table_name == 'message',
+        ActionLog.record_id == message.id,
+        ActionLog.action.in_(['change_labels', 'move'])).scalar()
+    actionlog = db_session.query(ActionLog).get(actionlog_id)
+
+    # We completed the syncback action /long enough ago/ (on average and
+    # with an error margin) that:
+    # - if it completed successfully, sync has picked it up; so, safe to
+    # overwrite message.categories
+    # - if syncback failed, the local changes made can be overwritten
+    # without confusing the API user.
+    # TODO[k]/(emfree): Implement proper rollback of local state in this case.
+    # This is needed in order to pick up future changes to the message,
+    # the local_changes counter is reset as well.
+    if actionlog.status in ('successful', 'failed') and \
+            (now - actionlog.updated_at).seconds >= 90:
+        message.categories = synced_categories
+        message.categories_change_count = 0
+
+    # Do /not/ overwrite message.categories in case of a recent local change -
+    # namely, a still 'pending' action or one that completed recently.

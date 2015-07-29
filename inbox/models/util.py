@@ -118,10 +118,10 @@ def delete_namespace(account_id, namespace_id):
 
     query = 'DELETE FROM {} WHERE {}={};'
 
-    for table in ['folder', 'calendar', 'namespace', 'account']:
+    for table in ['folder', 'label', 'calendar', 'namespace', 'account']:
         if table == 'calendar':
             filter_ = ('namespace_id', namespace_id)
-        elif table == 'folder':
+        elif table in ('folder', 'label'):
             filter_ = ('account_id', account_id)
         elif table == 'namespace':
             filter_ = ('id', namespace_id)

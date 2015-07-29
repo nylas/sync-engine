@@ -364,6 +364,7 @@ class FolderSyncEngine(Greenlet):
         # download messages, if necessary - in case a message has changed UID -
         # update UIDs, and discard orphaned messages. -siro
         with mailsync_session_scope() as db_session:
+            account = db_session.query(Account).get(self.account_id)
             folder_info = db_session.query(ImapFolderInfo). \
                 filter_by(account_id=self.account_id,
                           folder_id=self.folder_id).one()
@@ -403,7 +404,8 @@ class FolderSyncEngine(Greenlet):
                         db_session.add(uid)
 
                         # Update the existing message's metadata too
-                        common.update_message_metadata(db_session, uid)
+                        common.update_message_metadata(db_session, account,
+                                                       message, uid.is_draft)
 
                         del data_sha256_message[data_sha256]
                     else:
