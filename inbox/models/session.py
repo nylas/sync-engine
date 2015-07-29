@@ -8,7 +8,8 @@ from sqlalchemy.exc import OperationalError
 
 from inbox.config import config
 from inbox.ignition import main_engine
-from inbox.log import get_logger
+from inbox.util.stats import statsd_client
+from inbox.log import get_logger, _find_first_app_frame_and_name
 log = get_logger()
 
 
@@ -36,6 +37,29 @@ def new_session(engine, versioned=True):
 
             """
             create_revisions(session)
+
+        # Make statsd calls for transaction times
+        transaction_start_map = {}
+        frame, modname = _find_first_app_frame_and_name(
+                ignores=['sqlalchemy', 'inbox.models.session', 'inbox.log',
+                         'contextlib'])
+        funcname = frame.f_code.co_name
+        modname = modname.replace(".", "-")
+        metric_name = 'db.{}.{}'.format(modname, funcname)
+
+        @event.listens_for(session, 'after_transaction_create')
+        def after_transaction_create(session, transaction):
+            transaction_start_map[hash(transaction)] = time.time()
+
+        @event.listens_for(session, 'after_transaction_end')
+        def after_transaction_end(session, transaction):
+            start_time = transaction_start_map.get(hash(transaction))
+            if not start_time:
+                return
+
+            latency = int((time.time() - start_time) * 1000)
+            statsd_client.timing(metric_name, latency)
+            statsd_client.incr(metric_name)
 
     return session
 
