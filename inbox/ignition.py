@@ -1,15 +1,18 @@
-from sqlalchemy import create_engine
+from socket import gethostname
+from sqlalchemy import create_engine, event
 
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 from inbox.config import db_uri, config
+from inbox.util.stats import statsd_client
 
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 # Sane default of max overflow=5 if value missing in config.
 DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
+_hostname = None
 
 
 def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
-        echo=False):
+                echo=False):
     engine = create_engine(db_uri(),
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
@@ -18,6 +21,21 @@ def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
                            pool_recycle=3600,
                            max_overflow=max_overflow,
                            connect_args={'charset': 'utf8mb4'})
+
+    @event.listens_for(engine, 'checkout')
+    def receive_checkout(dbapi_connection, connection_record,
+                         connection_proxy):
+        '''Log checkedout and overflow when a connection is checked out'''
+        hostname = gethostname().replace(".", "-")
+
+        statsd_client.gauge(".".join(
+            ["dbconn", dbapi_connection.db, hostname, "checkedout"]),
+            connection_proxy._pool.checkedout())
+
+        statsd_client.gauge(".".join(
+            ["dbconn", dbapi_connection.db, hostname, "overflow"]),
+            connection_proxy._pool.overflow())
+
     return engine
 
 
