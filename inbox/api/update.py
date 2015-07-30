@@ -190,7 +190,6 @@ def update_message_labels(message, db_session, added_categories,
     for cat in removed_categories:
         message.categories.discard(cat)
     if removed_labels or added_labels:
-        message.categories_change_count += 1
         schedule_action('change_labels', message, message.namespace_id,
                         removed_labels=removed_labels,
                         added_labels=added_labels,
@@ -201,6 +200,5 @@ def update_message_folder(message, db_session, category):
     # STOPSHIP(emfree): what about sent/inbox duality?
     if category not in message.categories:
         message.categories = [category]
-        message.categories_change_count += 1
         schedule_action('move', message, message.namespace_id, db_session,
                         destination=category.display_name)

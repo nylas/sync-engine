@@ -15,11 +15,11 @@ from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import JSON, json_field_too_long
 from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
-from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
+from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.log import get_logger
 log = get_logger()
 
@@ -112,9 +112,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
     inbox_uid = Column(String(64), nullable=True, index=True)
-
-    categories_change_count = Column(Integer, nullable=False,
-                                     server_default='0')
 
     def regenerate_inbox_uid(self):
         """
@@ -491,6 +488,28 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         parsed = mime.from_string(self.full_body.data)
         return parsed.headers.get(header)
 
+    def update_metadata(self, is_draft):
+        account = self.namespace.account
+        if account.discriminator == 'easaccount':
+            uids = self.easuids
+        else:
+            uids = self.imapuids
+
+        self.is_read = any(i.is_seen for i in uids)
+        self.is_starred = any(i.is_flagged for i in uids)
+        self.is_draft = is_draft
+
+        categories = set()
+        for i in uids:
+            categories.update(i.categories)
+
+        if account.category_type == 'folder':
+            categories = [select_category(categories)] if categories else []
+
+        self.categories = categories
+
+        # TODO[k]: Update from pending actions here?
+
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
 Index('ix_message_subject', Message.subject, mysql_length=191)
@@ -533,3 +552,8 @@ class MessageCategory(MailSyncBase):
 
 Index('message_category_ids',
       MessageCategory.message_id, MessageCategory.category_id)
+
+
+def select_category(categories):
+    # TODO[k]: Implement proper ranking function
+    return list(categories)[0]
