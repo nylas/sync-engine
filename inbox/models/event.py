@@ -388,15 +388,15 @@ class RecurringEvent(Event):
         if end:
             overrides = overrides.filter(RecurringEventOverride.end < end)
         events = list(overrides)
-        uids = [e.uid for e in events]
+        overridden_starts = [e.original_start_time for e in events]
         # Remove cancellations from the override set
         events = filter(lambda e: not e.cancelled, events)
         # If an override has not changed the start time for an event, including
         # if the override is a cancellation, the RRULE doesn't include an
         # exception for it. Filter out unnecessary inflated events
-        # to cover this case: they will have the same UID.
+        # to cover this case by checking the start time.
         for e in self.inflate(start, end):
-            if e.uid not in uids:
+            if e.start not in overridden_starts:
                 events.append(e)
         return sorted(events, key=lambda e: e.start)
 
