@@ -8,7 +8,6 @@ from inbox.util.stats import statsd_client
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 # Sane default of max overflow=5 if value missing in config.
 DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
-_hostname = None
 
 
 def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
