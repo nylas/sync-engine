@@ -462,7 +462,15 @@ get_default_providers = lambda: {
 	"imap": ("imap.qq.com", 993),
 	"smtp": ("smtp.qq.com", 465),
 	"auth": "password",
-	"domains": ["qq.com", "vip.qq.com", "foxmail.com"],
+	"domains": ["qq.com", "vip.qq.com"],
+	"mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+    },
+    "foxmail" : {
+	"type": "generic",
+	"imap": ("imap.exmail.qq.com", 993),
+	"smtp": ("smtp.exmail.qq.com", 465),
+	"auth": "password",
+	"domains": ["foxmail.com"],
 	"mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "qq_enterprise": {
