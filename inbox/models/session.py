@@ -45,7 +45,8 @@ def new_session(engine, versioned=True):
                          'contextlib'])
         funcname = frame.f_code.co_name
         modname = modname.replace(".", "-")
-        metric_name = 'db.{}.{}'.format(modname, funcname)
+        metric_name = 'db.{}.{}.{}'.format(engine.url.database, modname,
+                                           funcname)
 
         @event.listens_for(session, 'after_transaction_create')
         def after_transaction_create(session, transaction):
