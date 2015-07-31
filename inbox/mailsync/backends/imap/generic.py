@@ -396,14 +396,14 @@ class FolderSyncEngine(Greenlet):
 
                         # Create a new imapuid
                         uid = ImapUid(msg_uid=raw_message.uid,
-                                      message_id=message.id,
+                                      message=message,
                                       account_id=self.account_id,
                                       folder_id=self.folder_id)
                         uid.update_flags(raw_message.flags)
                         db_session.add(uid)
 
                         # Update the existing message's metadata too
-                        common.update_message_metadata(db_session, uid)
+                        uid.message.update_metadata(uid.is_draft)
 
                         del data_sha256_message[data_sha256]
                     else:

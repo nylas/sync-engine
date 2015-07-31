@@ -28,11 +28,6 @@ def all_uids(account_id, session, folder_id):
         ImapUid.folder_id == folder_id)}
 
 
-def update_message_metadata(session, imapuid):
-    # Update the message's metadata.
-    imapuid.message.update_metadata(imapuid.is_draft)
-
-
 def update_metadata(account_id, session, folder_name, folder_id, uids,
                     new_flags):
     """
@@ -60,7 +55,7 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
             changed = True
 
         if changed:
-            update_message_metadata(session, item)
+            item.message.update_metadata(item.is_draft)
 
 
 def remove_deleted_uids(account_id, session, uids, folder_id):

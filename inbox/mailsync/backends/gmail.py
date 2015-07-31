@@ -481,7 +481,7 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                                         acc.namespace.id)])
 
                 # Stop Folder.find_or_create()'s query from triggering a flush.
-                with db_session.no_autoflush as session:
+                with db_session.no_autoflush:
                     new_imapuids = [ImapUid(
                         account=acc,
                         folder=Folder.find_or_create(
@@ -494,8 +494,7 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                         if uid.msg_uid in flags:
                             uid.update_flags(flags[uid.msg_uid].flags)
                             uid.update_labels(flags[uid.msg_uid].labels)
-
-                            common.update_message_metadata(session, uid)
+                            uid.message.update_metadata(uid.is_draft)
 
                 db_session.add_all(new_imapuids)
                 db_session.commit()
