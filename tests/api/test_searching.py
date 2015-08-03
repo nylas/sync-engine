@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from pytest import fixture
+from inbox.models import Folder
 from inbox.models.backends.imap import ImapUid
 from inbox.search.base import get_search_client
 from tests.util.base import (add_fake_message, add_fake_thread,
@@ -255,4 +256,35 @@ def test_imap_thread_search(imap_api_client, generic_account,
     threads = imap_api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
     for sorted_thread, result_thread in zip(sorted_imap_threads, threads):
+        assert sorted_thread.public_id == result_thread['id']
+
+
+def test_imap_search_unicode(db, imap_api_client, generic_account,
+                             patch_crispin_client,
+                             patch_handler_from_provider,
+                             sorted_imap_threads):
+    Folder.find_or_create(db.session, generic_account,
+                          '存档', '存档')
+    search_client = get_search_client(generic_account)
+    assert search_client.__class__.__name__ == 'IMAPSearchClient'
+
+    threads = imap_api_client.get_data('/threads/search?q=存档')
+
+    for sorted_thread, result_thread in zip(sorted_imap_threads, threads):
+        assert sorted_thread.public_id == result_thread['id']
+
+
+def test_gmail_search_unicode(db, api_client, test_gmail_thread,
+                              default_account,
+                              patch_crispin_client,
+                              patch_handler_from_provider,
+                              sorted_gmail_threads):
+    Folder.find_or_create(db.session, default_account,
+                          '存档', '存档')
+    search_client = get_search_client(default_account)
+    assert search_client.__class__.__name__ == 'GmailSearchClient'
+
+    threads = api_client.get_data('/threads/search?q=存档')
+
+    for sorted_thread, result_thread in zip(sorted_gmail_threads, threads):
         assert sorted_thread.public_id == result_thread['id']

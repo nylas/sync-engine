@@ -18,8 +18,9 @@ class GmailSearchClient(IMAPSearchClient):
                                             account.email_address,
                                             conn,
                                             readonly=True)
-        self.log.debug('Searching {} for `{}`'
-                        .format(account.email_address, search_query))
+        self.log.info('Searching account',
+                      account_id=self.account_id,
+                      query=search_query)
 
         all_messages = set()
         folders = db_session.query(Folder).filter(
@@ -38,9 +39,15 @@ class GmailSearchClient(IMAPSearchClient):
     def search_folder(self, db_session, crispin_client, folder, search_query):
         crispin_client.select_folder(folder.name, uidvalidity_cb)
         try:
-            matching_uids = crispin_client.conn.gmail_search(search_query)
+            try:
+                query = search_query.encode('ascii')
+                matching_uids = crispin_client.conn.gmail_search(query)
+            except UnicodeEncodeError:
+                matching_uids = \
+                    crispin_client.conn.gmail_search(search_query,
+                                                     charset="UTF-8")
         except Exception as e:
-            self.log.debug('Search error: {}'.format(e))
+            self.log.debug('Search error', error=e)
             raise
 
         all_messages = db_session.query(Message) \
@@ -50,9 +57,9 @@ class GmailSearchClient(IMAPSearchClient):
                     ImapUid.account_id == self.account_id,
                     ImapUid.msg_uid.in_(matching_uids)).all()
 
-        self.log.debug('Found {} messages for folder {}. '
-                        'We have synced {} of them.'
-                        .format(len(matching_uids), folder.name,
-                                len(all_messages)))
+        self.log.debug('Search found message for folder',
+                        folder_name=folder.name,
+                        matching_uids=len(matching_uids),
+                        messages_synced=len(all_messages))
 
         return all_messages

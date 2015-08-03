@@ -28,8 +28,8 @@ class IMAPSearchClient(object):
         try:
             acct_provider_info = provider_info(account.provider)
         except NotSupportedError:
-            self.log.warn('Account provider {} not supported.'
-                          .format(account.provider))
+            self.log.warn('Account provider not supported',
+                          provider=account.provider)
             raise
 
         crispin_client = CrispinClient(self.account_id,
@@ -37,10 +37,15 @@ class IMAPSearchClient(object):
                                         account.email_address,
                                         conn,
                                         readonly=True)
-        self.log.info('Searching {} for `{}`'
-                      .format(account.email_address, search_query))
+        self.log.info('Searching account',
+                      account_id=self.account_id,
+                      query=search_query)
         if ':' not in search_query:
-            criteria = 'TEXT {}'.format(search_query)
+            try:
+                query = search_query.encode('ascii')
+                criteria = 'TEXT {}'.format(query)
+            except UnicodeEncodeError:
+                criteria = u'TEXT {}'.format(search_query)
         else:
             criteria = re.sub('(\w+:[ ]?)', format_key, search_query)
 
@@ -62,8 +67,8 @@ class IMAPSearchClient(object):
         messages = self.search_messages(db_session, search_query)
         all_threads = {m.thread for m in messages}
 
-        self.log.debug('Found {} threads.'
-                       .format(len(all_threads)))
+        self.log.debug('Search found threads for folder',
+                       threads=len(all_threads))
 
         return sorted(all_threads, key=lambda thread: thread.recentdate,
                       reverse=True)
@@ -73,9 +78,13 @@ class IMAPSearchClient(object):
         account = db_session.query(Account).get(self.account_id)
         crispin_client.select_folder(folder.name, uidvalidity_cb)
         try:
-            matching_uids = crispin_client.conn.search(criteria=criteria)
+            if isinstance(criteria, unicode):
+                matching_uids = crispin_client.conn.search(criteria=criteria,
+                                                           charset="UTF-8")
+            else:
+                matching_uids = crispin_client.conn.search(criteria=criteria)
         except IMAP4.error as e:
-            self.log.warn('Search error: {}'.format(e))
+            self.log.warn('Search error', error=e)
             raise
 
         all_messages = db_session.query(Message) \
@@ -85,9 +94,9 @@ class IMAPSearchClient(object):
                     ImapUid.account_id == account.id,
                     ImapUid.msg_uid.in_(matching_uids)).all()
 
-        self.log.info('Found {} messages for folder {}. '
-                        'We have synced {} of them.'
-                        .format(len(matching_uids), folder.name,
-                                len(all_messages)))
+        self.log.debug('Search found message for folder',
+                        folder_name=folder.name,
+                        matching_uids=len(matching_uids),
+                        messages_synced=len(all_messages))
 
         return all_messages
