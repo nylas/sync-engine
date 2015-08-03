@@ -26,13 +26,16 @@ def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
                          connection_proxy):
         '''Log checkedout and overflow when a connection is checked out'''
         hostname = gethostname().replace(".", "-")
+        process_num = str(config.get("PROCESS_NUM", "unknown"))
 
         statsd_client.gauge(".".join(
-            ["dbconn", dbapi_connection.db, hostname, "checkedout"]),
+            ["dbconn", dbapi_connection.db, hostname, process_num,
+             "checkedout"]),
             connection_proxy._pool.checkedout())
 
         statsd_client.gauge(".".join(
-            ["dbconn", dbapi_connection.db, hostname, "overflow"]),
+            ["dbconn", dbapi_connection.db, hostname, process_num,
+             "overflow"]),
             connection_proxy._pool.overflow())
 
     return engine

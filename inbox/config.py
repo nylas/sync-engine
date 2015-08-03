@@ -101,9 +101,14 @@ def _get_local_feature_flags(config):
         flags = config.get('FEATURE_FLAGS', '').split()
     config['FEATURE_FLAGS'] = flags
 
+def _get_process_num(config):
+    if os.environ.get('PROCESS_NUM') is not None:
+        config['PROCESS_NUM'] = os.environ.get("PROCESS_NUM")
+
 config = Configuration()
 _update_config_from_env(config)
 _get_local_feature_flags(config)
+_get_process_num(config)
 
 if 'MYSQL_PASSWORD' not in config:
     raise Exception(
