@@ -12,23 +12,29 @@ def user_console(user_email_address):
         account = db_session.query(Account).filter_by(
             email_address=user_email_address).one()
 
-        with writable_connection_pool(account.id, pool_size=1).get()\
-                as crispin_client:
-            if account.provider == 'gmail' \
-                    and 'all' in crispin_client.folder_names():
-                crispin_client.select_folder(
-                    crispin_client.folder_names()['all'][0],
-                    uidvalidity_cb)
-
+        if account.provider == 'eas':
             banner = """
-    You can access the crispin instance with the 'crispin_client' variable.
+        You can access the account instance with the 'account' variable.
+        """
+        else:
+            with writable_connection_pool(account.id, pool_size=1).get()\
+                    as crispin_client:
+                if account.provider == 'gmail' \
+                        and 'all' in crispin_client.folder_names():
+                    crispin_client.select_folder(
+                        crispin_client.folder_names()['all'][0],
+                        uidvalidity_cb)
 
-    IMAPClient docs are at:
+                banner = """
+        You can access the crispin instance with the 'crispin_client' variable,
+        and the account instance with the 'account' variable.
 
-        http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
-    """
+        IMAPClient docs are at:
 
-            IPython.embed(banner1=banner)
+            http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
+        """
+
+        IPython.embed(banner1=banner)
 
 
 def start_console(user_email_address=None):
