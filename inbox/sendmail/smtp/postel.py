@@ -129,6 +129,17 @@ class SMTP_VerifyCerts(smtplib.SMTP):
         return (resp, reply)
 
 
+def _transform_ssl_error(strerror):
+    """ Clean up errors like:
+
+    _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+    """
+    if strerror.endswith('certificate verify failed'):
+        return 'SSL certificate verify failed'
+    else:
+        return strerror
+
+
 class SMTPConnection(object):
     def __init__(self, account_id, email_address, auth_type,
                  auth_token, smtp_endpoint, log):
@@ -157,13 +168,8 @@ class SMTPConnection(object):
         try:
             self.connection.connect(host, port)
         except socket.error as e:
-            # clean up errors like:
-            # _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
-            if e.strerror.endswith('certificate verify failed'):
-                msg = 'SSL certificate verify failed'
-            else:
-                # 'Connection refused', etc.
-                msg = e.strerror
+            # 'Connection refused', SSL errors for non-TLS connections, etc.
+            msg = _transform_ssl_error(e.strerror)
             raise SendMailException(msg, 503)
 
     def setup(self):
@@ -179,7 +185,11 @@ class SMTPConnection(object):
             if not self.connection.has_extn('starttls'):
                 raise SendMailException('Required SMTP STARTTLS not '
                                         'supported.', 403)
-            self.connection.starttls()
+            try:
+                self.connection.starttls()
+            except ssl.SSLError as e:
+                msg = _transform_ssl_error(e.strerror)
+                raise SendMailException(msg, 503)
 
         # Auth the connection
         self.connection.ehlo()
