@@ -135,7 +135,7 @@ def _transform_ssl_error(strerror):
     _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
     """
     if strerror.endswith('certificate verify failed'):
-        return 'SSL certificate verify failed'
+        return 'SMTP server SSL certificate verify failed'
     else:
         return strerror
 
