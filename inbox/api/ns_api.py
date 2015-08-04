@@ -45,6 +45,7 @@ from inbox.api.err import err, APIException, NotFoundError, InputError
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 
+
 from inbox.ignition import main_engine
 engine = main_engine()
 log = get_logger()
@@ -85,8 +86,8 @@ def start():
     g.db_session = InboxSession(engine)
     try:
         valid_public_id(g.namespace_public_id)
-        g.namespace = g.db_session.query(Namespace) \
-            .filter(Namespace.public_id == g.namespace_public_id).one()
+        g.namespace = Namespace.from_public_id(g.namespace_public_id,
+                                               g.db_session)
 
         g.encoder = APIEncoder(g.namespace.public_id)
     except NoResultFound:
@@ -378,9 +379,8 @@ def message_read_api(public_id):
 
     try:
         valid_public_id(public_id)
-        message = g.db_session.query(Message).filter(
-            Message.public_id == public_id,
-            Message.namespace_id == g.namespace.id).one()
+        message = Message.from_public_id(public_id, g.namespace.id,
+                                         g.db_session)
     except NoResultFound:
         raise NotFoundError("Couldn't find message {0} ".format(public_id))
 

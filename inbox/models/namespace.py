@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, Enum, ForeignKey
+from sqlalchemy import Column, Integer, Enum, ForeignKey, bindparam
 from sqlalchemy.orm import relationship, backref
 
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID
+from inbox.sqlalchemy_ext.util import bakery
 
 
 class Namespace(MailSyncBase, HasPublicID):
@@ -30,3 +31,10 @@ class Namespace(MailSyncBase, HasPublicID):
     def email_address(self):
         if self.account is not None:
             return self.account.email_address
+
+    @classmethod
+    def from_public_id(cls, public_id, db_session):
+        q = bakery(lambda session: session.query(Namespace))
+        q += lambda q: q.filter(
+            Namespace.public_id == bindparam('public_id'))
+        return q(db_session).params(public_id=public_id).one()

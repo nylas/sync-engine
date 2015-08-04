@@ -5,14 +5,14 @@ from collections import defaultdict
 
 from flanker import mime
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
-                        Boolean, Enum, ForeignKey, Index)
+                        Boolean, Enum, ForeignKey, Index, bindparam)
 from sqlalchemy.dialects.mysql import LONGBLOB
-from sqlalchemy.orm import relationship, backref, validates
+from sqlalchemy.orm import relationship, backref, validates, joinedload
 from sqlalchemy.sql.expression import false
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from inbox.util.html import plaintext2html, strip_tags
-from inbox.sqlalchemy_ext.util import JSON, json_field_too_long
+from inbox.sqlalchemy_ext.util import JSON, json_field_too_long, bakery
 from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
 from inbox.models.mixins import HasPublicID, HasRevisions
@@ -508,7 +508,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         self.categories = categories
 
-        # TODO[k]: Update from pending actions here?
+    @classmethod
+    def from_public_id(cls, public_id, namespace_id, db_session):
+        q = bakery(lambda s: s.query(cls))
+        q += lambda q: q.filter(
+            Message.public_id == bindparam('public_id'),
+            Message.namespace_id == bindparam('namespace_id'))
+        q += lambda q: q.options(
+            joinedload(Message.thread).load_only('discriminator', 'public_id'),
+            joinedload(Message.messagecategories).joinedload('category'),
+            joinedload(Message.parts).joinedload('block'),
+            joinedload(Message.events))
+        return q(db_session).params(
+            public_id=public_id, namespace_id=namespace_id).one()
+
 
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
