@@ -4,7 +4,7 @@ import yaml
 from urllib import quote_plus as urlquote
 
 
-__all__ = ['config', 'engine_uri', 'db_uri']
+__all__ = ['config', 'engine_uri']
 
 
 class ConfigError(Exception):
@@ -137,8 +137,3 @@ def engine_uri(database=None):
                    ':{port}/{database}?charset=utf8mb4'
 
     return uri_template.format(**{k: urlquote(v) for k, v in info.items()})
-
-
-def db_uri():
-    database = config.get_required('MYSQL_DATABASE')
-    return engine_uri(database)

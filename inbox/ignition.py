@@ -2,7 +2,7 @@ from socket import gethostname
 from sqlalchemy import create_engine, event
 
 from inbox.sqlalchemy_ext.util import ForceStrictMode
-from inbox.config import db_uri, config
+from inbox.config import engine_uri, config
 from inbox.util.stats import statsd_client
 
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
@@ -12,7 +12,8 @@ DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
 
 def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
                 echo=False):
-    engine = create_engine(db_uri(),
+    database_name = config.get_required('MYSQL_DATABASE')
+    engine = create_engine(engine_uri(database_name),
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
                            echo=echo,
@@ -29,12 +30,12 @@ def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
         process_name = str(config.get("PROCESS_NAME", "unknown"))
 
         statsd_client.gauge(".".join(
-            ["dbconn", dbapi_connection.db, hostname, process_name,
+            ["dbconn", database_name, hostname, process_name,
              "checkedout"]),
             connection_proxy._pool.checkedout())
 
         statsd_client.gauge(".".join(
-            ["dbconn", dbapi_connection.db, hostname, process_name,
+            ["dbconn", database_name, hostname, process_name,
              "overflow"]),
             connection_proxy._pool.overflow())
 
