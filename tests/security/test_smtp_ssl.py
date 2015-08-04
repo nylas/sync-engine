@@ -71,7 +71,7 @@ def test_smtp_ssl_verification_bad_cert(db, api_client, bad_cert_smtp_server,
     ns_public_id = local_smtp_account.namespace.public_id
     r = api_client.post_data('/send', example_draft, ns_public_id)
     assert r.status_code == 503
-    assert json.loads(r.data)['message'] == 'SSL certificate verify failed'
+    assert json.loads(r.data)['message'] == 'SMTP server SSL certificate verify failed'
 
 if __name__ == '__main__':
     server = BadCertSMTPServer((SMTP_SERVER_HOST, SMTP_SERVER_PORT), None)
