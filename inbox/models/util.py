@@ -152,8 +152,8 @@ def _batch_delete(engine, table, (column, id_)):
 
     batches = int(math.ceil(float(count) / CHUNK_SIZE))
 
-    print 'Starting batch deletion for table: {}, number of batches: {}'.\
-          format(table, batches)
+    print 'Starting batch deletion for table: {}, rows: {} number of batches: {}'.\
+          format(table, count, batches)
     start = time.time()
 
     query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
