@@ -244,7 +244,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if in_ is not None:
         query = query.join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
-                   or_(Category.name == in_, Category.display_name == in_))
+                   or_(Category.name == in_, Category.display_name == in_,
+                       Category.public_id == in_))
 
     query = query.filter(*filters)
 
