@@ -1,3 +1,5 @@
+import sys
+
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.crispin import writable_connection_pool
 from inbox.models.session import session_scope
@@ -40,7 +42,11 @@ def start_console(user_email_address=None):
 
 
 def start_client_console(user_email_address=None):
-    from tests.system.client import InboxTestClient
+    try:
+        from tests.system.client import InboxTestClient
+    except ImportError:
+        sys.exit("You need to have the Nylas Python SDK installed to use this"
+                 " option.")
     client = InboxTestClient(user_email_address)
-    IPython.embed(banner1=("You can access an Inbox API client "
+    IPython.embed(banner1=("You can access a Nylas API client "
                            "using the 'client' variable."))
