@@ -47,7 +47,7 @@ class GmailSearchClient(IMAPSearchClient):
                     crispin_client.conn.gmail_search(search_query,
                                                      charset="UTF-8")
         except Exception as e:
-            self.log.debug('Search error', error=e)
+            self.log.info('Search error', error=e)
             raise
 
         all_messages = db_session.query(Message) \
@@ -57,7 +57,7 @@ class GmailSearchClient(IMAPSearchClient):
                     ImapUid.account_id == self.account_id,
                     ImapUid.msg_uid.in_(matching_uids)).all()
 
-        self.log.debug('Search found message for folder',
+        self.log.info('Search found message for folder',
                         folder_name=folder.name,
                         matching_uids=len(matching_uids),
                         messages_synced=len(all_messages))
