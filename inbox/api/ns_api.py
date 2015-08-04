@@ -29,6 +29,7 @@ from inbox.api.validation import (get_attachments, get_calendar,
                                   validate_search_query, validate_search_sort,
                                   valid_delta_object_types, valid_display_name,
                                   noop_event_update)
+from inbox.config import config
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
                                        calculate_group_counts, is_stale)
@@ -74,6 +75,11 @@ with open(mt_path, 'r') as f:
         mime_type, extensions = m[0], m[1:]
         assert extensions, 'Must have at least one extension per mimetype'
         common_extensions[mime_type.lower()] = extensions[0]
+
+
+if config.get('DEBUG_PROFILING_ON'):
+    from inbox.util.debug import attach_profiler
+    attach_profiler()
 
 
 @app.url_value_preprocessor
