@@ -97,7 +97,7 @@ def delete_namespace(account_id, namespace_id):
     filters = OrderedDict()
 
     for table in ['message', 'block', 'thread', 'transaction', 'actionlog',
-                  'contact', 'event']:
+                  'contact', 'event', 'dataprocessingcache']:
         filters[table] = ('namespace_id', namespace_id)
 
     with session_scope() as db_session:
@@ -113,25 +113,28 @@ def delete_namespace(account_id, namespace_id):
     for cls in filters:
         _batch_delete(engine, cls, filters[cls])
 
-    # Use a single delete for the other tables
+    # Use a single delete for the other tables. Rows from tables which contain
+    # cascade-deleted foreign keys to other tables deleted here (or above)
+    # are also not always explicitly deleted, except where needed for
+    # performance.
+    #
     # NOTE: Namespace, Account are deleted at the end too.
 
     query = 'DELETE FROM {} WHERE {}={};'
 
-    for table in ['folder', 'calendar', 'namespace', 'account']:
-        if table == 'calendar':
-            filter_ = ('namespace_id', namespace_id)
-        elif table == 'folder':
-            filter_ = ('account_id', account_id)
-        elif table == 'namespace':
-            filter_ = ('id', namespace_id)
-        elif table == 'account':
-            filter_ = ('id', account_id)
+    filters = OrderedDict()
+    for table in ('category', 'calendar'):
+        filters[table] = ('namespace_id', namespace_id)
+    for table in ('folder', 'label'):
+        filters[table] = ('account_id', account_id)
+    filters['namespace'] = ('id', namespace_id)
+    filters['account'] = ('id', account_id)
 
+    for table, (column, id_) in filters.iteritems():
         print 'Performing bulk deletion for table: {}'.format(table)
         start = time.time()
 
-        engine.execute(query.format(table, filter_[0], filter_[1]))
+        engine.execute(query.format(table, column, id_))
 
         end = time.time()
         print 'Completed bulk deletion for table: {}, time taken: {}'.\
