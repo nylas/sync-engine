@@ -57,7 +57,7 @@ class GmailSearchClient(IMAPSearchClient):
                     ImapUid.account_id == self.account_id,
                     ImapUid.msg_uid.in_(matching_uids)).all()
 
-        self.log.info('Search found message for folder',
+        self.log.info('Search found messages',
                         folder_name=folder.name,
                         matching_uids=len(matching_uids),
                         messages_synced=len(all_messages))

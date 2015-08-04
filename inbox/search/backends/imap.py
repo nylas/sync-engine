@@ -67,7 +67,7 @@ class IMAPSearchClient(object):
         messages = self.search_messages(db_session, search_query)
         all_threads = {m.thread for m in messages}
 
-        self.log.info('Search found threads for folder',
+        self.log.info('Search found threads',
                        threads=len(all_threads))
 
         return sorted(all_threads, key=lambda thread: thread.recentdate,
@@ -94,7 +94,7 @@ class IMAPSearchClient(object):
                     ImapUid.account_id == account.id,
                     ImapUid.msg_uid.in_(matching_uids)).all()
 
-        self.log.info('Search found message for folder',
+        self.log.info('Search found messages',
                         folder_name=folder.name,
                         matching_uids=len(matching_uids),
                         messages_synced=len(all_messages))
