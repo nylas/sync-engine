@@ -18,15 +18,15 @@ def user_console(user_email_address):
                     crispin_client.folder_names()['all'][0],
                     uidvalidity_cb)
 
-                banner = """
-        You can access the crispin instance with the 'crispin_client' variable.
+            banner = """
+    You can access the crispin instance with the 'crispin_client' variable.
 
-        IMAPClient docs are at:
+    IMAPClient docs are at:
 
-            http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
-        """
+        http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
+    """
 
-                IPython.embed(banner1=banner)
+            IPython.embed(banner1=banner)
 
 
 def start_console(user_email_address=None):
