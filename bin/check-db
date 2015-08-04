@@ -1,0 +1,11 @@
+#!/usr/share/python/inbox-sync/bin/python
+
+from inbox.util.startup import check_db
+
+
+def main():
+    check_db()
+
+
+if __name__ == '__main__':
+    main()

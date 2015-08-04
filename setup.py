@@ -77,6 +77,7 @@ setup(
              'bin/delete-account-data',
              'bin/alive-dead-metrics',
              'bin/create-db',
+             'bin/check-db',
              'bin/inbox-api',
              'bin/get-id',
              'bin/get-object',
