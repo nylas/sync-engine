@@ -198,7 +198,7 @@ def _encode(obj, namespace_public_id=None, expand=False):
                 'starred': msg.is_starred,
                 'files': msg.api_attachment_metadata
             }
-            categories = format_categories(obj.categories)
+            categories = format_categories(msg.categories)
             if obj.account.category_type == 'folder':
                 resp['folder'] = categories[0] if categories else None
             else:
