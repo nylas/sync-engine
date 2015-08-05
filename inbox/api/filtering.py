@@ -9,7 +9,7 @@ from inbox.models.event import RecurringEvent
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             any_email, thread_public_id, started_before, started_after,
             last_message_before, last_message_after, filename, in_, unread,
-            starred, sort, limit, offset, view, db_session):
+            starred, limit, offset, view, db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Thread.id))
@@ -132,10 +132,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             .joinedload(Message.parts)
             .joinedload(Part.block))
 
-    if sort and sort == 'received_recent_date':
-        query = query.order_by(desc(Thread.receivedrecentdate)).limit(limit)
-    else:
-        query = query.order_by(desc(Thread.recentdate)).limit(limit)
+    query = query.order_by(desc(Thread.recentdate)).limit(limit)
 
     if offset:
         query = query.offset(offset)

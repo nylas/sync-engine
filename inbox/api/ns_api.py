@@ -164,7 +164,6 @@ def thread_query_api():
     g.parser.add_argument('unread', type=strict_bool, location='args')
     g.parser.add_argument('starred', type=strict_bool, location='args')
     g.parser.add_argument('view', type=view, location='args')
-    g.parser.add_argument('sort', type=bounded_str, location='args')
 
     # For backwards-compatibility -- remove after deprecating tags API.
     g.parser.add_argument('tag', type=bounded_str, location='args')
@@ -195,7 +194,6 @@ def thread_query_api():
         filename=args['filename'],
         unread=unread,
         starred=args['starred'],
-        sort=args['sort'],
         in_=in_,
         limit=args['limit'],
         offset=args['offset'],
