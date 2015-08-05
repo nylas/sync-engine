@@ -9,6 +9,7 @@ from inbox.util.debug import bind_context
 log = get_logger()
 
 DEFAULT_MESSAGE_TTL = 120
+MAX_FETCH = 1000
 
 
 class DeleteHandler(gevent.Greenlet):
@@ -59,7 +60,8 @@ class DeleteHandler(gevent.Greenlet):
         with session_scope() as db_session:
             dangling_messages = db_session.query(Message).filter(
                 Message.namespace_id == self.namespace_id,
-                Message.deleted_at <= current_time - self.message_ttl)
+                Message.deleted_at <= current_time - self.message_ttl
+            ).limit(MAX_FETCH)
             for message in dangling_messages:
                 # If the message isn't *actually* dangling (i.e., it has
                 # imapuids associated with it), undelete it.
