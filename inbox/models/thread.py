@@ -77,7 +77,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         if not received_recent_date:
             sorted_messages = sorted(self.messages,
                                      key=lambda m: m.received_date)
-            received_recent_date = sorted_messages[-1]
+            received_recent_date = sorted_messages[-1].received_date
 
         return received_recent_date
 

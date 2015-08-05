@@ -22,7 +22,8 @@ def test_thread_received_recent_date(db, api_client, default_account):
 
     thread2 = add_fake_thread(db.session, default_account.namespace.id)
     add_fake_message(db.session, default_account.namespace.id, thread2,
-                     subject="Test Thread 2", received_date=date1)
+                     subject="Test Thread 2", received_date=date1,
+                     add_sent_category=True)
 
     date_dict["Test Thread 2"] = date1
 
