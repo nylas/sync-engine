@@ -218,7 +218,7 @@ def _fail_callback():
 
 retry_crispin = functools.partial(
     retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback,
-    fail_callback=_fail_callback, max_count=5, reset_interval=150)
+    fail_callback=_fail_callback, max_count=10, reset_interval=150)
 
 
 class CrispinClient(object):
