@@ -77,6 +77,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         if not received_recent_date:
             sorted_messages = sorted(self.messages,
                                      key=lambda m: m.received_date)
+            if not sorted_messages:
+                log.warning('Thread does not have associated messages',
+                            thread_id=self.id)
+                return None
             received_recent_date = sorted_messages[-1].received_date
 
         return received_recent_date

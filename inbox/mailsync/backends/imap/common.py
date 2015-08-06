@@ -80,7 +80,11 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
         for message in affected_messages:
             if not message.imapuids and message.is_draft:
                 # Synchronously delete drafts.
+                thread = message.thread
+                thread.messages.remove(message)
                 session.delete(message)
+                if not thread.messages:
+                    session.delete(thread)
             else:
                 message.update_metadata(message.is_draft)
                 if not message.imapuids:

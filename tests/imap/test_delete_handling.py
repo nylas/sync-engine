@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
-from sqlalchemy import desc
+from sqlalchemy import desc, inspect
 from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
@@ -18,8 +18,7 @@ def marked_deleted_message(db, message):
     return message
 
 
-def test_only_uids_deleted_synchronously(db, default_account,
-                                         default_namespace, thread, message,
+def test_messages_deleted_asynchronously(db, default_account, thread, message,
                                          imapuid, folder):
     msg_uid = imapuid.msg_uid
     update_metadata(default_account.id, db.session, folder.name, folder.id,
@@ -29,6 +28,16 @@ def test_only_uids_deleted_synchronously(db, default_account,
     assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 2
     # Check that message categories do get updated synchronously.
     assert 'label' not in [cat.display_name for cat in message.categories]
+
+
+def test_drafts_deleted_synchronously(db, default_account, thread, message,
+                                      imapuid, folder):
+    message.is_draft = True
+    msg_uid = imapuid.msg_uid
+    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    db.session.expire_all()
+    assert inspect(message).deleted
+    assert inspect(thread).deleted
 
 
 def test_deleting_from_a_message_with_multiple_uids(db, default_account,
