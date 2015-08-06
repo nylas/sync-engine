@@ -13,7 +13,6 @@ from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.debug import attach_profiler
 from inbox.util.rdb import break_to_interpreter
-from inbox.heartbeat.status import clear_heartbeat_status
 
 from inbox.mailsync.backends import module_registry
 
@@ -151,21 +150,6 @@ class SyncService(object):
                                account_id=account_id)
 
             elif acc.id not in self.monitors:
-                # Before starting the sync, clear the heartbeat and individual
-                # folder should_run bits. These bits will be flipped to the
-                # correct state by the mailsync monitor.
-                try:
-                    for status in acc.foldersyncstatuses:
-                        status.sync_should_run = False
-                except Exception as e:
-                    self.log.error('Error resetting folder run status',
-                                   message=str(e.message), account_id=acc.id)
-                try:
-                    clear_heartbeat_status(acc.id)
-                except Exception as e:
-                    self.log.error('Error clearing heartbeat on sync start',
-                                   message=str(e.message), account_id=acc.id)
-
                 try:
                     if acc.is_sync_locked and acc.is_killed:
                         acc.sync_unlock()
