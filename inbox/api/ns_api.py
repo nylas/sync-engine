@@ -269,6 +269,8 @@ def thread_api_update(public_id):
     except NoResultFound:
         raise NotFoundError("Couldn't find thread `{0}` ".format(public_id))
     data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        raise InputError('Invalid request body')
     update_thread(thread, data, g.db_session)
     return g.encoder.jsonify(thread)
 
@@ -411,8 +413,9 @@ def message_update_api(public_id):
             Message.namespace_id == g.namespace.id).one()
     except NoResultFound:
         raise NotFoundError("Couldn't find message {0} ".format(public_id))
-
     data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        raise InputError('Invalid request body')
     update_message(message, data, g.db_session)
     return g.encoder.jsonify(message)
 

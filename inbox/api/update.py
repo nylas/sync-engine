@@ -1,7 +1,9 @@
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.api.err import InputError
-from inbox.models.action_log import schedule_action
+
 from inbox.models import Category
+from inbox.models.action_log import schedule_action
+from inbox.api.validation import valid_public_id
+from inbox.api.err import InputError
 # STOPSHIP(emfree): better naming/structure for this module
 
 # TODO[k]: Instead of directly updating message.is_read, is_starred and
@@ -112,9 +114,9 @@ def parse_labels(request_data, db_session, namespace_id):
         return
     # TODO(emfree): Use a real JSON schema validator for this sort of thing.
     if not isinstance(label_public_ids, list):
-        raise InputError('"labels" must be a list of strings')
-    if not all(isinstance(l, basestring) for l in label_public_ids):
-        raise InputError('"labels" must be a list of strings')
+        raise InputError('"labels" must be a list')
+    for id_ in label_public_ids:
+        valid_public_id(id_)
 
     labels = set()
     for id_ in label_public_ids:
@@ -132,8 +134,7 @@ def parse_folder(request_data, db_session, namespace_id):
     folder_public_id = request_data.pop('folder', None)
     if folder_public_id is None:
         return
-    if not isinstance(folder_public_id, basestring):
-        raise InputError('"folder" must be a string')
+    valid_public_id(folder_public_id)
     try:
         return db_session.query(Category). \
             filter(Category.namespace_id == namespace_id,
