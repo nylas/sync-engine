@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError
+from sqlalchemy import func
 
 from inbox.log import get_logger
 logger = get_logger()
@@ -133,16 +134,20 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
     """Persists new or updated Event objects to the database."""
     added_count = 0
     updated_count = 0
+    existing_event_count = db_session.query(func.count(Event.id)).filter(
+        Event.namespace_id == namespace_id,
+        Event.calendar_id == calendar_id).scalar()
     for event in events:
         assert event.uid is not None, 'Got remote item with null uid'
 
-        # Note: we could bulk-load previously existing events instead of
-        # loading them one-by-one. This would make the first sync faster, and
-        # probably not really affect anything else.
-        local_event = db_session.query(Event).filter(
-            Event.namespace_id == namespace_id,
-            Event.calendar_id == calendar_id,
-            Event.uid == event.uid).first()
+        local_event = None
+        if existing_event_count:
+            # Skip this lookup if there are no local events at all, for faster
+            # first sync.
+            local_event = db_session.query(Event).filter(
+                Event.namespace_id == namespace_id,
+                Event.calendar_id == calendar_id,
+                Event.uid == event.uid).first()
 
         if local_event is not None:
             # We also need to mark all overrides as cancelled if we're
@@ -179,6 +184,10 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
                 isinstance(event, RecurringEventOverride):
             db_session.flush()
             link_events(db_session, event)
+
+        # Batch commits to avoid long transactions that may lock calendar rows.
+        if (added_count + updated_count) % 1000 == 0:
+            db_session.commit()
 
     log.info('synced added and updated events',
              calendar_id=calendar_id,
