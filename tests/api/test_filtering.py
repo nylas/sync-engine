@@ -83,6 +83,9 @@ def test_filtering(db, api_client, default_namespace):
     results = api_client.get_data('/messages?in=inbox&limit=1')
     assert len(results) == 1
 
+    results = api_client.get_data('/messages?in=banana%20rama')
+    assert len(results) == 0
+
     results = api_client.get_data('/threads?subject={}'.format(subject))
     assert len(results) == 1
 

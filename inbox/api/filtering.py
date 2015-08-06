@@ -1,5 +1,7 @@
 from sqlalchemy import and_, or_, desc, asc, func
 from sqlalchemy.orm import subqueryload, contains_eager
+from inbox.api.err import InputError
+from inbox.api.validation import valid_public_id
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread,
                           Block, Part, MessageCategory, Category)
@@ -87,12 +89,16 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         query = query.filter(Thread.id.in_(files_query))
 
     if in_ is not None:
+        category_filters = [Category.name == in_, Category.display_name == in_]
+        try:
+            valid_public_id(in_)
+            category_filters.append(Category.public_id == in_)
+        except InputError:
+            pass
         category_query = db_session.query(Message.thread_id). \
             join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
-                   or_(Category.name == in_, Category.display_name == in_,
-                       Category.public_id == in_)). \
-            subquery()
+                   or_(*category_filters)).subquery()
         query = query.filter(Thread.id.in_(category_query))
 
     if unread is not None:
@@ -239,10 +245,15 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                    Block.namespace_id == namespace_id)
 
     if in_ is not None:
+        category_filters = [Category.name == in_, Category.display_name == in_]
+        try:
+            valid_public_id(in_)
+            category_filters.append(Category.public_id == in_)
+        except InputError:
+            pass
         query = query.join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
-                   or_(Category.name == in_, Category.display_name == in_,
-                       Category.public_id == in_))
+                   or_(*category_filters))
 
     query = query.filter(*filters)
 
