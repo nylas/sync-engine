@@ -152,8 +152,9 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                        cc_addr, bcc_addr, any_email, thread_public_id,
                        started_before, started_after, last_message_before,
-                       last_message_after, filename, in_, unread, starred,
-                       limit, offset, view, db_session):
+                       last_message_after, received_before, received_after,
+                       filename, in_, unread, starred, limit, offset, view,
+                       db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Message.id))
@@ -199,6 +200,12 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if last_message_after is not None:
         filters.append(Thread.recentdate > last_message_after)
         filters.append(Thread.namespace_id == namespace_id)
+
+    if received_before is not None:
+        filters.append(Message.received_date <= received_before)
+
+    if received_after is not None:
+        filters.append(Message.received_date > received_after)
 
     if to_addr is not None:
         to_query = db_session.query(MessageContactAssociation.message_id). \

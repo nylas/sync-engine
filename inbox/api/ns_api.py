@@ -301,6 +301,10 @@ def message_query_api():
                           location='args')
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
+    g.parser.add_argument('received_before', type=timestamp,
+                          location='args')
+    g.parser.add_argument('received_after', type=timestamp,
+                          location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
@@ -329,6 +333,8 @@ def message_query_api():
         started_after=args['started_after'],
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
+        received_before=args['received_before'],
+        received_after=args['received_after'],
         filename=args['filename'],
         in_=in_,
         unread=args['unread'],
@@ -1140,6 +1146,10 @@ def draft_query_api():
                           location='args')
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
+    g.parser.add_argument('received_before', type=timestamp,
+                          location='args')
+    g.parser.add_argument('received_after', type=timestamp,
+                          location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
@@ -1163,6 +1173,8 @@ def draft_query_api():
         started_after=args['started_after'],
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
+        received_before=args['received_before'],
+        received_after=args['received_after'],
         filename=args['filename'],
         in_=args['in'],
         unread=args['unread'],
