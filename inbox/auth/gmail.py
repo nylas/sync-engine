@@ -8,10 +8,10 @@ from inbox.models.backends.gmail import GmailAuthCredentials
 from inbox.models.backends.gmail import g_token_manager
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
-from inbox.basicauth import OAuthError, UserRecoverableConfigError
+from inbox.basicauth import OAuthError, ImapSupportDisabledError
 from inbox.util.url import url_concat
 from inbox.providers import provider_info
-from inbox.crispin import GmailCrispinClient, GmailSettingError
+from inbox.crispin import GmailCrispinClient
 
 from inbox.log import get_logger
 log = get_logger()
@@ -60,12 +60,21 @@ class GmailAuthHandler(OAuthAuthHandler):
             conn.oauth2_login(account.email_address, token)
         except IMAPClient.Error as exc:
             log.error('Error during IMAP XOAUTH2 login',
-                      account_id=account.id,
-                      email=account.email_address,
-                      host=host,
-                      port=port,
-                      error=exc)
-            raise
+                      account_id=account.id, email=account.email_address,
+                      host=host, port=port, error=exc)
+            if not _auth_is_invalid(exc):
+                raise
+            # If we got an AUTHENTICATIONFAILED response, force a token refresh
+            # and try again. If IMAP auth still fails, it's likely that IMAP
+            # access is disabled, so propagate that errror.
+            token = g_token_manager.get_token_for_email(
+                account, force_refresh=True)
+            try:
+                conn.oauth2_login(account.email_address, token)
+            except IMAPClient.Error as exc:
+                if not _auth_is_invalid(exc):
+                    raise
+                raise ImapSupportDisabledError()
 
     def create_account(self, db_session, email_address, response):
         email_address = response.get('email')
@@ -141,10 +150,7 @@ class GmailAuthHandler(OAuthAuthHandler):
 
             db_session.add(auth_creds)
 
-        try:
-            self.verify_config(account)
-        except GmailSettingError as e:
-            raise UserRecoverableConfigError(e)
+        self.verify_config(account)
 
         # Ensure account has sync enabled.
         account.enable_sync()
@@ -199,3 +205,8 @@ class GmailAuthHandler(OAuthAuthHandler):
             except OAuthError:
                 print "\nInvalid authorization code, try again...\n"
                 auth_code = None
+
+
+def _auth_is_invalid(exc):
+    return exc.message.startswith(
+        '[AUTHENTICATIONFAILED] Invalid credentials (Failure)')

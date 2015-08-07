@@ -30,7 +30,15 @@ class ConfigError(Exception):
     pass
 
 
-class UserRecoverableConfigError(ConfigError):
+class UserRecoverableConfigError(Exception):
+    pass
+
+
+class GmailSettingError(ValidationError):
+    pass
+
+
+class ImapSupportDisabledError(ValidationError):
     pass
 
 

@@ -25,10 +25,10 @@ from datetime import datetime
 from gevent import kill, spawn, sleep
 from sqlalchemy.orm import joinedload, load_only
 
+from inbox.basicauth import GmailSettingError
 from inbox.util.itert import chunk, partition
 from inbox.util.debug import bind_context
 
-from inbox.crispin import GmailSettingError
 from inbox.log import get_logger
 from inbox.models import Message, Folder, Namespace, Account, Label
 from inbox.models.backends.gmail import GmailAccount
@@ -50,7 +50,6 @@ GMetadata = namedtuple('GMetadata', 'msgid thrid throttled')
 
 class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, *args, **kwargs):
-        kwargs['retry_fail_classes'] = [GmailSettingError]
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
 
@@ -77,9 +76,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
         remote_label_names = {l.display_name.rstrip()[:MAX_LABEL_NAME_LENGTH]
                               for l in raw_folders}
 
-        assert 'all' in {f.role for f in raw_folders},\
-            'Account {} has no detected All Mail folder'.\
-            format(account.email_address)
+        if 'all' not in {f.role for f in raw_folders}:
+            raise GmailSettingError()
 
         local_labels = {l.name: l for l in db_session.query(Label).filter(
                         Label.account_id == self.account_id).all()}

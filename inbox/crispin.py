@@ -33,7 +33,7 @@ from gevent.queue import Queue
 from inbox.util.concurrency import retry
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import ValidationError
+from inbox.basicauth import ValidationError, GmailSettingError
 from inbox.models.session import session_scope
 from inbox.models.account import Account
 from inbox.log import get_logger
@@ -58,11 +58,6 @@ _lock_map = defaultdict(threading.Lock)
 
 
 CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
-
-
-class GmailSettingError(Exception):
-    """ Thrown on misconfigured Gmail accounts. """
-    pass
 
 
 class FolderMissingError(Exception):
