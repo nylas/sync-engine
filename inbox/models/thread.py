@@ -47,7 +47,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         return value
 
     @validates('messages')
-    def update_from_message(self, k, message, sent=False):
+    def update_from_message(self, k, message):
         with object_session(self).no_autoflush:
             if message.is_draft:
                 # Don't change subjectdate, recentdate, or unread/unseen based
@@ -69,7 +69,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         received_recent_date = None
         for m in self.messages:
             if all(category.name != "sent" for category in m.categories) and \
-                    not m.is_draft:
+                    not m.is_draft and not m.is_sent:
                 if not received_recent_date or \
                         m.received_date > received_recent_date:
                     received_recent_date = m.received_date

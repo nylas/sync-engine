@@ -34,7 +34,7 @@ def update_draft_on_send(account, draft, db_session):
     draft.is_draft = False
     draft.received_date = datetime.utcnow()
     thread = draft.thread
-    thread.update_from_message(None, draft, sent=True)
+    thread.update_from_message(None, draft)
 
     db_session.flush()
 
