@@ -317,3 +317,56 @@ def test_namespace_limiting(db, test_client):
         r = json.loads(test_client.get('/n/{}/files?filename={}'.
                                        format(ns.public_id, subject)).data)
         assert len(r) == 1
+
+
+def test_received_before_after(db, api_client, default_namespace):
+    thread = add_fake_thread(db.session, default_namespace.id)
+    message = add_fake_message(db.session, default_namespace.id, thread,
+                               to_addr=[('Bob', 'bob@foocorp.com')],
+                               from_addr=[('Alice', 'alice@foocorp.com')],
+                               received_date=datetime.datetime(year=1999, day=20, month=03),
+                               subject='some subject')
+
+    thread2 = add_fake_thread(db.session, default_namespace.id)
+    message2 = add_fake_message(db.session, default_namespace.id, thread,
+                                to_addr=[('Bob', 'bob@foocorp.com')],
+                                from_addr=[('Alice', 'alice@foocorp.com')],
+                                received_date=datetime.datetime(year=2000, day=20, month=03),
+                                subject='another subject')
+
+    inbox = Category(namespace_id=message.namespace_id, name='inbox',
+                     display_name='Inbox', type_='label')
+    message.categories.add(inbox)
+    thread.subject = message.subject
+
+    message2.categories.add(inbox)
+    thread2.subject = message2.subject
+
+    db.session.commit()
+
+    received_date = message.received_date
+    t_epoch = dt_to_timestamp(datetime.datetime(year=1998, month=2, day=3))
+    t_firstmsg = dt_to_timestamp(received_date)
+
+    results = api_client.get_data('/messages?received_before={}'
+                                  .format(t_epoch))
+    assert len(results) == 0
+
+    # received_before should be inclusive (i.e: match <=, not just <).
+    results = api_client.get_data('/messages?received_before={}'
+                                  .format(t_firstmsg))
+    assert len(results) == 1
+
+    t1 = dt_to_timestamp(received_date + datetime.timedelta(days=1))
+    results = api_client.get_data('/messages?received_after={}'
+                                  .format(t1))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?received_before={}&received_after={}'
+                                  .format(t1, t_firstmsg))
+    assert len(results) == 0
+
+    # bogus values
+    results = api_client.get_data('/messages?received_before={}&received_after={}'
+                                  .format(t_epoch, t1))
+    assert len(results) == 0
