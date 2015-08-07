@@ -68,6 +68,8 @@ class FlexibleDateTime(TypeDecorator):
 class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
     API_OBJECT_NAME = 'event'
+    API_MODIFIABLE_FIELDS = ['title', 'description', 'location',
+                             'when', 'participants', 'busy']
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)

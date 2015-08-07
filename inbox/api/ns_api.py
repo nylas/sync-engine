@@ -809,7 +809,7 @@ def event_update_api(public_id):
     if noop_event_update(event, data):
         return g.encoder.jsonify(event)
 
-    for attr in ['title', 'description', 'location', 'when', 'participants']:
+    for attr in Event.API_MODIFIABLE_FIELDS:
         if attr in data:
             setattr(event, attr, data[attr])
 

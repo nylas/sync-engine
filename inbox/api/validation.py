@@ -9,6 +9,7 @@ from inbox.models.when import parse_as_when
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import InputError, NotFoundError, ConflictError
 from inbox.search.query import MessageQuery, ThreadQuery
+from inbox.api.kellogs import encode
 
 MAX_LIMIT = 1000
 
@@ -255,22 +256,23 @@ def noop_event_update(event, data):
     # about the multiple values of the `when` field.
     e = Event()
     e.update(event)
+    e.namespace = event.namespace
 
-    for attr in ['title', 'description', 'location', 'when', 'participants']:
+    for attr in Event.API_MODIFIABLE_FIELDS:
         if attr in data:
             setattr(e, attr, data[attr])
 
-    for attr in ['title', 'description', 'location']:
-        event_value = getattr(event, attr)
-        e_value = getattr(e, attr)
-        if event_value != e_value:
-            return False
+    e1 = encode(event)
+    e2 = encode(e)
 
-    for attr in ['start', 'end']:
-        # This code can get datetimes and Arrow datetimes
-        # so we convert everything to Arrow datetimes.
-        event_value = arrow.get(getattr(event, attr))
-        e_value = arrow.get(getattr(e, attr))
+    for attr in Event.API_MODIFIABLE_FIELDS:
+        # We have to handle participants a bit differently because
+        # it's a list which can be permuted.
+        if attr == 'participants':
+            continue
+
+        event_value = e1.get(attr)
+        e_value = e2.get(attr)
         if event_value != e_value:
             return False
 
