@@ -217,7 +217,9 @@ def thread_search_api():
             return err(400, err_string)
 
         search_client = get_search_client(g.namespace.account)
-        results = search_client.search_threads(g.db_session, args['q'])
+        results = search_client.search_threads(g.db_session, args['q'],
+                                                offset=args['offset'],
+                                                limit=args['limit'])
     else:
         data = request.get_json(force=True)
 
@@ -361,7 +363,9 @@ def message_search_api():
             return err(400, err_string)
 
         search_client = get_search_client(g.namespace.account)
-        results = search_client.search_messages(g.db_session, args['q'])
+        results = search_client.search_messages(g.db_session, args['q'],
+                                                offset=args['offset'],
+                                                limit=args['limit'])
     else:
         data = request.get_json(force=True)
         query = data.get('query')
