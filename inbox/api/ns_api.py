@@ -51,8 +51,7 @@ from inbox.ignition import main_engine
 engine = main_engine()
 log = get_logger()
 
-# Limit for EAS search range is 99.
-DEFAULT_LIMIT = 99
+DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
 LONG_POLL_REQUEST_TIMEOUT = 120
 
