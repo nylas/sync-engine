@@ -247,8 +247,36 @@ get_default_providers = lambda: {
             "onmicrosoft.com",
             "exchange.mit.edu",
         ],
-        # Office365
-        "mx_servers": ["mail.protection.outlook.com", "mail.eo.outlook.com"]
+        "mx_servers": [
+            # Office365
+            "mail.protection.outlook.com", "mail.eo.outlook.com",
+        ],
+    },
+    "outlook": {
+        "auth": "password",
+        "domains": [
+            "hotmail.com", "outlook.com", "outlook.com.ar",
+            "outlook.com.au", "outlook.at", "outlook.be",
+            "outlook.com.br", "outlook.cl", "outlook.cz", "outlook.dk",
+            "outlook.fr", "outlook.de", "outlook.com.gr",
+            "outlook.co.il", "outlook.in", "outlook.co.id",
+            "outlook.ie", "outlook.it", "outlook.hu", "outlook.jp",
+            "outlook.kr", "outlook.lv", "outlook.my", "outlook.co.nz",
+            "outlook.com.pe", "outlook.ph", "outlook.pt", "outlook.sa",
+            "outlook.sg", "outlook.sk", "outlook.es", "outlook.co.th",
+            "outlook.com.tr", "outlook.com.vn",
+        ],
+        "mx_servers": [
+            ".*.pamx1.hotmail.com", "mx.*.hotmail.com",
+        ],
+    },
+    "_outlook": {
+        # IMAP-based Outlook. Legacy-only.
+        "type": "generic",
+        "imap": ("imap-mail.outlook.com", 993),
+        "smtp": ("smtp.live.com", 587),
+        "auth": "oauth2",
+        "events": False,
     },
     "fastmail": {
         "type": "generic",
@@ -344,24 +372,6 @@ get_default_providers = lambda: {
         "smtp": ("mail.privateemail.com", 587),
         "auth": "password",
         "mx_servers": ["mx1.privateemail.com", "mx2.privateemail.com"]
-    },
-    "outlook": {
-        "type": "generic",
-        "imap": ("imap-mail.outlook.com", 993),
-        "smtp": ("smtp.live.com", 587),
-        "auth": "oauth2",
-        "events": False,
-        "domains": ["hotmail.com", "outlook.com", "outlook.com.ar",
-                    "outlook.com.au", "outlook.at", "outlook.be",
-                    "outlook.com.br", "outlook.cl", "outlook.cz", "outlook.dk",
-                    "outlook.fr", "outlook.de", "outlook.com.gr",
-                    "outlook.co.il", "outlook.in", "outlook.co.id",
-                    "outlook.ie", "outlook.it", "outlook.hu", "outlook.jp",
-                    "outlook.kr", "outlook.lv", "outlook.my", "outlook.co.nz",
-                    "outlook.com.pe", "outlook.ph", "outlook.pt", "outlook.sa",
-                    "outlook.sg", "outlook.sk", "outlook.es", "outlook.co.th",
-                    "outlook.com.tr", "outlook.com.vn"],
-        "mx_servers": [".*.pamx1.hotmail.com"],
     },
     "yahoo": {
         "type": "generic",

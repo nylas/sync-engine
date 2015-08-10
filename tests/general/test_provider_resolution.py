@@ -5,7 +5,6 @@ from inbox.util.url import InvalidEmailAddressError
 from inbox.auth.base import handler_from_provider
 from inbox.auth.generic import GenericAuthHandler
 from inbox.auth.gmail import GmailAuthHandler
-from inbox.auth.outlook import OutlookAuthHandler
 from inbox.basicauth import NotSupportedError
 
 
@@ -96,7 +95,6 @@ def test_auth_handler_dispatch():
     assert isinstance(handler_from_provider('aol'), GenericAuthHandler)
     assert isinstance(handler_from_provider('yahoo'), GenericAuthHandler)
     assert isinstance(handler_from_provider('gmail'), GmailAuthHandler)
-    assert isinstance(handler_from_provider('outlook'), OutlookAuthHandler)
 
     with pytest.raises(NotSupportedError):
         handler_from_provider('NOTAREALMAILPROVIDER')

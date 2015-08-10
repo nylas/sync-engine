@@ -506,8 +506,7 @@ def generate_icalendar_invite(event, invite_type='request'):
 
 def generate_invite_message(ical_txt, event, account, invite_type='request'):
     assert invite_type in ['request', 'update', 'cancel']
-
-    html_body = event.description
+    html_body = event.description or ''
 
     text_body = html2text(html_body)
     msg = mime.create.multipart('mixed')
@@ -576,9 +575,10 @@ def send_invite(ical_txt, event, account, invite_type='request'):
                       event_id=event.id, account_id=account.id,
                       logstash_tag='invite_sending', exception=str(e))
 
-        if account.provider == 'eas' and invite_type in ['request', 'update']:
+        if (account.provider == 'eas' and not account.outlook_account
+                and invite_type in ['request', 'update']):
             # Exchange very surprisingly goes out of the way to send an invite
-            # to all participants.
+            # to all participants (though Outlook.com doesn't).
             # We only do this for invites and not cancelled because Exchange
             # doesn't parse our cancellation messages as invites.
             break
@@ -682,7 +682,7 @@ def send_rsvp(ical_data, event, body_text, status, account):
     assert status in ['yes', 'no', 'maybe']
 
     if status == 'yes':
-         msg.headers['Subject'] = 'Accepted: {}'.format(event.message.subject)
+        msg.headers['Subject'] = 'Accepted: {}'.format(event.message.subject)
     elif status == 'maybe':
         msg.headers['Subject'] = 'Tentatively accepted: {}'.format(
             event.message.subject)
