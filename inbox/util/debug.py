@@ -59,7 +59,10 @@ def profile(func):
     return wrapper
 
 
-def attach_profiler():
+def attach_pyinstrument_profiler():
+    """Run the pyinstrument profiler in the background and dump its output to
+    stdout when the process receives SIGTRAP. In general, you probably want to
+    use the facilities in inbox.util.profiling instead."""
     profiler = Profiler()
     profiler.start()
 

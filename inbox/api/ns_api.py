@@ -78,8 +78,8 @@ with open(mt_path, 'r') as f:
 
 
 if config.get('DEBUG_PROFILING_ON'):
-    from inbox.util.debug import attach_profiler
-    attach_profiler()
+    from inbox.util.debug import attach_pyinstrument_profiler
+    attach_pyinstrument_profiler()
 
 
 @app.url_value_preprocessor

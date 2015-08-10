@@ -11,7 +11,6 @@ from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
-from inbox.util.debug import attach_profiler
 from inbox.util.rdb import break_to_interpreter
 
 from inbox.mailsync.backends import module_registry
@@ -56,13 +55,6 @@ class SyncService(object):
         self.poll_interval = poll_interval
 
     def run(self):
-        if config.get('DEBUG_PROFILING_ON'):
-            # If config flag is set, get live top-level profiling output on
-            # stdout by doing kill -SIGTRAP <sync_process>.
-            # This slows things down so you probably don't want to do it
-            # normally.
-            attach_profiler()
-
         if config.get('DEBUG_CONSOLE_ON'):
             # Enable the debugging console if this flag is set. Connect to
             # localhost on the port shown in the logs to get access to a REPL

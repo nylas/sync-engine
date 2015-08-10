@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from gevent import monkey
 monkey.patch_all()
+import gevent
 
 import os
 import socket
@@ -95,6 +96,11 @@ def main(prod, enable_tracer, config, process_num):
     if enable_tracer:
         tracer = Tracer(gather_stats=True)
         tracer.start()
+
+    if inbox_config.get('DEBUG_PROFILING_ON'):
+        from inbox.util.profiling import run_profiler
+        port = 16384 + process_num
+        gevent.spawn(run_profiler, '0.0.0.0', port)
 
     global sync_service
     sync_service = SyncService(process_num, total_processes)
