@@ -122,7 +122,7 @@ class IMAPSearchClient(object):
             self.log.warn('Search error', error=e)
             raise
 
-        self.log.debug('Search found message for folder',
+        self.log.debug('Search found messages for folder',
                         folder_name=folder.name,
                         matching_uids=len(matching_uids))
 
