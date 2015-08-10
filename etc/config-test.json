@@ -7,7 +7,6 @@
 
 "DB_POOL_SIZE": 25,
 
-"CACHE_BASEDIR" : "tests/cache",
 "LOGDIR": "/tmp/log",
 "LOGLEVEL": 10,
 "TEST_LOGFILE": "/tmp/log/test.log",
