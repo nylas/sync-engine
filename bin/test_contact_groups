@@ -6,7 +6,7 @@ from inbox.api import filtering
 from inbox.contacts.algorithms import calculate_group_scores
 from inbox.contacts.algorithms import calculate_contact_scores
 from inbox.models import Namespace
-from inbox.models.session import InboxSession, session_scope
+from inbox.models.session import new_session, session_scope
 from inbox.ignition import main_engine
 engine = main_engine()
 

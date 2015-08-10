@@ -64,8 +64,8 @@ def dbloader(config):
 
 @yield_fixture(scope='function')
 def db(dbloader):
-    from inbox.models.session import InboxSession
-    dbloader.session = InboxSession(dbloader.engine)
+    from inbox.models.session import new_session
+    dbloader.session = new_session(dbloader.engine)
     yield dbloader
     dbloader.session.close()
 

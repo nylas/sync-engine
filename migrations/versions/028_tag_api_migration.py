@@ -27,7 +27,7 @@ def upgrade():
 
     @contextmanager
     def basic_session():
-        # Using the InboxSession is kind of a pain in this migration, so let's
+        # Using the new_session is kind of a pain in this migration, so let's
         # just roll with a normal sqlalchemy session.
         session = Session(autoflush=True, autocommit=False)
         try:

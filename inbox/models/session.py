@@ -64,9 +64,6 @@ def new_session(engine, versioned=True):
 
     return session
 
-# Old name for legacy code.
-InboxSession = new_session
-
 
 @contextmanager
 def session_scope(versioned=True, debug=False):

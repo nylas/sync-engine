@@ -6,7 +6,7 @@ from inbox.api.err import APIException, NotFoundError, InputError
 from inbox.api.validation import valid_public_id
 from inbox.log import get_logger
 log = get_logger()
-from inbox.models.session import InboxSession
+from inbox.models.session import new_session
 
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models import Calendar
@@ -34,7 +34,7 @@ def resp(http_code, message=None, **kwargs):
 
 @app.before_request
 def start():
-    g.db_session = InboxSession(engine)
+    g.db_session = new_session(engine)
     g.log = get_logger()
 
     try:

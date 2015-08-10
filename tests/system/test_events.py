@@ -5,7 +5,7 @@ import time
 
 from inbox.client.errors import NotFoundError
 from conftest import calendar_accounts, timeout_loop
-from inbox.models.session import InboxSession
+from inbox.models.session import new_session
 from inbox.models import ActionLog
 from inbox.ignition import main_engine
 
@@ -18,7 +18,7 @@ def real_db():
     to log in to providers like gmail to check that events changes
     are synced back."""
     engine = main_engine()
-    session = InboxSession(engine)
+    session = new_session(engine)
     yield session
     session.rollback()
     session.close()

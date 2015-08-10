@@ -46,7 +46,7 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
         Id of the namespace for which to get a cursor.
     timestamp: int
         Unix timestamp
-    db_session: InboxSession
+    db_session: new_session
         database session
 
     Returns
@@ -111,7 +111,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
         Id of the namespace for which to get changes.
     pointer: int
         Process transactions starting after this id.
-    db_session: InboxSession
+    db_session: new_session
         database session
     result_limit: int
         Maximum number of results to return. (Because we may roll up multiple
