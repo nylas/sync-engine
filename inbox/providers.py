@@ -255,7 +255,7 @@ get_default_providers = lambda: {
     "outlook": {
         "auth": "password",
         "domains": [
-            "hotmail.com", "outlook.com", "outlook.com.ar",
+            "outlook.com", "outlook.com.ar",
             "outlook.com.au", "outlook.at", "outlook.be",
             "outlook.com.br", "outlook.cl", "outlook.cz", "outlook.dk",
             "outlook.fr", "outlook.de", "outlook.com.gr",
@@ -264,7 +264,20 @@ get_default_providers = lambda: {
             "outlook.kr", "outlook.lv", "outlook.my", "outlook.co.nz",
             "outlook.com.pe", "outlook.ph", "outlook.pt", "outlook.sa",
             "outlook.sg", "outlook.sk", "outlook.es", "outlook.co.th",
-            "outlook.com.tr", "outlook.com.vn",
+            "outlook.com.tr", "outlook.com.vn", "live.com", "live.com.ar"
+            "live.com.au", "live.at", "live.be", "live.cl", "live.cz",
+            "live.dk", "live.fr", "live.de", "live.com.gr", "live.co.il",
+            "live.in", "live.ie", "live.it", "live.hu", "live.jp", "live.lv",
+            "live.co.nz", "live.com.pe", "live.ph", "live.pt", "live.sa",
+            "live.sg", "live.sk", "live.es", "live.co.th", "live.com.tr",
+            "live.com.vn", "live.ca", "hotmail.ca",
+            "hotmail.com", "hotmail.com.ar", "hotmail.com.au",
+            "hotmail.at", "hotmail.be", "hotmail.com.br", "hotmail.cl",
+            "hotmail.cz", "hotmail.dk", "hotmail.fr", "hotmail.de",
+            "hotmail.co.il", "hotmail.in", "hotmail.ie", "hotmail.it",
+            "hotmail.hu", "hotmail.jp", "hotmail.kr", "hotmail.com.pe",
+            "hotmail.pt", "hotmail.sa", "hotmail.es", "hotmail.co.th",
+            "hotmail.com.tr",
         ],
         "mx_servers": [
             ".*.pamx1.hotmail.com", "mx.*.hotmail.com",
@@ -424,89 +437,89 @@ get_default_providers = lambda: {
     },
     "163": {
         "type": "generic",
-	"imap": ("imap.163.com", 993),
-	"smtp": ("smtp.163.com", 465),
-	"auth": "password",
-	"domains": ["163.com"],
-	"mx_servers": ["163mx00.mxmail.netease.com",
-		       "163mx01.mxmail.netease.com",
-		       "163mx02.mxmail.netease.com",
-		       "163mx03.mxmail.netease.com"]
+        "imap": ("imap.163.com", 993),
+        "smtp": ("smtp.163.com", 465),
+        "auth": "password",
+        "domains": ["163.com"],
+        "mx_servers": ["163mx00.mxmail.netease.com",
+                       "163mx01.mxmail.netease.com",
+                       "163mx02.mxmail.netease.com",
+                       "163mx03.mxmail.netease.com"]
     },
     "163_ym": {
-	"type": "generic",
-	"imap": ("imap.ym.163.com", 993),
-	"smtp": ("smtp.ym.163.com", 994),
-	"auth": "password",
-	"mx_servers": ["mx.ym.163.com"]
+        "type": "generic",
+        "imap": ("imap.ym.163.com", 993),
+        "smtp": ("smtp.ym.163.com", 994),
+        "auth": "password",
+        "mx_servers": ["mx.ym.163.com"]
     },
     "163_qiye": {
-	"type": "generic",
-	"imap": ("imap.qiye.163.com", 993),
-	"smtp": ("smtp.qiye.163.com", 994),
-	"auth": "password",
-	"mx_servers": ["qiye163mx01.mxmail.netease.com",
-		       "qiye163mx02.mxmail.netease.com"]
+        "type": "generic",
+        "imap": ("imap.qiye.163.com", 993),
+        "smtp": ("smtp.qiye.163.com", 994),
+        "auth": "password",
+        "mx_servers": ["qiye163mx01.mxmail.netease.com",
+                       "qiye163mx02.mxmail.netease.com"]
     },
     "126": {
-	"type": "generic",
-	"imap": ("imap.126.com", 993),
-	"smtp": ("smtp.126.com", 465),
-	"auth": "password",
-	"domains": ["126.com"],
-	"mx_servers": ["126mx00.mxmail.netease.com",
-		       "126mx01.mxmail.netease.com",
-		       "126mx02.mxmail.netease.com"]
+        "type": "generic",
+        "imap": ("imap.126.com", 993),
+        "smtp": ("smtp.126.com", 465),
+        "auth": "password",
+        "domains": ["126.com"],
+        "mx_servers": ["126mx00.mxmail.netease.com",
+                       "126mx01.mxmail.netease.com",
+                       "126mx02.mxmail.netease.com"]
     },
     "yeah.net": {
-	"type": "generic",
-	"imap": ("imap.yeah.net",993),
-	"smtp": ("smtp.yeah.net",465),
-	"auth": "password",
-	"domains": ["yeah.net"],
-	"mx_servers": ["yeahmx00.mxmail.netease.com",
-		       "yeahmx01.mxmail.netease.com"]
+        "type": "generic",
+        "imap": ("imap.yeah.net",993),
+        "smtp": ("smtp.yeah.net",465),
+        "auth": "password",
+        "domains": ["yeah.net"],
+        "mx_servers": ["yeahmx00.mxmail.netease.com",
+                       "yeahmx01.mxmail.netease.com"]
     },
     "qq" : {
-	"type": "generic",
-	"imap": ("imap.qq.com", 993),
-	"smtp": ("smtp.qq.com", 465),
-	"auth": "password",
-	"domains": ["qq.com", "vip.qq.com"],
-	"mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+        "type": "generic",
+        "imap": ("imap.qq.com", 993),
+        "smtp": ("smtp.qq.com", 465),
+        "auth": "password",
+        "domains": ["qq.com", "vip.qq.com"],
+        "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "foxmail" : {
-	"type": "generic",
-	"imap": ("imap.exmail.qq.com", 993),
-	"smtp": ("smtp.exmail.qq.com", 465),
-	"auth": "password",
-	"domains": ["foxmail.com"],
-	"mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+        "type": "generic",
+        "imap": ("imap.exmail.qq.com", 993),
+        "smtp": ("smtp.exmail.qq.com", 465),
+        "auth": "password",
+        "domains": ["foxmail.com"],
+        "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "qq_enterprise": {
-	"type":"generic",
-	"imap":("imap.exmail.qq.com", 993),
-	"smtp":("smtp.exmail.qq.com", 465),
-	"auth":"password",
-	"mx_servers":["mxbiz1.qq.com", "mxbiz2.qq.com"]
+        "type":"generic",
+        "imap":("imap.exmail.qq.com", 993),
+        "smtp":("smtp.exmail.qq.com", 465),
+        "auth":"password",
+        "mx_servers":["mxbiz1.qq.com", "mxbiz2.qq.com"]
     },
     "aliyun":{
-	"type":"generic",
-	"imap":("imap.aliyun.com", 993),
-	"smtp":("smtp.aliyun.com", 465),
-	"auth":"password",
-	"domains":"aliyun",
-	"mx_servers":["mx2.mail.aliyun.com"]
+        "type":"generic",
+        "imap":("imap.aliyun.com", 993),
+        "smtp":("smtp.aliyun.com", 465),
+        "auth":"password",
+        "domains":"aliyun",
+        "mx_servers":["mx2.mail.aliyun.com"]
     },
     "139":{
-	"type":"generic",
-	"imap":("imap.139.com", 993),
-	"smtp":("smtp.139.com", 465),
-	"auth":"password",
-	"domains":["139.com"],
-	"mx_servers":["mx1.mail.139.com",
-		      "mx2.mail.139.com",
-		      "mx3.mail.139.com"]
+        "type":"generic",
+        "imap":("imap.139.com", 993),
+        "smtp":("smtp.139.com", 465),
+        "auth":"password",
+        "domains":["139.com"],
+        "mx_servers":["mx1.mail.139.com",
+                      "mx2.mail.139.com",
+                      "mx3.mail.139.com"]
     },
     "custom": {
         "type": "generic",
