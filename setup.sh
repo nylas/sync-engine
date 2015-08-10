@@ -198,6 +198,7 @@ if [ -d "../sync-engine-eas" ]; then
     pip install -e ../sync-engine-eas
     python ../sync-engine-eas/bin/create-test-db
 fi
+
 color '35;1' 'Finished installing dependencies.'
 
 mkdir -p /etc/inboxapp
