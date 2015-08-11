@@ -22,7 +22,6 @@ setup(
         "html2text>=2014.9.8",
         "pyinstrument>=0.12",
         "PyMySQL>=0.6.2",
-        "elasticsearch>=1.2.0",
         "setproctitle>=1.1.8",
         "pymongo>=2.5.2",
         "python-dateutil>=2.4",
@@ -64,10 +63,6 @@ setup(
 
     scripts=['bin/inbox-start',
              'bin/inbox-console',
-             'bin/search-index-service',
-             'bin/search-backfill-namespaces',
-             'bin/search-backfill-checker',
-             'bin/search-account-health',
              'bin/migrate-bodies',
              'bin/migrate-account',
              'bin/migrate-account-bulk',
