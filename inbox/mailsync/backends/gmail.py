@@ -494,7 +494,8 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                         if uid.msg_uid in flags:
                             uid.update_flags(flags[uid.msg_uid].flags)
                             uid.update_labels(flags[uid.msg_uid].labels)
-                            uid.message.update_metadata(uid.is_draft)
-
+                            common.update_message_metadata(db_session, acc,
+                                                           message_for[uid],
+                                                           uid.is_draft)
                 db_session.add_all(new_imapuids)
                 db_session.commit()

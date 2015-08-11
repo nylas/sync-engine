@@ -15,11 +15,11 @@ from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import JSON, json_field_too_long, bakery
 from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
+from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
-from inbox.security.blobstorage import encode_blob, decode_blob
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -74,8 +74,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     is_draft = Column(Boolean, server_default=false(), nullable=False)
     is_sent = Column(Boolean, server_default=false(), nullable=False)
 
-    # DEPRECATED
-    state = Column(Enum('draft', 'sending', 'sending failed', 'sent'))
+    # REPURPOSED
+    state = Column(Enum('draft', 'sending', 'sending failed', 'sent',
+                        'actions_pending', 'actions_committed'))
+
+    @property
+    def categories_changes(self):
+        return self.state == 'actions_pending'
+
+    @categories_changes.setter
+    def categories_changes(self, has_changes):
+        if has_changes is True:
+            self.state = 'actions_pending'
+        else:
+            self.state = 'actions_committed'
 
     _compacted_body = Column(LONGBLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
@@ -351,7 +363,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         block.data = data
 
     def _mark_error(self):
-        """ Mark message as having encountered errors while parsing.
+        """
+        Mark message as having encountered errors while parsing.
 
         Message parsing can fail for several reasons. Occasionally iconv will
         fail via maximum recursion depth. EAS messages may be missing Date and
@@ -488,26 +501,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         parsed = mime.from_string(self.full_body.data)
         return parsed.headers.get(header)
 
-    def update_metadata(self, is_draft):
-        account = self.namespace.account
-        if account.discriminator == 'easaccount':
-            uids = self.easuids
-        else:
-            uids = self.imapuids
-
-        self.is_read = any(i.is_seen for i in uids)
-        self.is_starred = any(i.is_flagged for i in uids)
-        self.is_draft = is_draft
-
-        categories = set()
-        for i in uids:
-            categories.update(i.categories)
-
-        if account.category_type == 'folder':
-            categories = [select_category(categories)] if categories else []
-
-        self.categories = categories
-
     @classmethod
     def from_public_id(cls, public_id, namespace_id, db_session):
         q = bakery(lambda s: s.query(cls))
@@ -521,7 +514,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             joinedload(Message.events))
         return q(db_session).params(
             public_id=public_id, namespace_id=namespace_id).one()
-
 
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
@@ -565,8 +557,3 @@ class MessageCategory(MailSyncBase):
 
 Index('message_category_ids',
       MessageCategory.message_id, MessageCategory.category_id)
-
-
-def select_category(categories):
-    # TODO[k]: Implement proper ranking function
-    return list(categories)[0]

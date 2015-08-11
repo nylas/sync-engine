@@ -220,10 +220,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
 
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):
-        """ Make sure we only create one lock per account per process.
+        """
+        Make sure we only create one lock per account per process.
 
         (Default args are initialized at import time, so `lock_for` acts as a
         module-level memory cache.)
+
         """
         return lock_for.setdefault(account_id,
                                    Lock(cls._sync_lockfile_name(account_id),
