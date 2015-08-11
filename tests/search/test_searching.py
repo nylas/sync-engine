@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+import pytest
 from pytest import fixture
 from sqlalchemy import desc
 from inbox.models import Folder, Message, Thread

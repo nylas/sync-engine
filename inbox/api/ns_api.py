@@ -26,7 +26,6 @@ from inbox.api.validation import (get_attachments, get_calendar,
                                   bounded_str, view, strict_parse_args,
                                   limit, offset, ValidatableArgument,
                                   strict_bool, validate_draft_recipients,
-                                  validate_search_query, validate_search_sort,
                                   valid_delta_object_types, valid_display_name,
                                   noop_event_update)
 from inbox.config import config
@@ -40,7 +39,6 @@ from inbox.log import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
 from inbox.search.base import get_search_client
-from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 from inbox.api.err import err, APIException, NotFoundError, InputError
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
@@ -205,39 +203,20 @@ def thread_query_api():
     return encoder.jsonify(threads)
 
 
-@app.route('/threads/search', methods=['GET', 'POST'])
+@app.route('/threads/search', methods=['GET'])
 def thread_search_api():
     g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-    if request.method == 'GET':
-        if not args['q']:
-            err_string = ('GET HTTP method must include query'
-                          ' url parameter')
-            g.log.error(err_string)
-            return err(400, err_string)
+    if not args['q']:
+        err_string = ('GET HTTP method must include query'
+                      ' url parameter')
+        g.log.error(err_string)
+        return err(400, err_string)
 
-        search_client = get_search_client(g.namespace.account)
-        results = search_client.search_threads(g.db_session, args['q'],
-                                                offset=args['offset'],
-                                                limit=args['limit'])
-    else:
-        data = request.get_json(force=True)
-
-        query = data.get('query')
-        validate_search_query(query)
-
-        sort = data.get('sort')
-        validate_search_sort(sort)
-
-        try:
-            search_engine = NamespaceSearchEngine(g.namespace_public_id)
-            results = search_engine.threads.search(query=query,
-                                                   sort=sort,
-                                                   max_results=args.limit,
-                                                   offset=args.offset)
-        except SearchEngineError as e:
-            g.log.error('Search error: {0}'.format(e))
-            return err(501, 'Search error')
+    search_client = get_search_client(g.namespace.account)
+    results = search_client.search_threads(g.db_session, args['q'],
+                                            offset=args['offset'],
+                                            limit=args['limit'])
 
     return g.encoder.jsonify(results)
 
@@ -351,38 +330,20 @@ def message_query_api():
     return encoder.jsonify(messages)
 
 
-@app.route('/messages/search', methods=['GET', 'POST'])
+@app.route('/messages/search', methods=['GET'])
 def message_search_api():
     g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-    if request.method == 'GET':
-        if not args['q']:
-            err_string = ('GET HTTP method must include query'
-                          ' url parameter')
-            g.log.error(err_string)
-            return err(400, err_string)
+    if not args['q']:
+        err_string = ('GET HTTP method must include query'
+                      ' url parameter')
+        g.log.error(err_string)
+        return err(400, err_string)
 
-        search_client = get_search_client(g.namespace.account)
-        results = search_client.search_messages(g.db_session, args['q'],
-                                                offset=args['offset'],
-                                                limit=args['limit'])
-    else:
-        data = request.get_json(force=True)
-        query = data.get('query')
-
-        validate_search_query(query)
-
-        sort = data.get('sort')
-        validate_search_sort(sort)
-        try:
-            search_engine = NamespaceSearchEngine(g.namespace_public_id)
-            results = search_engine.messages.search(query=query,
-                                                    sort=sort,
-                                                    max_results=args.limit,
-                                                    offset=args.offset)
-        except SearchEngineError as e:
-            g.log.error('Search error: {0}'.format(e))
-            return err(501, 'Search error')
+    search_client = get_search_client(g.namespace.account)
+    results = search_client.search_messages(g.db_session, args['q'],
+                                            offset=args['offset'],
+                                            limit=args['limit'])
 
     return g.encoder.jsonify(results)
 

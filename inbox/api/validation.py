@@ -8,7 +8,6 @@ from inbox.models import Calendar, Thread, Block, Message, Category, Event
 from inbox.models.when import parse_as_when
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import InputError, NotFoundError, ConflictError
-from inbox.search.query import MessageQuery, ThreadQuery
 from inbox.api.kellogs import encode
 
 MAX_LIMIT = 1000
@@ -352,41 +351,3 @@ def valid_display_name(namespace_id, category_type, display_name, db_session):
                          category_type, display_name))
 
     return display_name
-
-
-def validate_search_query(query):
-    if query is None:
-        # No query defaults to 'all'
-        return
-
-    if not isinstance(query, list):
-        raise InputError('Search query must be a list')
-
-    queried_fields = []
-    query_values = []
-    for subquery in query:
-        queried_fields.extend(subquery.keys())
-        query_values.extend(subquery.values())
-
-    if len(query) > 1:
-        # We can't OR together 'all' queries, so check they are not supplied
-        if not all([k != 'all' for k in queried_fields]):
-            raise InputError("Cannot perform OR search with 'all' subquery")
-
-    # valid search attributes - we search across children/parents if the
-    # attribute isn't present on the type being queried.
-    attrs = [a for a in MessageQuery.attrs]
-    attrs.extend(ThreadQuery.attrs)
-    attrs.append('all')
-    attrs.append('weights')
-
-    if not all([k in attrs for k in queried_fields]):
-        raise InputError('Invalid search fields specified')
-
-    if any([isinstance(v, list) for v in query_values]):
-        raise InputError('Search query value cannot be a list')
-
-
-def validate_search_sort(sort):
-    if sort not in ('datetime', 'relevance', None):
-        raise InputError("Sort order must be 'datetime' or 'relevance'")
