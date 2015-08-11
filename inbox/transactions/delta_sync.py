@@ -122,9 +122,10 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
         If given, don't include transactions for these types of objects.
 
     """
+    exclude_types = set(exclude_types) if exclude_types else set()
     # Begin backwards-compatibility shim -- suppress new object types for now,
     # because clients may not be able to deal with them.
-    exclude_types = set(exclude_types) if exclude_types else set()
+    exclude_types.add('account')
     if exclude_folders is True:
         exclude_types.update(('folder', 'label'))
     # End backwards-compatibility shim.

@@ -175,6 +175,36 @@ def test_file_transactions(db, default_namespace):
         assert transaction.command == 'insert'
 
 
+def test_account_transactions(db, default_namespace):
+    account = default_namespace.account
+
+    transaction = get_latest_transaction(db.session, 'account', account.id,
+                                         default_namespace.id)
+    assert transaction.command == 'insert'
+    transaction_id = transaction.id
+
+    with db.session.no_autoflush:
+        account.last_synced_events = datetime.utcnow()
+        db.session.commit()
+        transaction = get_latest_transaction(db.session, 'account', account.id,
+                                             default_namespace.id)
+        assert transaction.id == transaction_id
+
+        account.sync_state = 'invalid'
+        db.session.commit()
+        transaction = get_latest_transaction(db.session, 'account', account.id,
+                                             default_namespace.id)
+        assert transaction.id != transaction_id
+        assert transaction.command == 'update'
+
+        account.sync_host = 'anewhost'
+        db.session.commit()
+        same_transaction = get_latest_transaction(db.session, 'account',
+                                                  account.id,
+                                                  default_namespace.id)
+        assert same_transaction.id == transaction.id
+
+
 def test_object_deletions_create_transaction(db, default_namespace):
     with db.session.no_autoflush:
         thr = add_fake_thread(db.session, default_namespace.id)

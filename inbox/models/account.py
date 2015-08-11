@@ -1,20 +1,24 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
-                        Enum)
+                        Enum, inspect)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true, false
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 from inbox.util.file import Lock
 
-from inbox.models.mixins import HasPublicID, HasEmailAddress, HasRunState
+from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
+                                 HasRevisions)
 from inbox.models.base import MailSyncBase
 from inbox.models.calendar import Calendar
 from inbox.providers import provider_info
 
 
-class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
+class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
+              HasRevisions):
+    API_OBJECT_NAME = 'account'
+
     @property
     def provider(self):
         """
@@ -161,8 +165,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
         self._sync_status['sync_error'] = error
 
     def sync_started(self):
-        """ Record transition to started state. Should be called after the
-            sync is actually started, not when the request to start it is made.
+        """
+        Record transition to started state. Should be called after the
+        sync is actually started, not when the request to start it is made.
+
         """
         current_time = datetime.utcnow()
 
@@ -191,9 +197,11 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
             self._sync_status['sync_disabled_reason'] = reason
 
     def mark_invalid(self, reason='invalid credentials', scope='mail'):
-        """ In the event that the credentials for this account are invalid,
-            update the status and sync flag accordingly. Should only be called
-            after trying to re-authorize / get new token.
+        """
+        In the event that the credentials for this account are invalid,
+        update the status and sync flag accordingly. Should only be called
+        after trying to re-authorize / get new token.
+
         """
         if scope == 'calendar':
             self.sync_events = False
@@ -204,8 +212,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
             self.sync_state = 'invalid'
 
     def sync_stopped(self, reason=None):
-        """ Record transition to stopped state. Should be called after the
-            sync is actually stopped, not when the request to stop it is made.
+        """
+        Record transition to stopped state. Should be called after the
+        sync is actually stopped, not when the request to stop it is made.
+
         """
         if self.sync_state == 'running':
             self.sync_state = 'stopped'
@@ -263,6 +273,13 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     @property
     def is_sync_locked(self):
         return self._sync_lock.locked()
+
+    @property
+    def should_suppress_transaction_creation(self):
+        # Only version if new or the `sync_state` has changed.
+        obj_state = inspect(self)
+        return not (obj_state.pending or
+                    inspect(self).attrs.sync_state.history.has_changes())
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',

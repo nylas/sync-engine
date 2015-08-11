@@ -67,7 +67,8 @@ def new_session(engine, versioned=True):
 
 @contextmanager
 def session_scope(versioned=True, debug=False):
-    """ Provide a transactional scope around a series of operations.
+    """
+    Provide a transactional scope around a series of operations.
 
     Takes care of rolling back failed transactions and closing the session
     when it goes out of scope.
@@ -89,8 +90,8 @@ def session_scope(versioned=True, debug=False):
     ------
     Session
         The created session.
-    """
 
+    """
     global cached_engine
     if cached_engine is None and not debug:
         cached_engine = main_engine()
