@@ -9,7 +9,7 @@ from inbox.events.remote_sync import handle_event_updates
 from inbox.events.recurring import (link_events, get_start_times,
                                     parse_exdate, rrule_to_json)
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 TEST_RRULE = ["RRULE:FREQ=WEEKLY;UNTIL=20140918T203000Z;BYDAY=TH"]

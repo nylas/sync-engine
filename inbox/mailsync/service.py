@@ -7,7 +7,7 @@ from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync, GoogleEventSync
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging

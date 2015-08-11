@@ -1,4 +1,4 @@
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.heartbeat.config import STATUS_DATABASE, get_redis_client
 from inbox.heartbeat.status import HeartbeatStatusKey
 

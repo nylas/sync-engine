@@ -8,7 +8,7 @@ from inbox.models.base import MailSyncBase
 from inbox.models.mixins import (HasRevisions, HasPublicID,
                                  CaseInsensitiveComparator)
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

@@ -1,7 +1,7 @@
 import smtplib
 import mock
 from inbox.sendmail.smtp.postel import SMTPConnection
-from inbox.log import get_logger
+from nylas.logging import get_logger
 
 
 def test_use_smtp_over_ssl():

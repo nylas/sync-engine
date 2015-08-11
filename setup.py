@@ -10,15 +10,13 @@ setup(
 
     install_requires=[
         "gevent>=1.0.1",
+        "nylas-production-python>=0.2.0",
         "click>=2.4",
         "cpu_affinity>=0.1.0",
         "pyyaml",
         "SQLAlchemy==1.0.6",
         "alembic>=0.6.4",
         "requests>=2.4.3",
-        "raven>=5.0.0",
-        "colorlog>=1.8",
-        "structlog>=0.4.1",
         "html2text>=2014.9.8",
         "pyinstrument>=0.12",
         "PyMySQL>=0.6.2",

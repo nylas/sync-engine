@@ -1,4 +1,4 @@
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.crispin import CrispinClient
 from inbox.providers import provider_info
 from inbox.basicauth import NotSupportedError

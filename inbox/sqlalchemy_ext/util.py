@@ -18,7 +18,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 
 from inbox.util.encoding import base36encode, base36decode
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

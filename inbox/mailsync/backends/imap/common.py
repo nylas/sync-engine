@@ -18,7 +18,7 @@ from inbox.models import Message, Folder
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 from inbox.models.util import reconcile_message
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

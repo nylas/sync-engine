@@ -3,7 +3,7 @@ from sqlalchemy import asc, or_
 from sqlalchemy.orm import joinedload
 from gevent import Greenlet, sleep
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 from inbox.api.kellogs import encode
 from inbox.models import Transaction

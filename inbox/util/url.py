@@ -2,7 +2,7 @@ import dns
 from dns.resolver import Resolver
 from dns.resolver import NoNameservers, NXDOMAIN, Timeout, NoAnswer
 from urllib import urlencode
-from inbox.log import get_logger
+from nylas.logging import get_logger
 import re
 log = get_logger('inbox.util.url')
 

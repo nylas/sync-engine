@@ -6,7 +6,7 @@ from simplejson import JSONDecodeError
 from inbox.auth.base import AuthHandler
 from inbox.basicauth import ConnectionError, OAuthError
 from inbox.models.backends.oauth import token_manager
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

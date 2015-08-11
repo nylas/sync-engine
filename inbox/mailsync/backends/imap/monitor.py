@@ -2,7 +2,7 @@ from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
 from inbox.models import Account, Folder
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH

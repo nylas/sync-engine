@@ -7,7 +7,7 @@ from flask import Response
 from inbox.models import (Message, Contact, Calendar, Event, When,
                           Thread, Namespace, Block, Category)
 from inbox.models.event import RecurringEvent, RecurringEventOverride
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

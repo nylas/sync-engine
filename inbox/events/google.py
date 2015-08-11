@@ -9,7 +9,7 @@ import uuid
 
 from inbox.basicauth import AccessNotEnabledError
 from inbox.config import config
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models import Calendar, Account
 from inbox.models.event import Event, EVENT_STATUSES
 from inbox.models.session import session_scope

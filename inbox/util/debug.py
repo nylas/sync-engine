@@ -8,7 +8,8 @@ import gevent._threading  # This is a clone of the *real* threading module
 import greenlet
 import pdb
 import sys
-from inbox.log import log_uncaught_errors, get_logger
+from nylas.logging import get_logger
+from nylas.logging.sentry import log_uncaught_errors
 from pyinstrument import Profiler
 import signal
 

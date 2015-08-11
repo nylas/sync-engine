@@ -14,7 +14,7 @@ from inbox.models.backends.oauth import OAuthAccount
 from inbox.models.base import MailSyncBase
 from inbox.models.secret import Secret
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'

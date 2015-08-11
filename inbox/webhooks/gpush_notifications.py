@@ -4,7 +4,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.api.err import APIException, NotFoundError, InputError
 from inbox.api.validation import valid_public_id
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 from inbox.models.session import new_session
 

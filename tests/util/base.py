@@ -28,36 +28,6 @@ def config():
 
 
 @fixture(scope='session')
-def log(request, config):
-    """
-    Returns root server logger. For others loggers, use this fixture
-    for setup but then call inbox.log.get_logger().
-
-    Testing log file is removed at the end of the test run!
-
-    """
-    import logging
-    from inbox.util.file import mkdirp
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers:
-        root_logger.removeHandler(handler)
-
-    logdir = config.get_required('LOGDIR')
-    mkdirp(logdir)
-    logfile = config.get_required('TEST_LOGFILE')
-    fileHandler = logging.FileHandler(logfile, encoding='utf-8')
-    root_logger.addHandler(fileHandler)
-    root_logger.setLevel(logging.DEBUG)
-
-    def remove_logs():
-        try:
-            os.remove(logfile)
-        except OSError:
-            pass
-    request.addfinalizer(remove_logs)
-
-
-@fixture(scope='session')
 def dbloader(config):
     return TestDB()
 

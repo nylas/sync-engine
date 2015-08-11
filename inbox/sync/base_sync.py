@@ -1,6 +1,6 @@
 from gevent import event, Greenlet, sleep
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 logger = get_logger()
 
 from inbox.util.concurrency import retry_and_report_killed

@@ -11,9 +11,10 @@ from inbox.heartbeat.status import (clear_heartbeat_status, list_all_accounts,
                                     get_heartbeat_status, get_ping_status,
                                     AccountHeartbeatStatus)
 from inbox.heartbeat.config import ALIVE_EXPIRY
+from inbox.config import config
 
-from inbox.log import configure_logging
-configure_logging()
+from nylas.logging import configure_logging
+configure_logging(config.get('LOGLEVEL'))
 
 from mockredis import MockRedis
 # Note that all Redis commands are mocked via mockredis in conftest.py.

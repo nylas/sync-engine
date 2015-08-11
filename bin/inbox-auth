@@ -4,15 +4,16 @@ import sys
 import click
 from setproctitle import setproctitle; setproctitle('inbox-auth')
 
+from inbox.config import config
 from inbox.util.startup import preflight
 from inbox.util.url import provider_from_address
 from inbox.auth.base import handler_from_provider
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.basicauth import NotSupportedError
-from inbox.log import configure_logging
+from nylas.logging import configure_logging
 
-configure_logging()
+configure_logging(config.get('LOGLEVEL'))
 
 
 @click.command()

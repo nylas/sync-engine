@@ -4,7 +4,8 @@ import random
 
 import gevent
 
-from inbox.log import get_logger, log_uncaught_errors
+from nylas.logging import get_logger
+from nylas.logging.sentry import log_uncaught_errors
 from inbox.mailsync.reporting import report_killed
 log = get_logger()
 BACKOFF_DELAY = 30  # seconds to wait before retrying after a failure

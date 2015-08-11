@@ -1,5 +1,5 @@
 from datetime import datetime
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.api.err import err
 from inbox.api.kellogs import APIEncoder
 from inbox.sendmail.base import get_sendmail_client, SendMailException

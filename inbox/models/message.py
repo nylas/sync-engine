@@ -20,7 +20,7 @@ from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
 from inbox.security.blobstorage import encode_blob, decode_blob
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

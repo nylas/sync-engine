@@ -1,6 +1,6 @@
 import datetime
 import gevent
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models import Message
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_and_report_killed

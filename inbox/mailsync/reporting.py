@@ -2,7 +2,7 @@ import sys
 
 from inbox.models.session import session_scope
 from inbox.models.account import Account
-from inbox.log import safe_format_exception
+from nylas.logging import safe_format_exception
 
 
 def report_killed(account_id, folder_name=None):

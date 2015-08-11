@@ -19,7 +19,7 @@ from inbox.models.message import Message
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 from inbox.events.util import parse_rrule_datetime
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 TITLE_MAX_LEN = 1024

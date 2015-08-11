@@ -81,7 +81,7 @@ from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
 from inbox.util.stats import statsd_client
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin, FolderMissingError
 from inbox.models import Folder, Account, Message

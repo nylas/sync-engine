@@ -4,8 +4,9 @@ import multiprocessing
 import click
 from sqlalchemy.orm import load_only
 from inbox.models import Message
-from inbox.log import configure_logging, get_logger
-configure_logging()
+from inbox.config import config
+from nylas.logging import configure_logging, get_logger
+configure_logging(config.get('LOGLEVEL'))
 
 
 CHUNK_SIZE = 1000

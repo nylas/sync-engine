@@ -3,7 +3,7 @@ from flask.ext.restful import reqparse
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 from inbox.api.kellogs import APIEncoder
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models import Namespace, Account
 from inbox.models.session import session_scope
 from inbox.api.validation import (bounded_str, ValidatableArgument,

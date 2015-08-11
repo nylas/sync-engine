@@ -36,7 +36,7 @@ from inbox.util.misc import or_none, timed
 from inbox.basicauth import ValidationError
 from inbox.models.session import session_scope
 from inbox.models.account import Account
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 __all__ = ['CrispinClient', 'GmailCrispinClient', 'CondStoreCrispinClient']

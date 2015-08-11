@@ -4,7 +4,7 @@ from hashlib import sha256
 from sqlalchemy import Column, Integer, String
 
 from inbox.config import config
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 # TODO: store AWS credentials in a better way.

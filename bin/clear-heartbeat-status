@@ -3,10 +3,11 @@
 import click
 from sys import exit
 
+from inbox.config import config
 from inbox.heartbeat.status import clear_heartbeat_status
-from inbox.log import configure_logging, get_logger
+from nylas.logging import configure_logging, get_logger
 
-configure_logging()
+configure_logging(config.get('LOGLEVEL'))
 log = get_logger()
 
 

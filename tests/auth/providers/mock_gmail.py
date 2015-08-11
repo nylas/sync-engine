@@ -16,7 +16,7 @@ from inbox.auth.gmail import GmailAuthHandler
 from inbox.crispin import GmailSettingError
 from inbox.basicauth import OAuthError, UserRecoverableConfigError
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'  # Uses the default gmail provider info from providers.py

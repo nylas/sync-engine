@@ -5,14 +5,14 @@ import gevent.monkey
 import gevent.pool
 gevent.monkey.patch_all()
 import click
-from inbox.log import configure_logging, get_logger
+from nylas.logging import configure_logging, get_logger
+from inbox.config import config
 from inbox.models.session import session_scope
 from inbox.models import Namespace
 from inbox.models.backends.imap import ImapAccount, ImapThread
-from inbox.mailsync.backends.imap.common import recompute_thread_labels
 from inbox.sqlalchemy_ext.util import safer_yield_per
 from inbox.util.misc import cleanup_subject
-configure_logging()
+configure_logging(config.get('LOGLEVEL'))
 log = get_logger()
 
 

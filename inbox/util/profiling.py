@@ -3,7 +3,7 @@ import signal
 import time
 from werkzeug.serving import BaseWSGIServer, WSGIRequestHandler
 from werkzeug.wrappers import Request, Response
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

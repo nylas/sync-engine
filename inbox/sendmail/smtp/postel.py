@@ -9,7 +9,7 @@ import smtplib
 
 import requests
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import token_manager as default_token_manager

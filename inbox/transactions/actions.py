@@ -14,8 +14,9 @@ import gevent
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm import contains_eager
 
-from inbox.util.concurrency import retry_with_logging, log_uncaught_errors
-from inbox.log import get_logger
+from inbox.util.concurrency import retry_with_logging
+from nylas.logging import get_logger
+from nylas.logging.sentry import log_uncaught_errors
 logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace, Account

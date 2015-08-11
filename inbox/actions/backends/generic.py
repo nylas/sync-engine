@@ -4,7 +4,7 @@
 """
 from collections import defaultdict
 from inbox.crispin import writable_connection_pool, retry_crispin
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.models.backends.imap import ImapUid
 from inbox.models.folder import Folder

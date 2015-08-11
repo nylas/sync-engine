@@ -13,7 +13,7 @@ from inbox.util.url import url_concat
 from inbox.providers import provider_info
 from inbox.crispin import GmailCrispinClient, GmailSettingError
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'

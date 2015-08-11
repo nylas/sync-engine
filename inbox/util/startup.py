@@ -12,7 +12,7 @@ from alembic.config import Config as alembic_config
 
 from inbox.config import config
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

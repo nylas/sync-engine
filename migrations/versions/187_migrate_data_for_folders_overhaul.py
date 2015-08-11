@@ -12,8 +12,9 @@ down_revision = '23e204cd1d91'
 
 from sqlalchemy import asc
 from sqlalchemy.orm import joinedload, subqueryload, load_only
-from inbox.log import configure_logging, get_logger
-configure_logging()
+from inbox.config import config
+from nylas.logging import configure_logging, get_logger
+configure_logging(config.get('LOGLEVEL'))
 log = get_logger()
 
 

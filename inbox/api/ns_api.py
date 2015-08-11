@@ -36,7 +36,7 @@ import inbox.contacts.crud
 from inbox.sendmail.base import (create_message_from_json, update_draft,
                                  delete_draft, create_draft_from_mime,
                                  SendMailException)
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
 from inbox.search.base import get_search_client

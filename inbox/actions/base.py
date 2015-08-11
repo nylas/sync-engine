@@ -28,7 +28,7 @@ from inbox.actions.backends import module_registry
 from inbox.models import Account, Message
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

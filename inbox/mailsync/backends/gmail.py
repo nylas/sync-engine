@@ -29,7 +29,7 @@ from inbox.util.itert import chunk, partition
 from inbox.util.debug import bind_context
 
 from inbox.crispin import GmailSettingError
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.models import Message, Folder, Namespace, Account, Label
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread

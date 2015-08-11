@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from email.utils import parsedate_tz, mktime_tz
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.providers import providers
 
 

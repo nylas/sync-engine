@@ -15,7 +15,7 @@ from inbox.events.util import MalformedEventError
 from inbox.util.addr import canonicalize_address
 from inbox.models.action_log import schedule_action
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

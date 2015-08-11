@@ -2,7 +2,7 @@ from datetime import datetime
 import time
 import json
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 from inbox.heartbeat.config import (CONTACTS_FOLDER_ID, EVENTS_FOLDER_ID,
                                     get_redis_client)

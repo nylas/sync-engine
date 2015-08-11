@@ -14,7 +14,7 @@ from inbox.mailsync.backends.base import new_or_updated, mailsync_session_scope
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.imap.generic import (
     FolderSyncEngine, uidvalidity_cb, UIDStack)
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from requests.exceptions import HTTPError
 from sqlalchemy import func
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 logger = get_logger()
 
 from inbox.basicauth import AccessNotEnabledError, OAuthError

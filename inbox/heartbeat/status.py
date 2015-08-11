@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import json
 import time
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 from inbox.heartbeat.config import ALIVE_EXPIRY
 from inbox.heartbeat.store import HeartbeatStore
 

@@ -9,7 +9,7 @@ from inbox.sqlalchemy_ext.util import (LittleJSON, JSON, MutableDict)
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import object_session
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 from inbox.models.base import MailSyncBase
 from inbox.models.account import Account

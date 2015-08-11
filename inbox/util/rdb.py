@@ -3,7 +3,7 @@ import os
 import sys
 from gevent import monkey; monkey.patch_all(aggressive=False)
 from code import InteractiveConsole
-from inbox.log import get_logger
+from nylas.logging import get_logger
 
 log = get_logger()
 

@@ -7,7 +7,7 @@ import gdata.auth
 import gdata.client
 import gdata.contacts.client
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
 from inbox.basicauth import OAuthError

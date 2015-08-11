@@ -5,7 +5,7 @@ from dateutil.rrule import (rrulestr, rrule, rruleset,
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.events.util import parse_rrule_datetime
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 # How far in the future to expand recurring events

@@ -6,7 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from inbox.models.base import MailSyncBase
 from inbox.models.category import Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

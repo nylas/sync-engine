@@ -3,7 +3,7 @@ from collections import Counter
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 logger = get_logger()
 from inbox.models import Contact, Account
 from inbox.sync.base_sync import BaseSyncMonitor

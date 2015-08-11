@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
 from inbox.models.secret import Secret
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 

@@ -2,7 +2,7 @@ import datetime
 
 import sqlalchemy.orm.exc
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 log = get_logger()
 
 from inbox.auth.oauth import OAuthAuthHandler

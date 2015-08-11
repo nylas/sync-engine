@@ -1,6 +1,6 @@
 """Provide iCloud contacts"""
 
-from inbox.log import get_logger
+from nylas.logging import get_logger
 logger = get_logger()
 
 from carddav import CardDav

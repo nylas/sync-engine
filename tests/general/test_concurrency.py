@@ -5,7 +5,7 @@ from gevent import GreenletExit
 
 from inbox.util.concurrency import (retry, retry_with_logging,
                                     _resettable_counter)
-from inbox.log import log_uncaught_errors
+from nylas.logging.sentry import log_uncaught_errors
 
 
 class MockLogger(object):
