@@ -33,8 +33,9 @@ from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
                                        calculate_group_counts, is_stale)
 import inbox.contacts.crud
-from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
-                                 create_draft_from_mime, SendMailException)
+from inbox.sendmail.base import (create_message_from_json, update_draft,
+                                 delete_draft, create_draft_from_mime,
+                                 SendMailException)
 from inbox.log import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
@@ -1166,7 +1167,8 @@ def draft_get_api(public_id):
 @app.route('/drafts/', methods=['POST'])
 def draft_create_api():
     data = request.get_json(force=True)
-    draft = create_draft(data, g.namespace, g.db_session, syncback=True)
+    draft = create_message_from_json(data, g.namespace, g.db_session,
+                                     is_draft=True)
     return g.encoder.jsonify(draft)
 
 
@@ -1231,7 +1233,8 @@ def draft_send_api():
                         g.db_session, inbox_uid=draft.inbox_uid,
                         message_id_header=draft.message_id_header)
     else:
-        draft = create_draft(data, g.namespace, g.db_session, syncback=False)
+        draft = create_message_from_json(data, g.namespace, g.db_session,
+                                         is_draft=False)
 
     validate_draft_recipients(draft)
     resp = send_draft(g.namespace.account, draft, g.db_session)

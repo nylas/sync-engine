@@ -88,10 +88,10 @@ def create_draft_from_mime(account, raw_mime, db_session):
     return msg
 
 
-def create_draft(data, namespace, db_session, syncback):
-    """ Construct a draft object (a Message instance) from `data`, a dictionary
-    representing the POST body of an API request. All new objects are added to
-    the session, but not committed."""
+def create_message_from_json(data, namespace, db_session, is_draft):
+    """ Construct a Message instance from `data`, a dictionary representing the
+    POST body of an API request. All new objects are added to the session, but
+    not committed."""
 
     # Validate the input and get referenced objects (thread, attachments)
     # as necessary.
@@ -145,7 +145,7 @@ def create_draft(data, namespace, db_session, syncback):
         message = Message()
         message.namespace = namespace
         message.is_created = True
-        message.is_draft = True
+        message.is_draft = is_draft
         message.from_addr = from_addr if from_addr else \
             [(account.name, account.email_address)]
         # TODO(emfree): we should maybe make received_date nullable, so its
@@ -215,7 +215,7 @@ def create_draft(data, namespace, db_session, syncback):
         message.thread = thread
 
     db_session.add(message)
-    if syncback:
+    if is_draft:
         schedule_action('save_draft', message, namespace.id, db_session,
                         version=message.version)
     db_session.flush()

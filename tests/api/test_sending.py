@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import smtplib
 import json
+import time
 import pytest
 from flanker import mime
 from inbox.basicauth import OAuthError
@@ -609,3 +610,16 @@ def test_rsvp_updates_status(patch_smtp, api_client, example_rsvp,
     assert dct['participants'][0]['email'] == 'inboxapptest@gmail.com'
     assert dct['participants'][0]['status'] == 'yes'
     assert dct['participants'][0]['comment'] == 'I will come.'
+
+
+def test_sent_messages_shown_in_delta(patch_smtp, api_client, example_draft):
+    ts = int(time.time())
+    r = api_client.post_data('/delta/generate_cursor', {'start': ts})
+    cursor = json.loads(r.data)['cursor']
+    r = api_client.post_data('/send', example_draft)
+    message_id = json.loads(r.data)['id']
+    deltas = api_client.get_data('/delta?cursor={}'.format(cursor))['deltas']
+    message_delta = next((d for d in deltas if d['id'] == message_id), None)
+    assert message_delta is not None
+    assert message_delta['object'] == 'message'
+    assert message_delta['event'] == 'create'

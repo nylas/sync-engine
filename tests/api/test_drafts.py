@@ -10,8 +10,6 @@ import pytest
 
 from tests.util.base import add_fake_message, add_fake_thread
 
-__all__ = ['message', 'thread']
-
 
 @pytest.fixture
 def example_draft(db, default_account):
@@ -79,13 +77,13 @@ def test_save_update_bad_recipient_draft(db, patch_remote_save_draft,
                                          example_bad_recipient_drafts):
     # You should be able to save a draft, even if
     # the recipient's email is invalid.
-    from inbox.sendmail.base import create_draft
+    from inbox.sendmail.base import create_message_from_json
     from inbox.actions.base import save_draft as save_draft_remote
-    from inbox.models import Account
 
     for example_draft in example_bad_recipient_drafts:
-        draft = create_draft(example_draft, default_account.namespace,
-                             db.session, syncback=False)
+        draft = create_message_from_json(example_draft,
+                                         default_account.namespace, db.session,
+                                         is_draft=True)
 
         save_draft_remote(default_account.id, draft.id, db.session,
                           {'version': draft.version})

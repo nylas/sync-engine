@@ -1,10 +1,10 @@
-from inbox.sendmail.base import create_draft, update_draft
-from tests.util.base import default_namespace, db
+from inbox.sendmail.base import create_message_from_json, update_draft
 
 
 def test_headers_presence(default_namespace, db):
     data = {'subject': 'test draft', 'to': [{'email': 'karim@nylas.com'}]}
-    draft = create_draft(data, default_namespace, db.session, False)
+    draft = create_message_from_json(data, default_namespace, db.session,
+                                     False)
 
     assert draft.inbox_uid is not None
     assert draft.message_id_header is not None
