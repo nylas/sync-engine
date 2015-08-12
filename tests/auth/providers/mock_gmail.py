@@ -13,8 +13,8 @@ from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 
 from inbox.auth.gmail import GmailAuthHandler
-from inbox.crispin import GmailSettingError
-from inbox.basicauth import OAuthError, UserRecoverableConfigError
+from inbox.basicauth import (OAuthError, UserRecoverableConfigError,
+                             GmailSettingError, ImapSupportDisabledError)
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -27,6 +27,10 @@ def raise_setting_error(folder):
     raise GmailSettingError(folder)
 
 
+def raise_imap_disabled_error(*args):
+    raise ImapSupportDisabledError()
+
+
 def raise_oauth_error(e):
     raise OAuthError(e)
 
@@ -34,7 +38,8 @@ def raise_oauth_error(e):
 fake_responses = {
     'no_all_mail': raise_setting_error,
     'no_trash': raise_setting_error,
-    'oauth_fail': raise_oauth_error
+    'oauth_fail': raise_oauth_error,
+    'imap_disabled': raise_imap_disabled_error
 }
 
 

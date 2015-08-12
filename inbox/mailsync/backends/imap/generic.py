@@ -229,9 +229,14 @@ class FolderSyncEngine(Greenlet):
                           folder_name=self.folder_name,
                           folder_id=self.folder_id)
                 raise MailsyncDone()
-            except ValidationError:
+            except ValidationError as exc:
                 log.error('Error authenticating; stopping sync', exc_info=True,
-                          account_id=self.account_id, folder_id=self.folder_id)
+                          account_id=self.account_id, folder_id=self.folder_id,
+                          logstash_tag='mark_invalid')
+                with mailsync_session_scope() as db_session:
+                    account = db_session.query(Account).get(self.account_id)
+                    account.mark_invalid()
+                    account.update_sync_error(str(exc))
                 raise MailsyncDone()
 
             # State handlers are idempotent, so it's okay if we're

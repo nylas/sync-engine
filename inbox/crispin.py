@@ -33,7 +33,7 @@ from gevent.queue import Queue
 from inbox.util.concurrency import retry
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import ValidationError
+from inbox.basicauth import GmailSettingError
 from inbox.models.session import session_scope
 from inbox.models.account import Account
 from nylas.logging import get_logger
@@ -58,11 +58,6 @@ _lock_map = defaultdict(threading.Lock)
 
 
 CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
-
-
-class GmailSettingError(Exception):
-    """ Thrown on misconfigured Gmail accounts. """
-    pass
 
 
 class FolderMissingError(Exception):
@@ -184,26 +179,16 @@ class CrispinConnectionPool(object):
                 self.client_cls = CrispinClient
 
     def _new_connection(self):
-        try:
-            with session_scope() as db_session:
-                account = db_session.query(Account).get(self.account_id)
-                conn = self.auth_handler.connect_account(account)
-                # If we can connect the account, then we can set the state
-                # to 'running' if it wasn't already
-                if self.sync_state != 'running':
-                    self.sync_state = account.sync_state = 'running'
-            return self.client_cls(self.account_id, self.provider_info,
-                                   self.email_address, conn,
-                                   readonly=self.readonly)
-        except ValidationError, e:
-            log.error('Error validating',
-                      account_id=self.account_id,
-                      logstash_tag='mark_invalid')
-            with session_scope() as db_session:
-                account = db_session.query(Account).get(self.account_id)
-                account.mark_invalid()
-                account.update_sync_error(str(e))
-            raise
+        with session_scope() as db_session:
+            account = db_session.query(Account).get(self.account_id)
+            conn = self.auth_handler.connect_account(account)
+            # If we can connect the account, then we can set the state
+            # to 'running' if it wasn't already
+            if self.sync_state != 'running':
+                self.sync_state = account.sync_state = 'running'
+        return self.client_cls(self.account_id, self.provider_info,
+                               self.email_address, conn,
+                               readonly=self.readonly)
 
 
 def _exc_callback():

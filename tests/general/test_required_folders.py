@@ -2,7 +2,8 @@
 import pytest
 
 from inbox.auth.gmail import GmailAuthHandler
-from inbox.crispin import GmailCrispinClient, GmailSettingError
+from inbox.basicauth import GmailSettingError
+from inbox.crispin import GmailCrispinClient
 
 
 class AccountStub(object):
