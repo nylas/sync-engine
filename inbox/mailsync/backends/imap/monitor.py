@@ -42,6 +42,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.poll_frequency = poll_frequency
         self.syncmanager_lock = BoundedSemaphore(1)
         self.refresh_flags_max = refresh_flags_max
+        self.saved_remote_folders = None
 
         provider_supports_condstore = account.provider_info.get('condstore',
                                                                 False)
@@ -68,7 +69,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             with connection_pool(self.account_id).get() as crispin_client:
                 # Get a fresh list of the folder names from the remote
                 remote_folders = crispin_client.folders()
-                self.save_folder_names(db_session, remote_folders)
+                if self.saved_remote_folders != remote_folders:
+                    self.save_folder_names(db_session, remote_folders)
+                    self.saved_remote_folders = remote_folders
                 # The folders we should be syncing
                 sync_folders = crispin_client.sync_folders()
 
