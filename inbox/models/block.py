@@ -32,7 +32,9 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     """ Metadata for any file that we store """
     API_OBJECT_NAME = 'file'
 
+    @property
     def should_suppress_transaction_creation(self):
+        # Only version attachments
         return not any(part.is_attachment for part in self.parts)
 
     from inbox.models.namespace import Namespace

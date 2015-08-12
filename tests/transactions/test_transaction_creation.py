@@ -1,7 +1,12 @@
+from datetime import datetime
+
 from sqlalchemy import desc
+from flanker import mime
+
 from inbox.models import Transaction, Calendar
 from inbox.models.mixins import HasRevisions
 from inbox.models.util import transaction_objects
+
 from tests.util.base import add_fake_message, add_fake_thread, add_fake_event
 
 
@@ -134,6 +139,40 @@ def test_transactions_created_for_calendars(db, default_namespace):
     assert transaction.record_id == calendar.id
     assert transaction.object_type == 'calendar'
     assert transaction.command == 'delete'
+
+
+def test_file_transactions(db, default_namespace):
+    from inbox.models.message import Message
+
+    account = default_namespace.account
+    thread = add_fake_thread(db.session, default_namespace.id)
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.text('plain', 'This is a message with attachments'),
+        mime.create.attachment('image/png', 'filler', 'attached_image.png',
+                               'attachment'),
+        mime.create.attachment('application/pdf', 'filler',
+                               'attached_file.pdf', 'attachment')
+    )
+    msg = Message.create_from_synced(account, 22, '[Gmail]/All Mail',
+                                     datetime.utcnow(), mime_msg.to_string())
+    msg.thread = thread
+    db.session.add(msg)
+    db.session.commit()
+
+    assert len(msg.parts) == 2
+    assert all(part.content_disposition == 'attachment' for part in msg.parts)
+
+    block_ids = [part.block.id for part in msg.parts]
+
+    with db.session.no_autoflush:
+        transaction = get_latest_transaction(db.session, 'file', block_ids[0],
+                                             default_namespace.id)
+        assert transaction.command == 'insert'
+
+        transaction = get_latest_transaction(db.session, 'file', block_ids[1],
+                                             default_namespace.id)
+        assert transaction.command == 'insert'
 
 
 def test_object_deletions_create_transaction(db, default_namespace):
