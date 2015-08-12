@@ -133,7 +133,7 @@ def engine_uri(database=None):
     info['host'] = os.getenv("MYSQL_PORT_3306_TCP_ADDR", info['host'])
     info['port'] = os.getenv("MYSQL_PORT_3306_TCP_PORT", info['port'])
 
-    uri_template = 'mysql+pymysql://{username}:{password}@{host}' \
+    uri_template = 'mysql+mysqldb://{username}:{password}@{host}' \
                    ':{port}/{database}?charset=utf8mb4'
 
     return uri_template.format(**{k: urlquote(v) for k, v in info.items()})

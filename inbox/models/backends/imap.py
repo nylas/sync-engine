@@ -36,7 +36,11 @@ class ImapAccount(Account):
     @property
     def imap_endpoint(self):
         if self._imap_server_host is not None:
-            return (self._imap_server_host, self._imap_server_port)
+            # We have to take care to coerce to int here and below, because
+            # mysqlclient returns Integer columns as type long, and
+            # socket.getaddrinfo in older versions of Python 2.7 fails to
+            # handle ports of type long. Yay. http://bugs.python.org/issue8853.
+            return (self._imap_server_host, int(self._imap_server_port))
         else:
             return self.provider_info['imap']
 
@@ -49,7 +53,7 @@ class ImapAccount(Account):
     @property
     def smtp_endpoint(self):
         if self._smtp_server_host is not None:
-            return (self._smtp_server_host, self._smtp_server_port)
+            return (self._smtp_server_host, int(self._smtp_server_port))
         else:
             return self.provider_info['smtp']
 
