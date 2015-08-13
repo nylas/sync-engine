@@ -118,7 +118,7 @@ if 'MYSQL_PASSWORD' not in config:
         'Missing secrets config file? Run `sudo cp etc/secrets-dev.yml '
         '/etc/inboxapp/secrets.yml` and retry')
 
-nylas.logging.sentry.SENTRY_DSN = config.get_required('SENTRY_DSN')
+nylas.logging.sentry.SENTRY_DSN = config.get('SENTRY_DSN')
 
 
 def engine_uri(database=None):
