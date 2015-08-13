@@ -30,8 +30,6 @@
 "MSG_PARTS_DIRECTORY": "tests/data/parts",
 
 "EMAIL_EXCEPTIONS": false,
-"SENTRY_EXCEPTIONS": false,
-"SENTRY_DSN": "http://public:secret@example.com/1",
 "ENCRYPT_SECRETS": false,
 
 "ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
