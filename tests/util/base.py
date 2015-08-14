@@ -277,7 +277,8 @@ def add_fake_account(db_session, email_address='test@nilas.com'):
 def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
                      received_date=None, subject='',
-                     body='', snippet='', add_sent_category=False):
+                     body='', snippet='', g_msgid=None,
+                     add_sent_category=False):
     from inbox.models import Message, Category
     from inbox.contacts.process_mail import update_contacts_from_message
     m = Message()
@@ -293,6 +294,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.body = body
     m.snippet = snippet
     m.subject = subject
+    m.g_msgid = g_msgid
 
     if thread:
         thread.messages.append(m)

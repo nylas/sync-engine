@@ -12,21 +12,6 @@ from tests.api.base import api_client, new_api_client
 __all__ = ['api_client']
 
 
-imap_ids = []
-gmail_ids = []
-
-
-@fixture
-def populate_ids(db, generic_account, default_account):
-    gmail_uids = db.session.query(ImapUid). \
-        filter(ImapUid.account_id == default_account.id).all()
-    gmail_ids.extend([gmail_uid.msg_uid for gmail_uid in gmail_uids])
-    imap_uids = db.session.query(ImapUid). \
-        filter(ImapUid.account_id == generic_account.id).all()
-    imap_ids.extend([imap_uid.msg_uid for imap_uid in imap_uids])
-    return imap_ids
-
-
 @fixture
 def imap_api_client(db, generic_account):
     return new_api_client(db, generic_account.namespace)
@@ -60,6 +45,7 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
                                            'email': 'barrack@obama.com'}],
+                                 g_msgid=1,
                                  received_date=datetime.
                                  datetime(2015, 7, 9, 23, 50, 7),
                                  subject='YOO!')
@@ -73,6 +59,7 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
                                            'email': 'barrack@obama.com'}],
+                                 g_msgid=2,
                                  received_date=datetime.
                                  datetime(2014, 7, 9, 23, 50, 7),
                                  subject='Hey!')
@@ -86,14 +73,13 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
                                            'email': 'barrack@obama.com'}],
+                                 g_msgid=3,
                                  received_date=datetime.
                                  datetime(2013, 7, 9, 23, 50, 7),
                                  subject='Sup?')
 
     add_fake_imapuid(db.session, default_account.id, message3,
                      folder, 3002)
-
-    gmail_ids.extend([3000, 3001, 3002])
 
     return [message1, message2, message3]
 
@@ -152,8 +138,6 @@ def sorted_imap_messages(db, generic_account, sorted_imap_threads, folder):
     add_fake_imapuid(db.session, generic_account.id, message3,
                      folder, 2002)
 
-    imap_ids.extend([2000, 2001, 2002])
-
     return [message1, message2, message3]
 
 
@@ -166,12 +150,20 @@ def patch_connection(db, generic_account, default_account):
             self.default_account_id = default_account.id
 
         def gmail_search(self, *args, **kwargs):
-            return gmail_ids
+            imap_uids = db.session.query(ImapUid).join(Message) \
+                        .filter(
+                            ImapUid.message_id == Message.id,
+                            Message.g_msgid != None).all()
+            return [uid.msg_uid for uid in imap_uids]
 
         def search(self, *args, **kwargs):
             criteria = kwargs['criteria']
             assert criteria == 'TEXT blah blah blah'
-            return imap_ids
+            imap_uids = db.session.query(ImapUid).join(Message) \
+                            .filter(
+                                ImapUid.message_id == Message.id,
+                                Message.g_msgid != None).all()
+            return [uid.msg_uid for uid in imap_uids]
 
     return MockConnection()
 
@@ -320,7 +312,6 @@ def test_imap_pagination(db, imap_api_client, generic_account,
 
         add_fake_imapuid(db.session, generic_account.id, message,
                          folder, i)
-        imap_ids.append(i)
 
     first_ten_messages_db = db.session.query(Message)\
                             .filter(Message.namespace_id ==
@@ -335,11 +326,17 @@ def test_imap_pagination(db, imap_api_client, generic_account,
                                         first_ten_messages_api):
         assert db_message.public_id == api_message['id']
 
+    imap_uids = db.session.query(ImapUid).join(Message) \
+                    .filter(
+                        ImapUid.message_id == Message.id,
+                        Message.g_msgid == None).all()
+    uids = [uid.msg_uid for uid in imap_uids]
+
     first_ten_threads_db = db.session.query(Thread) \
                             .join(Message) \
                             .join(ImapUid) \
                             .filter(ImapUid.account_id == generic_account.id,
-                                    ImapUid.msg_uid.in_(imap_ids),
+                                    ImapUid.msg_uid.in_(uids),
                                     Thread.id == Message.thread_id)\
                             .order_by(desc(Message.received_date)) \
                             .limit(10).all()
@@ -362,12 +359,12 @@ def test_gmail_pagination(db, api_client, default_account,
                                    from_addr=[{'name': '', 'email':
                                                '{}@test.com'.format(str(i))}],
                                    subject='hi',
+                                   g_msgid=i,
                                    received_date=datetime.
                                    datetime(2000 + i, 1, 1, 1, 0, 0))
 
         add_fake_imapuid(db.session, default_account.id, message,
                          folder, i)
-        gmail_ids.append(i)
 
     first_ten_messages_db = db.session.query(Message)\
                             .filter(Message.namespace_id ==
@@ -385,11 +382,17 @@ def test_gmail_pagination(db, api_client, default_account,
                                         first_ten_messages_api):
         assert db_message.public_id == api_message['id']
 
+    imap_uids = db.session.query(ImapUid).join(Message) \
+                    .filter(
+                        ImapUid.message_id == Message.id,
+                        Message.g_msgid != None).all()
+    uids = [uid.msg_uid for uid in imap_uids]
+
     first_ten_threads_db = db.session.query(Thread) \
                             .join(Message) \
                             .join(ImapUid) \
                             .filter(ImapUid.account_id == default_account.id,
-                                    ImapUid.msg_uid.in_(imap_ids),
+                                    ImapUid.msg_uid.in_(uids),
                                     Thread.id == Message.thread_id)\
                             .order_by(desc(Message.received_date)) \
                             .limit(10).all()
