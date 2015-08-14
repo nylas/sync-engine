@@ -3,12 +3,13 @@ import gevent
 import collections
 from datetime import datetime
 
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func, bindparam
 from sqlalchemy.orm import subqueryload
 from inbox.api.kellogs import APIEncoder, encode
 from inbox.models import Transaction, Message, Thread
 from inbox.models.session import session_scope
 from inbox.models.util import transaction_objects
+from inbox.sqlalchemy_ext.util import bakery
 
 
 QUERY_OPTIONS = {
@@ -89,6 +90,16 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
     return latest_transaction.public_id
 
 
+def _get_last_trx_id_for_namespace(namespace_id, db_session):
+    q = bakery(lambda session: session.query(func.max(Transaction.id)))
+    q += lambda q: q.filter(
+        Transaction.namespace_id == bindparam('namespace_id'),
+        Transaction.deleted_at.is_(None))
+    q += lambda q: q.with_hint(Transaction,
+                               'USE INDEX (namespace_id_deleted_at)')
+    return q(db_session).params(namespace_id=namespace_id).one()[0]
+
+
 def format_transactions_after_pointer(namespace, pointer, db_session,
                                       result_limit, exclude_types=None,
                                       include_types=None,
@@ -129,6 +140,10 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
     if exclude_folders is True:
         exclude_types.update(('folder', 'label'))
     # End backwards-compatibility shim.
+
+    last_trx = _get_last_trx_id_for_namespace(namespace.id, db_session)
+    if last_trx == pointer:
+        return ([], pointer)
 
     while True:
         # deleted_at condition included to allow this query to be satisfied via
