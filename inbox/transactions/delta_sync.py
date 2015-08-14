@@ -103,7 +103,8 @@ def _get_last_trx_id_for_namespace(namespace_id, db_session):
 def format_transactions_after_pointer(namespace, pointer, db_session,
                                       result_limit, exclude_types=None,
                                       include_types=None,
-                                      exclude_folders=True):
+                                      exclude_folders=True,
+                                      legacy_nsid=False):
     """
     Return a pair (deltas, new_pointer), where deltas is a list of change
     events, represented as dictionaries:
@@ -214,7 +215,8 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                     if obj is None:
                         continue
                     repr_ = encode(
-                        obj, namespace_public_id=namespace.public_id)
+                        obj, namespace_public_id=namespace.public_id,
+                        legacy_nsid=legacy_nsid)
                     delta['attributes'] = repr_
 
                 results.append((trx.id, delta))
@@ -233,7 +235,8 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
 
 def streaming_change_generator(namespace, poll_interval, timeout,
                                transaction_pointer, exclude_types=None,
-                               include_types=None, exclude_folders=True):
+                               include_types=None, exclude_folders=True,
+                               legacy_nsid=False):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
@@ -250,13 +253,14 @@ def streaming_change_generator(namespace, poll_interval, timeout,
         `transaction_pointer`.
 
     """
-    encoder = APIEncoder()
+    encoder = APIEncoder(legacy_nsid=legacy_nsid)
     start_time = time.time()
     while time.time() - start_time < timeout:
         with session_scope() as db_session:
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
-                exclude_types, include_types, exclude_folders)
+                exclude_types, include_types, exclude_folders,
+                legacy_nsid=legacy_nsid)
 
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer

@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 import pytest
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 __all__ = ['api_client']
 
@@ -39,7 +39,7 @@ def files(db):
 @pytest.fixture(scope='function')
 def uploaded_file_ids(api_client, files):
     file_ids = []
-    upload_path = '/files'
+    upload_path = api_client.full_path('/files')
     for filename, path in files:
         # Mac and linux fight over filesystem encodings if we store this
         # filename on the fs. Work around by changing the filename we upload
@@ -49,7 +49,7 @@ def uploaded_file_ids(api_client, files):
         elif filename == 'andra-moi-ennepe.txt':
             filename = u'ἄνδρα μοι ἔννεπε'
         data = {'file': (open(path, 'rb'), filename)}
-        r = api_client.post_raw(upload_path, data=data)
+        r = api_client.client.post(upload_path, data=data)
         assert r.status_code == 200
         file_id = json.loads(r.data)[0]['id']
         file_ids.append(file_id)

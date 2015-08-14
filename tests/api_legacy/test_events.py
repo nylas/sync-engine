@@ -4,7 +4,7 @@ import pytest
 from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Event
 from tests.util.base import db, calendar, add_fake_event
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 __all__ = ['api_client', 'calendar', 'db']
 
@@ -86,7 +86,7 @@ def test_api_create(db, api_client, calendar, default_account):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['account_id'] == default_account.namespace.public_id
+    assert e_resp_data['namespace_id'] == default_account.namespace.public_id
     assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['location'] == e_data['location']
     assert e_resp_data['when']['time'] == e_data['when']['time']
@@ -95,7 +95,7 @@ def test_api_create(db, api_client, calendar, default_account):
     e_get_resp = api_client.get_data('/events/' + e_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['account_id'] == default_account.namespace.public_id
+    assert e_get_resp['namespace_id'] == default_account.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['title'] == e_data['title']
     assert e_get_resp['when']['time'] == e_data['when']['time']
@@ -111,7 +111,7 @@ def test_api_create_no_title(db, api_client, calendar, default_account):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['account_id'] == default_account.namespace.public_id
+    assert e_resp_data['namespace_id'] == default_account.namespace.public_id
     assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
@@ -119,7 +119,7 @@ def test_api_create_no_title(db, api_client, calendar, default_account):
     e_get_resp = api_client.get_data('/events/' + e_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['account_id'] == default_account.namespace.public_id
+    assert e_get_resp['namespace_id'] == default_account.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['title'] == e_data['title']
     assert e_get_resp['when']['time'] == e_data['when']['time']
@@ -135,7 +135,7 @@ def test_api_update_title(db, api_client, calendar, default_account):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['account_id'] == default_account.namespace.public_id
+    assert e_resp_data['namespace_id'] == default_account.namespace.public_id
     assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
@@ -146,7 +146,7 @@ def test_api_update_title(db, api_client, calendar, default_account):
     e_put_data = json.loads(e_put_resp.data)
 
     assert e_put_data['object'] == 'event'
-    assert e_put_data['account_id'] == default_account.namespace.public_id
+    assert e_put_data['namespace_id'] == default_account.namespace.public_id
     assert e_put_data['id'] == e_id
     assert e_put_data['title'] == 'new title'
     assert e_put_data['when']['object'] == 'time'

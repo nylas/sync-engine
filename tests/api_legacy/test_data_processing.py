@@ -3,7 +3,7 @@ from inbox.models import DataProcessingCache
 from sqlalchemy.orm.exc import NoResultFound
 from tests.util.base import (add_fake_thread,
                              add_fake_message, default_namespace)
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 
 __all__ = ['api_client', 'default_namespace']
@@ -41,8 +41,8 @@ def test_contact_rankings(db, api_client, default_namespace):
                          add_sent_category=True)
 
     # Check contact rankings
-    resp = api_client.get_raw(
-        '/contacts/rankings?force_recalculate=true')
+    resp = api_client.client.get(api_client.full_path(
+        '/contacts/rankings?force_recalculate=true'))
     assert resp.status_code == 200
 
     emails_scores = {e: s for (e, s) in json.loads(resp.data)}
@@ -55,7 +55,8 @@ def test_contact_rankings(db, api_client, default_namespace):
         assert emails_scores[e1] > emails_scores[e2]
 
     # make sure it works if we call it again!
-    resp = api_client.get_raw('/contacts/rankings')
+    resp = api_client.client.get(api_client.full_path(
+        '/contacts/rankings'))
     assert resp.status_code == 200
 
     emails_scores = {e: s for (e, s) in json.loads(resp.data)}
@@ -120,7 +121,8 @@ def test_contact_groups(db, api_client, default_namespace):
                          add_sent_category=True)
 
     # Check contact groups
-    resp = api_client.get_raw('/groups/intrinsic?force_recalculate=true')
+    resp = api_client.client.get(api_client.full_path(
+        '/groups/intrinsic?force_recalculate=true'))
     assert resp.status_code == 200
 
     groups_scores = {g: s for (g, s) in json.loads(resp.data)}
@@ -132,7 +134,8 @@ def test_contact_groups(db, api_client, default_namespace):
         assert g in groups_scores
 
     # make sure it works when we do it again
-    resp = api_client.get_raw('/groups/intrinsic')
+    resp = api_client.client.get(api_client.full_path(
+        '/groups/intrinsic'))
     assert resp.status_code == 200
 
     groups_scores = {g: s for (g, s) in json.loads(resp.data)}

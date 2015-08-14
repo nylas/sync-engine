@@ -1,4 +1,5 @@
-from tests.util.base import api_client, generic_account, gmail_account
+from tests.util.base import generic_account, gmail_account
+from tests.api_legacy.base import api_client
 
 __all__ = ['api_client', 'generic_account', 'gmail_account']
 

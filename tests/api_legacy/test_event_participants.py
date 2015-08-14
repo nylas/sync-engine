@@ -2,7 +2,7 @@ import pytest
 import json
 
 from tests.util.base import calendar
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 
 __all__ = ['calendar', 'api_client']
@@ -338,9 +338,7 @@ def test_api_participant_reply(db, api_client, rsvp, calendar):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
-
     assert e_resp_data['id']
-    assert e_resp_data['participants']
 
 
 def test_api_participant_reply_invalid_rsvp(db, api_client, calendar):
@@ -358,9 +356,7 @@ def test_api_participant_reply_invalid_rsvp(db, api_client, calendar):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
-
     assert e_resp_data['id']
-    assert e_resp_data['participants']
 
 
 def test_api_participant_reply_invalid_participant(db, api_client, calendar):
@@ -379,7 +375,6 @@ def test_api_participant_reply_invalid_participant(db, api_client, calendar):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
-
     assert e_resp_data['id']
 
 
@@ -398,8 +393,6 @@ def test_api_participant_reply_invalid_event(db, api_client, calendar):
     e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
-
-    assert e_resp_data['participants']
 
 
 def test_api_participant_reply_invalid_event2(db, api_client, calendar):

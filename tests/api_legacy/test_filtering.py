@@ -4,11 +4,11 @@ import calendar
 from sqlalchemy import desc
 from inbox.models import Message, Thread, Namespace, Block, Category
 from inbox.util.misc import dt_to_timestamp
-from tests.util.base import (test_client, add_fake_message,
+from tests.util.base import (test_client, add_fake_message, config,
                              add_fake_thread)
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
-__all__ = ['api_client', 'test_client']
+__all__ = ['api_client', 'test_client', 'config']
 
 
 def test_filtering(db, api_client, default_namespace):
@@ -224,7 +224,7 @@ def test_ordering(api_client, db, default_namespace):
 
 
 def test_strict_argument_parsing(api_client):
-    r = api_client.get_raw('/threads?foo=bar')
+    r = api_client.client.get(api_client.full_path('/threads?foo=bar'))
     assert r.status_code == 400
 
 
@@ -271,29 +271,32 @@ def test_distinct_results(api_client, db, default_namespace):
     assert len(filtered_results) == 1
 
 
-def test_filtering_accounts(db, test_client):
-    all_accounts = json.loads(test_client.get('/accounts/').data)
-    email = all_accounts[0]['email_address']
+def test_filtering_namespaces(db, test_client, default_namespace, config):
 
-    some_accounts = json.loads(test_client.get('/accounts/?offset=1').data)
-    assert len(some_accounts) == len(all_accounts) - 1
+    all_namespaces = json.loads(test_client.get('/n/').data)
+    email = all_namespaces[0]['email_address']
 
-    no_all_accounts = json.loads(test_client.get('/accounts/?limit=0').data)
-    assert no_all_accounts == []
+    some_namespaces = json.loads(test_client.get('/n/?offset=1').data)
+    assert all_namespaces[0]['namespace_id'] != \
+           some_namespaces[0]['namespace_id']
 
-    all_accounts = json.loads(test_client.get('/accounts/?limit=1').data)
-    assert len(all_accounts) == 1
+    no_namespaces = json.loads(test_client.get('/n/?limit=0').data)
+    assert no_namespaces == []
+
+    all_namespaces = json.loads(test_client.get('/n/?limit=1').data)
+    assert len(all_namespaces) == 1
 
     filter_ = '?email_address={}'.format(email)
-    all_accounts = json.loads(test_client.get('/accounts/' + filter_).data)
-    assert all_accounts[0]['email_address'] == email
+    namespaces = json.loads(test_client.get('/n/' + filter_).data)
+    assert namespaces[0]['email_address'] == email
 
     filter_ = '?email_address=unknown@email.com'
-    accounts = json.loads(test_client.get('/accounts/' + filter_).data)
-    assert len(accounts) == 0
+    namespaces = json.loads(test_client.get('/n/' + filter_).data)
+    assert len(namespaces) == 0
 
 
-def test_namespace_limiting(db, api_client, default_namespace):
+def test_namespace_limiting(db, test_client, default_namespace, config):
+
     dt = datetime.datetime.utcnow()
     subject = dt.isoformat()
     namespaces = db.session.query(Namespace).all()
@@ -307,11 +310,72 @@ def test_namespace_limiting(db, api_client, default_namespace):
     db.session.commit()
 
     for ns in namespaces:
-        r = api_client.get_data('/threads?subject={}'.format(subject))
+        r = json.loads(test_client.get('/n/{}/threads?subject={}'.
+                                       format(ns.public_id, subject)).data)
         assert len(r) == 1
 
-        r = api_client.get_data('/messages?subject={}'.format(subject))
+        r = json.loads(test_client.get('/n/{}/messages?subject={}'.
+                                       format(ns.public_id, subject)).data)
         assert len(r) == 1
 
-        r = api_client.get_data('/files?filename={}'.format(subject))
+        r = json.loads(test_client.get('/n/{}/files?filename={}'.
+                                       format(ns.public_id, subject)).data)
         assert len(r) == 1
+
+
+def test_received_before_after(db, api_client, default_namespace):
+    thread = add_fake_thread(db.session, default_namespace.id)
+    message = add_fake_message(db.session, default_namespace.id, thread,
+                               to_addr=[('Bob', 'bob@foocorp.com')],
+                               from_addr=[('Alice', 'alice@foocorp.com')],
+                               received_date=datetime.datetime(year=1999,
+                                                               day=20,
+                                                               month=03),
+                               subject='some subject')
+
+    thread2 = add_fake_thread(db.session, default_namespace.id)
+    message2 = add_fake_message(db.session, default_namespace.id, thread,
+                                to_addr=[('Bob', 'bob@foocorp.com')],
+                                from_addr=[('Alice', 'alice@foocorp.com')],
+                                received_date=datetime.datetime(year=2000,
+                                                                day=20,
+                                                                month=03),
+                                subject='another subject')
+
+    inbox = Category(namespace_id=message.namespace_id, name='inbox',
+                     display_name='Inbox', type_='label')
+    message.categories.add(inbox)
+    thread.subject = message.subject
+
+    message2.categories.add(inbox)
+    thread2.subject = message2.subject
+
+    db.session.commit()
+
+    received_date = message.received_date
+    t_epoch = dt_to_timestamp(datetime.datetime(year=1998, month=2, day=3))
+    t_firstmsg = dt_to_timestamp(received_date)
+
+    results = api_client.get_data('/messages?received_before={}'
+                                  .format(t_epoch))
+    assert len(results) == 0
+
+    # received_before should be inclusive (i.e: match <=, not just <).
+    results = api_client.get_data('/messages?received_before={}'
+                                  .format(t_firstmsg))
+    assert len(results) == 1
+
+    t1 = dt_to_timestamp(received_date + datetime.timedelta(days=1))
+    results = api_client.get_data('/messages?received_after={}'
+                                  .format(t1))
+    assert len(results) == 1
+
+    results = api_client.get_data(
+        '/messages?received_before={}&received_after={}'.format(t1,
+                                                                t_firstmsg))
+    assert len(results) == 0
+
+    # bogus values
+    results = api_client.get_data(
+        '/messages?received_before={}&received_after={}'.format(t_epoch, t1))
+    assert len(results) == 0

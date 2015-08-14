@@ -3,7 +3,7 @@ import pytest
 
 import arrow
 
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 __all__ = ['api_client']
 
@@ -13,23 +13,23 @@ class CreateError(Exception):
 
 
 def _verify_create(ns_id, api_client, e_data):
-    e_resp = api_client.post_data('/events', e_data)
+    e_resp = api_client.post_data('/events', e_data, ns_id)
     if e_resp.status_code != 200:
         raise CreateError()
 
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['account_id'] == ns_id
+    assert e_resp_data['namespace_id'] == ns_id
     assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['location'] == e_data['location']
     for k, v in e_data['when'].iteritems():
         assert arrow.get(e_resp_data['when'][k]) == arrow.get(v)
     assert 'id' in e_resp_data
     e_id = e_resp_data['id']
-    e_get_resp = api_client.get_data('/events/' + e_id)
+    e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['account_id'] == ns_id
+    assert e_get_resp['namespace_id'] == ns_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['title'] == e_data['title']
     for k, v in e_data['when'].iteritems():

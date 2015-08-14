@@ -9,7 +9,7 @@ import gevent
 import pytest
 
 from tests.util.base import add_fake_message, add_fake_thread
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 
 __all__ = ['api_client']
 
@@ -191,10 +191,10 @@ def test_drafts_filter(api_client, example_draft):
 
 def test_create_draft_with_attachments(api_client, attachments, example_draft):
     attachment_ids = []
-    upload_path = '/files'
+    upload_path = api_client.full_path('/files')
     for filename, path in attachments:
         data = {'file': (open(path, 'rb'), filename)}
-        r = api_client.post_raw(upload_path, data=data)
+        r = api_client.client.post(upload_path, data=data)
         assert r.status_code == 200
         attachment_id = json.loads(r.data)[0]['id']
         attachment_ids.append(attachment_id)

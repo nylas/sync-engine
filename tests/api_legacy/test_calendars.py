@@ -1,6 +1,6 @@
 from tests.util.base import add_fake_event
 from inbox.models import Calendar
-from tests.api.base import api_client
+from tests.api_legacy.base import api_client
 from tests.util.base import db, default_namespace
 
 
@@ -18,7 +18,7 @@ def test_get_calendar(db, default_namespace, api_client):
     cal_id = cal.public_id
     calendar_item = api_client.get_data('/calendars/{}'.format(cal_id))
 
-    assert calendar_item['account_id'] == default_namespace.public_id
+    assert calendar_item['namespace_id'] == default_namespace.public_id
     assert calendar_item['name'] == 'Holidays'
     assert calendar_item['description'] is None
     assert calendar_item['read_only'] is False

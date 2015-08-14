@@ -18,13 +18,17 @@ def absolute_path(path):
         os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', path))
 
 
-@fixture(scope='session', autouse=True)
-def config():
+def make_config():
     from inbox.config import config
     assert 'INBOX_ENV' in os.environ and \
         os.environ['INBOX_ENV'] == 'test', \
         "INBOX_ENV must be 'test' to run tests"
     return config
+
+
+@fixture(scope='session', autouse=True)
+def config():
+    return make_config()
 
 
 @fixture(scope='session')
@@ -63,56 +67,6 @@ def test_client(db):
     app.config['TESTING'] = True
     with app.test_client() as c:
         yield c
-
-
-@yield_fixture
-def api_client(db, default_namespace):
-    from inbox.api.srv import app
-    app.config['TESTING'] = True
-    with app.test_client() as c:
-        yield TestAPIClient(c, default_namespace.public_id)
-
-
-class TestAPIClient(object):
-    """Provide more convenient access to the API for testing purposes."""
-    def __init__(self, test_client, default_ns_public_id):
-        self.client = test_client
-        self.default_ns_public_id = default_ns_public_id
-
-    def full_path(self, path, ns_public_id=None):
-        """ Replace a path such as `/tags` by `/n/<ns_public_id>/tags`.
-
-        If no `ns_public_id` is specified, uses the id of the first namespace
-        returned by a call to `/n/`.
-        """
-        if ns_public_id is None:
-            ns_public_id = self.default_ns_public_id
-
-        return '/n/{}'.format(ns_public_id) + path
-
-    def get_raw(self, short_path, ns_public_id=None):
-        path = self.full_path(short_path, ns_public_id)
-        return self.client.get(path)
-
-    def get_data(self, short_path, ns_public_id=None):
-        path = self.full_path(short_path, ns_public_id)
-        return json.loads(self.client.get(path).data)
-
-    def post_data(self, short_path, data, ns_public_id=None, headers=''):
-        path = self.full_path(short_path, ns_public_id)
-        return self.client.post(path, data=json.dumps(data), headers=headers)
-
-    def post_raw(self, short_path, data, ns_public_id=None, headers=''):
-        path = self.full_path(short_path, ns_public_id)
-        return self.client.post(path, data=data, headers=headers)
-
-    def put_data(self, short_path, data, ns_public_id=None):
-        path = self.full_path(short_path, ns_public_id)
-        return self.client.put(path, data=json.dumps(data))
-
-    def delete(self, short_path, data=None, ns_public_id=None):
-        path = self.full_path(short_path, ns_public_id)
-        return self.client.delete(path, data=json.dumps(data))
 
 
 @yield_fixture
@@ -184,8 +138,7 @@ def syncback_service():
     s.join()
 
 
-@fixture(scope='function')
-def default_account(db, config):
+def make_default_account(db, config):
     import platform
     from inbox.models.backends.gmail import GmailAccount
     from inbox.models.backends.gmail import GmailAuthCredentials
@@ -215,6 +168,11 @@ def default_account(db, config):
     db.session.add(auth_creds)
     db.session.commit()
     return account
+
+
+@fixture(scope='function')
+def default_account(db, config):
+    return make_default_account(db, config)
 
 
 @fixture(scope='function')
@@ -299,13 +257,6 @@ class ContactsProviderStub(object):
 
     def get_items(self, *args, **kwargs):
         return self._contacts
-
-
-def new_api_client(db, namespace):
-    from inbox.api.srv import app
-    app.config['TESTING'] = True
-    with app.test_client() as c:
-        return TestAPIClient(c, namespace.public_id)
 
 
 def add_fake_folder(db, default_account):
