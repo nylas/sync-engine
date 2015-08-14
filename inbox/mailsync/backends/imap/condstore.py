@@ -57,6 +57,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                           async_download):
         crispin_client.select_folder(self.folder_name, uidvalidity_cb)
         new_highestmodseq = crispin_client.selected_highestmodseq
+        new_uidnext = crispin_client.selected_uidnext
         with mailsync_session_scope() as db_session:
             saved_folder_info = common.get_folder_info(
                 self.account_id, db_session, self.folder_name)
@@ -71,7 +72,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                     crispin_client.account_id, db_session,
                     self.folder_name,
                     crispin_client.selected_uidvalidity,
-                    crispin_client.selected_highestmodseq)
+                    crispin_client.selected_highestmodseq,
+                    crispin_client.selected_uidnext)
             saved_highestmodseq = saved_folder_info.highestmodseq
             if new_highestmodseq == saved_highestmodseq:
                 # Don't need to do anything if the highestmodseq hasn't
@@ -109,7 +111,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                                    remote_uid_count=len(remote_uids))
             common.update_folder_info(self.account_id, db_session,
                                       self.folder_name, new_uidvalidity,
-                                      new_highestmodseq)
+                                      new_highestmodseq,
+                                      new_uidnext)
             db_session.commit()
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,

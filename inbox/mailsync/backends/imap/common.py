@@ -149,7 +149,7 @@ def uidvalidity_valid(account_id, selected_uidvalidity, folder_name,
 
 
 def update_folder_info(account_id, session, folder_name, uidvalidity,
-                       highestmodseq):
+                       highestmodseq, uidnext):
     cached_folder_info = get_folder_info(account_id, session, folder_name)
     if cached_folder_info is None:
         folder = session.query(Folder).filter_by(account_id=account_id,
@@ -158,6 +158,7 @@ def update_folder_info(account_id, session, folder_name, uidvalidity,
                                             folder=folder)
     cached_folder_info.highestmodseq = highestmodseq
     cached_folder_info.uidvalidity = uidvalidity
+    cached_folder_info.uidnext = uidnext
     session.add(cached_folder_info)
     return cached_folder_info
 

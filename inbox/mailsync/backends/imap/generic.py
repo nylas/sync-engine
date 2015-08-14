@@ -655,6 +655,12 @@ class FolderSyncEngine(Greenlet):
         to_refresh = sorted(remote_uids &
                             local_uids)[-self.refresh_flags_max:]
         self.update_metadata(crispin_client, to_refresh)
+        with mailsync_session_scope() as db_session:
+            common.update_folder_info(self.account_id, db_session,
+                                      self.folder_name,
+                                      crispin_client.selected_uidvalidity,
+                                      None,
+                                      crispin_client.selected_uidnext)
 
 
 def uidvalidity_cb(account_id, folder_name, select_info):

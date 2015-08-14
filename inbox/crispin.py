@@ -673,6 +673,10 @@ class CrispinClient(object):
     def logout(self):
         self.conn.logout()
 
+    @property
+    def selected_uidnext(self):
+        return or_none(self.selected_folder_info, lambda i: i['UIDNEXT'])
+
 
 class CondStoreCrispinClient(CrispinClient):
     def select_folder(self, folder, uidvalidity_cb):

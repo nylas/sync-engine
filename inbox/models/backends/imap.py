@@ -227,6 +227,7 @@ class ImapFolderInfo(MailSyncBase):
     # Note that some IMAP providers do not support the CONDSTORE extension, and
     # therefore will not use this field.
     highestmodseq = Column(BigInteger, nullable=True)
+    uidnext = Column(Integer, nullable=True)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
