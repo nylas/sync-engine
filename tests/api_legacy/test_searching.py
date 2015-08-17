@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from pytest import fixture
-from inbox.models import Folder
+from inbox.models import Folder, Message
 from inbox.models.backends.imap import ImapUid
 from inbox.search.base import get_search_client
 from tests.util.base import (add_fake_message, add_fake_thread,
@@ -40,6 +40,7 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
     thread1, thread2, thread3 = sorted_gmail_threads
     message1 = add_fake_message(db.session, default_account.namespace.id,
                                  thread=thread1,
+                                 g_msgid=1,
                                  from_addr=[{'name': 'Ben Bitdiddle',
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
@@ -53,6 +54,7 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
 
     message2 = add_fake_message(db.session, default_account.namespace.id,
                                  thread=thread2,
+                                 g_msgid=2,
                                  from_addr=[{'name': 'Ben Bitdiddle',
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
@@ -66,6 +68,7 @@ def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
 
     message3 = add_fake_message(db.session, default_account.namespace.id,
                                  thread=thread3,
+                                 g_msgid=3,
                                  from_addr=[{'name': 'Ben Bitdiddle',
                                              'email': 'ben@bitdiddle.com'}],
                                  to_addr=[{'name': 'Barrack Obama',
@@ -146,19 +149,20 @@ def patch_connection(db, generic_account, default_account):
             self.default_account_id = default_account.id
 
         def gmail_search(self, *args, **kwargs):
-            # Get all ImapUids for gmail account
-            imap_uids = db.session.query(ImapUid). \
-                filter(ImapUid.account_id == self.default_account_id).all()
-
-            return [imap_uid.msg_uid for imap_uid in imap_uids]
+            imap_uids = db.session.query(ImapUid).join(Message) \
+                        .filter(
+                            ImapUid.message_id == Message.id,
+                            Message.g_msgid != None).all()
+            return [uid.msg_uid for uid in imap_uids]
 
         def search(self, *args, **kwargs):
-            # Get all ImapUids for imap account
-            imap_uids = db.session.query(ImapUid). \
-                filter(ImapUid.account_id == self.default_account_id).all()
             criteria = kwargs['criteria']
             assert criteria == 'TEXT blah blah blah'
-            return [imap_uid.msg_uid for imap_uid in imap_uids]
+            imap_uids = db.session.query(ImapUid).join(Message) \
+                            .filter(
+                                ImapUid.message_id == Message.id,
+                                Message.g_msgid == None).all()
+            return [uid.msg_uid for uid in imap_uids]
 
     return MockConnection()
 

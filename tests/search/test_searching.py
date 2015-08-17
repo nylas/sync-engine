@@ -9,8 +9,6 @@ from tests.util.base import (add_fake_message, add_fake_thread,
                              add_fake_imapuid, add_fake_folder)
 from tests.api.base import api_client, new_api_client
 
-__all__ = ['api_client']
-
 
 @fixture
 def imap_api_client(db, generic_account):
@@ -162,7 +160,7 @@ def patch_connection(db, generic_account, default_account):
             imap_uids = db.session.query(ImapUid).join(Message) \
                             .filter(
                                 ImapUid.message_id == Message.id,
-                                Message.g_msgid != None).all()
+                                Message.g_msgid == None).all()
             return [uid.msg_uid for uid in imap_uids]
 
     return MockConnection()
@@ -349,9 +347,10 @@ def test_imap_pagination(db, imap_api_client, generic_account,
         assert db_thread.public_id == api_thread['id']
 
 
-def test_gmail_pagination(db, api_client, default_account,
+def test_gmail_pagination(db, default_account,
                           patch_crispin_client,
-                          patch_handler_from_provider, folder):
+                          patch_handler_from_provider,
+                          folder):
     for i in range(10):
         thread = add_fake_thread(db.session, default_account.namespace.id)
         message = add_fake_message(db.session, default_account.namespace.id,
@@ -417,10 +416,12 @@ def test_end_of_messages(db, api_client, default_account,
     assert len(end_of_messages) == 0
 
 
-def test_correct_thread_count(db, api_client, default_account,
+def test_correct_thread_count(db, default_account,
                               patch_crispin_client,
                               patch_handler_from_provider,
                               sorted_gmail_messages):
+
+    api_client = new_api_client(db, default_account.namespace)
 
     first_two_threads = api_client.get_data('/threads/search?q=hi'
                                               '&limit=2')
