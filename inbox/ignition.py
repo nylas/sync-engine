@@ -9,6 +9,7 @@ from inbox.util.stats import statsd_client
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 # Sane default of max overflow=5 if value missing in config.
 DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
+DB_POOL_TIMEOUT = config.get('DB_POOL_TIMEOUT') or 60
 
 
 # See
@@ -18,13 +19,14 @@ def gevent_waiter(fd, hub=gevent.hub.get_hub()):
 
 
 def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
-                echo=False):
+                pool_timeout=DB_POOL_TIMEOUT, echo=False):
     database_name = config.get_required('MYSQL_DATABASE')
     engine = create_engine(engine_uri(database_name),
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
                            echo=echo,
                            pool_size=pool_size,
+                           pool_timeout=pool_timeout,
                            pool_recycle=3600,
                            max_overflow=max_overflow,
                            connect_args={'charset': 'utf8mb4',
