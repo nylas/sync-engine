@@ -70,6 +70,14 @@ class DeleteHandler(gevent.Greenlet):
                     continue
 
                 thread = message.thread
+
+                if not thread or message not in thread.messages:
+                    self.log.warning("Running delete handler check but message"
+                                     " is not part of referenced thread: {}",
+                                     thread_id=thread.id)
+                    # Nothing to check
+                    continue
+
                 # Remove message from thread, so that the change to the thread
                 # gets properly versioned.
                 thread.messages.remove(message)
