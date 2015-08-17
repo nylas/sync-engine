@@ -109,7 +109,9 @@ def parse_flags(request_data):
 
 
 def parse_labels(request_data, db_session, namespace_id):
-    label_public_ids = request_data.pop('labels', None)
+    # TODO deprecate being able to post "labels" and not "label_ids"
+    label_public_ids = request_data.pop('label_ids', None) or \
+                       request_data.pop('labels', None)
     if label_public_ids is None:
         return
     # TODO(emfree): Use a real JSON schema validator for this sort of thing.
@@ -131,7 +133,9 @@ def parse_labels(request_data, db_session, namespace_id):
 
 
 def parse_folder(request_data, db_session, namespace_id):
-    folder_public_id = request_data.pop('folder', None)
+    # TODO deprecate being able to post "folder" and not "folder_id"
+    folder_public_id = request_data.pop('folder_id', None) or \
+                       request_data.pop('folder', None)
     if folder_public_id is None:
         return
     valid_public_id(folder_public_id)
