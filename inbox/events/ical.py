@@ -395,10 +395,15 @@ def import_attached_events(db_session, account, message):
             return
 
     for part in message.attached_event_files:
+        part_data = ''
         try:
+            part_data = part.block.data
+            if part_data == '':
+                continue
+
             new_events = events_from_ics(account.namespace,
                                          account.emailed_events_calendar,
-                                         part.block.data)
+                                         part_data)
         except MalformedEventError:
             log.error('Attached event parsing error',
                       account_id=account.id, message_id=message.id,
@@ -412,7 +417,7 @@ def import_attached_events(db_session, account, message):
             # creation because of an error in the attached calendar.
             log.error('Unhandled exception during message parsing',
                       message_id=message.id,
-                      invite=part.block.data,
+                      invite=part_data,
                       logstash_tag='icalendar_autoimport',
                       traceback=traceback.format_exception(
                                     sys.exc_info()[0],
