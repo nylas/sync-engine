@@ -154,10 +154,8 @@ def delete_draft(account_id, draft_id, db_session, args):
 
 def save_sent_email(account_id, message_id, db_session):
     """
-    Create an email on the remote backend. Only used to work
-    around providers who don't save sent messages themselves
-    (I'm looking at you, iCloud).
-
+    Create an email on the remote backend. Generic providers expect
+    us to create a copy of the message in the sent folder.
     """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)

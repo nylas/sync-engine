@@ -88,7 +88,6 @@ def remote_update_folder(account, category_id, db_session, old_name):
 @retry_crispin
 def remote_save_draft(account, message, db_session, date=None):
     with writable_connection_pool(account.id).get() as crispin_client:
-        # Create drafts folder on the backend if it doesn't exist.
         if 'drafts' not in crispin_client.folder_names():
             log.info('Account has no detected drafts folder; not saving draft',
                      account_id=account.id)
@@ -101,6 +100,10 @@ def remote_save_draft(account, message, db_session, date=None):
 @retry_crispin
 def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
     with writable_connection_pool(account.id).get() as crispin_client:
+        if 'drafts' not in crispin_client.folder_names():
+            log.info('Account has no detected drafts folder; not deleting draft',
+                     account_id=account.id)
+            return
         crispin_client.delete_draft(inbox_uid, message_id_header)
 
 

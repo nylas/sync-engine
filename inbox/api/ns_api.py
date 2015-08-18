@@ -16,6 +16,7 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache, Category, MessageCategory)
 from inbox.models.event import RecurringEvent, RecurringEventOverride
+from inbox.models.backends.generic import GenericAccount
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
 from inbox.api.kellogs import APIEncoder
@@ -1253,11 +1254,12 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
+    account = g.namespace.account
+
     if request.content_type == "message/rfc822":
-        msg = create_draft_from_mime(g.namespace.account, request.data,
-                                     g.db_session)
+        msg = create_draft_from_mime(account, request.data, g.db_session)
         validate_draft_recipients(msg)
-        resp = send_raw_mime(g.namespace.account, g.db_session, msg)
+        resp = send_raw_mime(account, g.db_session, msg)
         return resp
 
     data = request.get_json(force=True)
@@ -1273,7 +1275,12 @@ def draft_send_api():
                                          is_draft=False)
 
     validate_draft_recipients(draft)
-    resp = send_draft(g.namespace.account, draft, g.db_session)
+    resp = send_draft(account, draft, g.db_session)
+
+    if isinstance(account, GenericAccount):
+        schedule_action('save_sent_email', draft, draft.namespace.id,
+                        g.db_session)
+
     return resp
 
 
