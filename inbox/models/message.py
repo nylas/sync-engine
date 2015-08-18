@@ -300,7 +300,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         disposition, _ = mimepart.content_disposition
         content_id = mimepart.headers.get('Content-Id')
         content_type, params = mimepart.content_type
-        filename = params.get('name')
+
+        filename = mimepart.detected_file_name
+        if filename == '':
+            filename = None
+
         is_text = content_type.startswith('text')
         if disposition not in (None, 'inline', 'attachment'):
             log.error('Unknown Content-Disposition',

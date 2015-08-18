@@ -57,6 +57,33 @@ def raw_message_with_bad_attachment():
         return f.read()
 
 
+@pytest.fixture
+def raw_message_with_filename_attachment():
+    # Message with a MIME part that has an invalid attachment.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_filename_attachment')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
+def raw_message_with_name_attachment():
+    # Message with a MIME part that has an invalid attachment.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_name_attachment')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
+def raw_message_with_inline_name_attachment():
+    # Message with a MIME part that has an invalid attachment.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_inline_attachment')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
 def test_message_from_synced(db, new_message_from_synced, default_namespace):
     m = new_message_from_synced
     assert m.namespace_id == default_namespace.id
@@ -366,3 +393,26 @@ def test_sanitize_subject(default_account, mime_message):
         default_account, 22, '[Gmail]/All Mail', datetime.datetime.utcnow(),
         mime_message.to_string())
     assert m.subject == u'Your UPS Package was delivered'
+
+
+@pytest.mark.only
+def test_attachments_filename_parsing(default_account,
+                                      raw_message_with_filename_attachment,
+                                      raw_message_with_name_attachment):
+    m = create_from_synced(default_account,
+                           raw_message_with_filename_attachment)
+    assert len(m.attachments) == 1
+    assert m.attachments[0].block.filename == 'bewerbung_anschreiben_positivbeispiel.txt'
+
+    m = create_from_synced(default_account,
+                           raw_message_with_name_attachment)
+    assert len(m.attachments) == 1
+    assert m.attachments[0].block.filename == 'bewerbung_anschreiben_positivbeispiel.txt'
+
+
+def test_inline_attachments_filename_parsing(default_account,
+                                             raw_message_with_inline_name_attachment):
+    m = create_from_synced(default_account,
+                           raw_message_with_inline_name_attachment)
+    assert len(m.attachments) == 1
+    assert m.attachments[0].block.filename == u"Capture d'e\u0301cran 2015-08-13 20.58.24.png"
