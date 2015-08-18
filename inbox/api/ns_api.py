@@ -119,7 +119,7 @@ def start():
 
 @app.after_request
 def finish(response):
-    if response.status_code == 200:
+    if response.status_code == 200 and hasattr(g, 'db_session'):  # be cautions
         g.db_session.commit()
     if hasattr(g, 'db_session'):
         g.db_session.close()
