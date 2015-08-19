@@ -566,10 +566,11 @@ def tag_query_api():
          'id': obj.name or obj.public_id,
          'readonly': False} for obj in categories
     ]
-    if g.legacy_nsid:
-        resp['namespace_id'] = g.namespace.public_id
-    else:
-        resp['account_id'] = g.namespace.public_id
+    for item in resp:
+        if g.legacy_nsid:
+            item['namespace_id'] = g.namespace.public_id
+        else:
+            item['account_id'] = g.namespace.public_id
     return g.encoder.jsonify(resp)
 
 
