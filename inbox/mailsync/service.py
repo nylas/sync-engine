@@ -82,14 +82,17 @@ class SyncService(object):
             start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
                                                         self.total_cpus)
             if config.get('SYNC_STEAL_ACCOUNTS', True):
-                # First, atomically claim unscheduled syncs by setting
-                # sync_host.
-                db_session.query(Account).filter(
+                q = db_session.query(Account).filter(
                     Account.sync_host.is_(None),
                     Account.sync_should_run,
-                    start_on_this_cpu).update({'sync_host': self.host},
-                                              synchronize_session=False)
-                db_session.commit()
+                    start_on_this_cpu)
+                unscheduled_accounts_exist = db_session.query(
+                    q.exists()).scalar()
+                if unscheduled_accounts_exist:
+                    # Atomically claim unscheduled syncs by setting sync_host.
+                    q.update({'sync_host': self.host},
+                             synchronize_session=False)
+                    db_session.commit()
 
             return [id_ for id_, in db_session.query(Account.id).filter(
                 Account.sync_should_run,
