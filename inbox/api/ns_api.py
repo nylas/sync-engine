@@ -1361,6 +1361,7 @@ def sync_deltas():
     return g.encoder.jsonify(response)
 
 
+# TODO Deprecate this
 @app.route('/delta/generate_cursor', methods=['POST'])
 def generate_cursor():
     data = request.get_json(force=True)
@@ -1379,6 +1380,15 @@ def generate_cursor():
 
     cursor = delta_sync.get_transaction_cursor_near_timestamp(
         g.namespace.id, timestamp, g.db_session)
+    return g.encoder.jsonify({'cursor': cursor})
+
+
+@app.route('/delta/latest_cursor', methods=['POST'])
+def latest_cursor():
+    cursor = delta_sync.get_transaction_cursor_near_timestamp(
+        g.namespace.id,
+        int(time.time()),
+        g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
 
 

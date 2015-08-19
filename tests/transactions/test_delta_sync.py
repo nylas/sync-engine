@@ -12,6 +12,14 @@ def get_cursor(api_client, timestamp):
     return json.loads(cursor_response.data)['cursor']
 
 
+def test_latest_cursor(api_client):
+    now = int(time.time())
+    latest_cursor_resp = api_client.post_raw('/delta/latest_cursor', None)
+    latest_cursor = json.loads(latest_cursor_resp.data)['cursor']
+    now_cursor = get_cursor(api_client, now)
+    assert latest_cursor == now_cursor
+
+
 def test_invalid_input(api_client):
     cursor_response = api_client.post_data('/delta/generate_cursor',
                                            {'start': "I'm not a timestamp!"})
