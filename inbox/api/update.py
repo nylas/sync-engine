@@ -89,7 +89,9 @@ def update_thread(thread, request_data, db_session):
 
     elif folder is not None:
         for message in thread.messages:
-            if not message.is_draft:
+            # Exclude drafts and sent messages from thread-level moves.
+            if (not message.is_draft and not message.is_sent and
+                    'sent' not in {c.name for c in message.categories}):
                 update_message_folder(message, db_session, folder)
 
     for message in thread.messages:
