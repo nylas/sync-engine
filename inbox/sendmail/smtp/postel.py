@@ -256,7 +256,13 @@ class SMTPConnection(object):
         self.log.info('SMTP Auth(Password) success')
 
     def sendmail(self, recipients, msg):
-        return self.connection.sendmail(self.email_address, recipients, msg)
+        try:
+            return self.connection.sendmail(self.email_address, recipients, msg)
+        except UnicodeEncodeError:
+            self.log.error('Unicode error when trying to decode email',
+                           logstash_tag='sendmail_encode_error',
+                           email=self.email_address, recipients=recipients)
+            raise SendMailException('Invalid character in recipient address', 402)
 
 
 class SMTPClient(object):
