@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 from inbox.models import Namespace
-from inbox.api.validation import noop_event_update
+from inbox.api.validation import noop_event_update, valid_email
 from tests.util.base import db, calendar, add_fake_event
 from tests.api.base import api_client
 
@@ -74,3 +74,15 @@ def test_noop_event_update(db, default_namespace, calendar):
     update = {'participants': [{'email': 'benb@nylas.com', 'status': 'yes'},
                                {'email': 'helena@nylas.com'}]}
     assert noop_event_update(event, update) is True
+
+
+def test_valid_email():
+    assert valid_email('karim@nylas.com') is True
+    assert valid_email('karim nylas.com') is False
+    # We want email addresses, not full addresses
+    assert valid_email('Helena Handbasket <helena@nylas.com>') is False
+    assert valid_email('le roi de la montagne') is False
+    assert valid_email('le roi de la montagne@example.com') is False
+    assert valid_email('le-roi-de-la-montagne@example.com') is True
+    assert valid_email('le_roi_de_la_montagne@example.com') is True
+    assert valid_email('spaces with@example.com') is False
