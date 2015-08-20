@@ -78,7 +78,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     if any_email is not None:
         any_contact_query = db_session.query(Message.thread_id). \
             join(MessageContactAssociation).join(Contact). \
-            filter(Contact.email_address == any_email,
+            filter(Contact.email_address.in_(any_email),
                    Contact.namespace_id == namespace_id).subquery()
         query = query.filter(Thread.id.in_(any_contact_query))
 
@@ -271,7 +271,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query.spoil()
         any_email_query = db_session.query(
             MessageContactAssociation.message_id).join(Contact). \
-            filter(Contact.email_address == any_email,
+            filter(Contact.email_address.in_(any_email),
                    Contact.namespace_id == bindparam('namespace_id')). \
             subquery()
         query += lambda q: q.filter(Message.id.in_(any_email_query))

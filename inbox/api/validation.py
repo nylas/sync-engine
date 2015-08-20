@@ -28,6 +28,25 @@ def bounded_str(value, key):
     return value
 
 
+def comma_separated_email_list(value, key):
+    addresses = value.split(',')
+    # Note that something like "foo,bar"@example.com is technical a valid
+    # email address, but in practice nobody does this (and they shouldn't!)
+
+    if len(addresses) > 25:  # arbitrary limit
+        raise InputError(u'Too many emails. The current limit is 25')
+
+    good_emails = []
+    for unvalidated_address in addresses:
+        parsed = address.parse(unvalidated_address, addr_spec_only=True)
+        if not isinstance(parsed, address.EmailAddress):
+            raise InputError(u'Invalid recipient address {}'.
+                             format(unvalidated_address))
+        good_emails.append(parsed.address)
+
+    return good_emails
+
+
 def strict_bool(value, key):
     if value.lower() not in ['true', 'false']:
         raise ValueError('Value must be "true" or "false" (not "{}") for {}'
