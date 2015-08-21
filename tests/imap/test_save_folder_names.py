@@ -25,7 +25,7 @@ def add_imap_status_info_rows(folder_id, account_id, db_session):
             highestmodseq=22))
 
 
-def test_save_generic_folder_names(db, default_account):
+def test_imap_save_generic_folder_names(db, default_account):
     monitor = ImapSyncMonitor(default_account)
     folder_names_and_roles = {
         ('INBOX', 'inbox'),
@@ -60,6 +60,82 @@ def test_handle_folder_deletions(db, default_account):
         db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == {('INBOX', 'inbox')}
+
+
+def test_imap_handle_folder_renames(db, default_account):
+    monitor = ImapSyncMonitor(default_account)
+    folder_names_and_roles = {
+        ('INBOX', 'inbox'),
+        ('[Gmail]/Todos', 'all'),
+        ('[Gmail]/Basura', 'trash')
+    }
+
+    folders_renamed = {
+        ('INBOX', 'inbox'),
+        ('[Gmail]/All', 'all'),
+        ('[Gmail]/Trash', 'trash')
+    }
+    original_raw_folders = [RawFolder(*args) for args in
+                            folder_names_and_roles]
+    renamed_raw_folders = [RawFolder(*args) for args in folders_renamed]
+    monitor.save_folder_names(db.session, original_raw_folders)
+    assert len(db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()) == 3
+
+    monitor.save_folder_names(db.session, renamed_raw_folders)
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id).all())
+    assert saved_folder_data == folders_renamed
+
+
+def test_gmail_handle_folder_renames(db, default_account):
+    monitor = GmailSyncMonitor(default_account)
+    folder_names_and_roles = {
+        ('[Gmail]/Todos', 'all'),
+        ('[Gmail]/Basura', 'trash')
+    }
+
+    folders_renamed = {
+        ('[Gmail]/All', 'all'),
+        ('[Gmail]/Trash', 'trash')
+    }
+    original_raw_folders = [RawFolder(*args) for args in
+                            folder_names_and_roles]
+    renamed_raw_folders = [RawFolder(*args) for args in folders_renamed]
+    monitor.save_folder_names(db.session, original_raw_folders)
+    original_folders = db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()
+
+    assert len(original_folders) == 2
+    for folder in original_folders:
+        assert folder.category != None
+
+    original_categories = {f.canonical_name: f.category.display_name for f in
+                            original_folders}
+
+    for folder in folder_names_and_roles:
+        display_name, role = folder
+        assert original_categories[role] == display_name
+
+    monitor.save_folder_names(db.session, renamed_raw_folders)
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id).all())
+    assert saved_folder_data == folders_renamed
+
+    renamed_folders = db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()
+
+    for folder in renamed_folders:
+        assert folder.category != None
+
+    renamed_categories = {f.canonical_name: f.category.display_name for f in
+                            renamed_folders}
+
+    for folder in folders_renamed:
+        display_name, role = folder
+        assert renamed_categories[role] == display_name
 
 
 def test_save_gmail_folder_names(db, default_account):

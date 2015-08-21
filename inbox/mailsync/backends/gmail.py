@@ -29,7 +29,7 @@ from inbox.util.itert import chunk, partition
 from inbox.util.debug import bind_context
 
 from nylas.logging import get_logger
-from inbox.models import Message, Folder, Namespace, Account, Label
+from inbox.models import Message, Folder, Namespace, Account, Label, Category
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
 from inbox.mailsync.backends.base import (mailsync_session_scope,
@@ -83,16 +83,36 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                  raw_folder.display_name, raw_folder.role)
 
             if raw_folder.role in ('all', 'spam', 'trash'):
-                folder = Folder.find_or_create(db_session, account,
-                                               raw_folder.display_name,
-                                               raw_folder.role)
-                if folder.name != raw_folder.display_name:
-                    log.info('Folder name changed on remote',
-                             account_id=self.account_id,
-                             role=raw_folder.role,
-                             new_name=raw_folder.display_name,
-                             name=folder.name)
-                    folder.name = raw_folder.display_name
+                folder = db_session.query(Folder). \
+                        filter(Folder.account_id == account.id,
+                                Folder.canonical_name == raw_folder.role). \
+                        first()
+                if folder:
+                    if folder.name != raw_folder.display_name:
+                        log.info('Folder name changed on remote',
+                                 account_id=self.account_id,
+                                 role=raw_folder.role,
+                                 new_name=raw_folder.display_name,
+                                 name=folder.name)
+                        folder.name = raw_folder.display_name
+
+                    if folder.category:
+                        if folder.category.display_name != \
+                                raw_folder.display_name:
+                            folder.category.display_name = raw_folder.display_name
+                    else:
+                        log.info('Creating category for folder',
+                                 account_id=self.account_id,
+                                 folder_name=folder.name)
+                        folder.category = Category.find_or_create(
+                            db_session, namespace_id=account.namespace.id,
+                            name=raw_folder.role,
+                            display_name=raw_folder.display_name,
+                            type_='folder')
+                else:
+                    Folder.find_or_create(db_session, account,
+                                          raw_folder.display_name,
+                                          raw_folder.role)
 
         # Ensure sync_should_run is True for the folders we want to sync (for
         # Gmail, that's just all folders, since we created them above if
