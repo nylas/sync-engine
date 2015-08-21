@@ -86,6 +86,7 @@ def update_metadata(account_id, folder_id, new_flags, session):
         return
 
     account = Account.get(account_id, session)
+    change_count = 0
     for item in session.query(ImapUid).filter(
             ImapUid.account_id == account_id,
             ImapUid.msg_uid.in_(new_flags.keys()),
@@ -100,8 +101,11 @@ def update_metadata(account_id, folder_id, new_flags, session):
             changed = True
 
         if changed:
+            change_count += 1
             update_message_metadata(session, account, item.message,
                                     item.is_draft)
+    log.info('Updated UID metadata', changed=change_count,
+             out_of=len(new_flags))
 
 
 def remove_deleted_uids(account_id, folder_id, uids, session):
@@ -142,6 +146,7 @@ def remove_deleted_uids(account_id, folder_id, uids, session):
                     # dangling-message-collector to delete them.
                     message.mark_for_deletion()
 
+        log.info('Deleted expunged UIDs', count=len(deletes))
         session.commit()
 
 

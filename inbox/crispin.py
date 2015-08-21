@@ -670,6 +670,7 @@ class CrispinClient(object):
         """Idle for up to `timeout` seconds. Make sure we take the connection
         back out of idle mode so that we can reuse this connection in another
         context."""
+        log.info('Idling', timeout=timeout)
         self.conn.idle()
         try:
             r = self.conn.idle_check(timeout)

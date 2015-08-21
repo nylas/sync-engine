@@ -569,7 +569,7 @@ class FolderSyncEngine(Greenlet):
 
     def get_new_uids(self, crispin_client):
         remote_uidnext = crispin_client.conn.folder_status(
-            self.folder_name, ['UIDNEXT'])['UIDNEXT']
+            self.folder_name, ['UIDNEXT']).get('UIDNEXT')
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
 
@@ -588,6 +588,7 @@ class FolderSyncEngine(Greenlet):
         new_uids = range(lastseenuid + 1, remote_uidnext)
         for uid in new_uids:
             self.download_and_commit_uids(crispin_client, [uid])
+        log.info('Saved new UIDs', count=len(new_uids))
         self.uidnext = remote_uidnext
 
     def condstore_refresh_flags(self, crispin_client):
