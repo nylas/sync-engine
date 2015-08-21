@@ -21,10 +21,10 @@ def marked_deleted_message(db, message):
 def test_messages_deleted_asynchronously(db, default_account, thread, message,
                                          imapuid, folder):
     msg_uid = imapuid.msg_uid
-    update_metadata(default_account.id, db.session, folder.name, folder.id,
-                    [msg_uid], {msg_uid: GmailFlags((), ('label',))})
+    update_metadata(default_account.id, folder.id,
+                    {msg_uid: GmailFlags((), ('label',))}, db.session)
     assert 'label' in [cat.display_name for cat in message.categories]
-    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    remove_deleted_uids(default_account.id, folder.id, [msg_uid], db.session)
     assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 2
     # Check that message categories do get updated synchronously.
     assert 'label' not in [cat.display_name for cat in message.categories]
@@ -34,7 +34,7 @@ def test_drafts_deleted_synchronously(db, default_account, thread, message,
                                       imapuid, folder):
     message.is_draft = True
     msg_uid = imapuid.msg_uid
-    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    remove_deleted_uids(default_account.id, folder.id, [msg_uid], db.session)
     db.session.expire_all()
     assert inspect(message).deleted
     assert inspect(thread).deleted
@@ -56,8 +56,8 @@ def test_deleting_from_a_message_with_multiple_uids(db, default_account,
 
     assert len(message.imapuids) == 2
 
-    remove_deleted_uids(default_account.id, db.session, [2222],
-                        inbox_folder.id)
+    remove_deleted_uids(default_account.id, inbox_folder.id, [2222],
+                        db.session)
 
     assert message.deleted_at is None, \
         "The associated message should not have been marked for deletion."

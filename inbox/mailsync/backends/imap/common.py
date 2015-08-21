@@ -13,6 +13,7 @@ accounts.
 """
 from datetime import datetime
 
+from sqlalchemy import bindparam, desc
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import func
 
@@ -20,15 +21,33 @@ from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Account, Message, Folder, ActionLog
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 from inbox.models.util import reconcile_message
-
+from inbox.sqlalchemy_ext.util import bakery
 from nylas.logging import get_logger
 log = get_logger()
 
 
-def all_uids(account_id, session, folder_id):
-    return {uid for uid, in session.query(ImapUid.msg_uid).filter(
-        ImapUid.account_id == account_id,
-        ImapUid.folder_id == folder_id)}
+def local_uids(account_id, session, folder_id, limit=None):
+    q = bakery(lambda session: session.query(ImapUid.msg_uid))
+    q += lambda q: q.filter(
+        ImapUid.account_id == bindparam('account_id'),
+        ImapUid.folder_id == bindparam('folder_id'))
+    if limit:
+        q += lambda q: q.order_by(desc(ImapUid.msg_uid))
+        q += lambda q: q.limit(bindparam('limit'))
+    results = q(session).params(account_id=account_id,
+                                   folder_id=folder_id,
+                                   limit=limit).all()
+    return {u for u, in results}
+
+
+def lastseenuid(account_id, session, folder_id):
+    q = bakery(lambda session: session.query(func.max(ImapUid.msg_uid)))
+    q += lambda q: q.filter(
+        ImapUid.account_id == bindparam('account_id'),
+        ImapUid.folder_id == bindparam('folder_id'))
+    res = q(session).params(account_id=account_id,
+                            folder_id=folder_id).one()[0]
+    return res or 0
 
 
 def update_message_metadata(session, account, message, is_draft):
@@ -54,8 +73,7 @@ def update_message_metadata(session, account, message, is_draft):
         _update_categories(session, message, categories)
 
 
-def update_metadata(account_id, session, folder_name, folder_id, uids,
-                    new_flags):
+def update_metadata(account_id, folder_id, new_flags, session):
     """
     Update flags and labels (the only metadata that can change).
 
@@ -64,19 +82,18 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
     functionality in the lock.)
 
     """
-    if not uids:
+    if not new_flags:
         return
 
-    account = session.query(Account).get(account_id)
-
+    account = Account.get(account_id, session)
     for item in session.query(ImapUid).filter(
             ImapUid.account_id == account_id,
-            ImapUid.msg_uid.in_(uids),
+            ImapUid.msg_uid.in_(new_flags.keys()),
             ImapUid.folder_id == folder_id):
         flags = new_flags[item.msg_uid].flags
         labels = getattr(new_flags[item.msg_uid], 'labels', None)
 
-        # STOPSHIP(emfree) refactor
+        # TODO(emfree) refactor so this is only ever relevant for Gmail.
         changed = item.update_flags(flags)
         if labels is not None:
             item.update_labels(labels)
@@ -87,7 +104,7 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
                                     item.is_draft)
 
 
-def remove_deleted_uids(account_id, session, uids, folder_id):
+def remove_deleted_uids(account_id, folder_id, uids, session):
     """
     Make sure you're holding a db write lock on the account. (We don't try
     to grab the lock in here in case the caller needs to put higher-level
@@ -106,7 +123,7 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
             session.delete(uid)
         session.commit()
 
-        account = session.query(Account).get(account_id)
+        account = Account.get(account_id, session)
 
         for message in affected_messages:
             if not message.imapuids and message.is_draft:
@@ -138,43 +155,13 @@ def get_folder_info(account_id, session, folder_name):
         return None
 
 
-def uidvalidity_valid(account_id, selected_uidvalidity, folder_name,
-                      cached_uidvalidity):
-    """ Validate UIDVALIDITY on currently selected folder. """
-    if cached_uidvalidity is None:
-        # no row is basically equivalent to UIDVALIDITY == -inf
-        return True
-    else:
-        return selected_uidvalidity <= cached_uidvalidity
-
-
-def update_folder_info(account_id, session, folder_name, uidvalidity,
-                       highestmodseq, uidnext):
-    cached_folder_info = get_folder_info(account_id, session, folder_name)
-    if cached_folder_info is None:
-        folder = session.query(Folder).filter_by(account_id=account_id,
-                                                 name=folder_name).one()
-        cached_folder_info = ImapFolderInfo(account_id=account_id,
-                                            folder=folder)
-    cached_folder_info.highestmodseq = highestmodseq
-    cached_folder_info.uidvalidity = uidvalidity
-    cached_folder_info.uidnext = uidnext
-    session.add(cached_folder_info)
-    return cached_folder_info
-
-
-def create_imap_message(db_session, log, account, folder, msg):
+def create_imap_message(db_session, account, folder, msg):
     """
     IMAP-specific message creation logic.
 
-    This is the one function in this file that gets to take an account
-    object instead of an account_id, because we need to relate the
-    account to ImapUids for versioning to work, since it needs to look
-    up the namespace.
-
     Returns
     -------
-    imapuid : inbox.models.tables.imap.ImapUid
+    imapuid : inbox.models.backends.imap.ImapUid
         New db object, which links to new Message and Block objects through
         relationships. All new objects are uncommitted.
 

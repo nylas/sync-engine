@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, bindparam
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from inbox.models.base import MailSyncBase
 from inbox.models.category import Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
+from inbox.sqlalchemy_ext.util import bakery
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -78,5 +79,11 @@ class Folder(MailSyncBase):
             raise
 
         return obj
+
+    @classmethod
+    def get(cls, id_, session):
+        q = bakery(lambda session: session.query(cls))
+        q += lambda q: q.filter(cls.id == bindparam('id_'))
+        return q(session).params(id_=id_).first()
 
     __table_args__ = (UniqueConstraint('account_id', 'name'),)

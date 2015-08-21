@@ -31,7 +31,7 @@ def raise_folder_error(*args, **kwargs):
 def sync_engine_stub(db, yahoo_account):
     engine = FolderSyncEngine(yahoo_account.id, "Inbox", 0,
                               TEST_YAHOO_EMAIL, "yahoo",
-                              3200, None, 20, [])
+                              None)
 
     return engine
 

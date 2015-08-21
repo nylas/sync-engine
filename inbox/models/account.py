@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
-                        Enum, inspect)
+                        Enum, inspect, bindparam)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true, false
 
-from inbox.sqlalchemy_ext.util import JSON, MutableDict
+from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
 from inbox.util.file import Lock
 
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
@@ -240,6 +240,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         return lock_for.setdefault(account_id,
                                    Lock(cls._sync_lockfile_name(account_id),
                                         block=False))
+
+    @classmethod
+    def get(cls, id_, session):
+        q = bakery(lambda session: session.query(cls))
+        q += lambda q: q.filter(cls.id == bindparam('id_'))
+        return q(session).params(id_=id_).first()
 
     @classmethod
     def _sync_lockfile_name(cls, account_id):

@@ -58,7 +58,7 @@ __pycache__
 pip-log.txt
 
 # Unit test / coverage reports
-/.hypothesis
+**/.hypothesis
 .coverage
 .tox
 nosetests.xml

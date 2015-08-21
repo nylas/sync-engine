@@ -40,13 +40,14 @@ def constants():
     seq = 1231
     uid = 1764
     modseq = 95020
+    size = 16384
     flags = ()
     g_labels = ()
     internaldate = '02-Mar-2015 23:36:20 +0000'
     body = 'Delivered-To: ...'
     body_size = len(body)
     return dict(g_msgid=g_msgid, g_thrid=g_thrid, seq=seq, uid=uid,
-                modseq=modseq, flags=flags, g_labels=g_labels,
+                modseq=modseq, size=size, flags=flags, g_labels=g_labels,
                 body=body, body_size=body_size, internaldate=internaldate)
 
 
@@ -77,13 +78,16 @@ def patch_imap4(crispin_client, resp):
 
 def test_g_metadata(gmail_client, constants):
     expected_resp = '{seq} (X-GM-THRID {g_thrid} X-GM-MSGID {g_msgid} ' \
-                    'UID {uid} MODSEQ ({modseq}))'.format(**constants)
+                    'RFC822.SIZE {size} UID {uid} MODSEQ ({modseq}))'. \
+        format(**constants)
     unsolicited_resp = '1198 (UID 1731 MODSEQ (95244) FLAGS (\\Seen))'
     patch_imap4(gmail_client, [expected_resp, unsolicited_resp])
     uid = constants['uid']
     g_msgid = constants['g_msgid']
     g_thrid = constants['g_thrid']
-    assert gmail_client.g_metadata([uid]) == {uid: GMetadata(g_msgid, g_thrid)}
+    size = constants['size']
+    assert gmail_client.g_metadata([uid]) == {uid: GMetadata(g_msgid, g_thrid,
+                                                             size)}
 
 
 def test_gmail_flags(gmail_client, constants):

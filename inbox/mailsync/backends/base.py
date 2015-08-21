@@ -1,12 +1,10 @@
 from gevent import Greenlet, joinall, sleep, GreenletExit, event
-from sqlalchemy.exc import DataError
 
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.util.debug import bind_context
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import partition
-from inbox.models import Account, Folder
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.heartbeat.status import clear_heartbeat_status
@@ -79,11 +77,6 @@ class BaseMailSyncMonitor(Greenlet):
         self.email_address = account.email_address
         self.provider_name = account.provider
         self.retry_fail_classes = retry_fail_classes
-
-        # Stuff that might be updated later and we want to keep a shared
-        # reference on child greenlets.
-        if not hasattr(self, 'shared_state'):
-            self.shared_state = dict()
 
         Greenlet.__init__(self)
 

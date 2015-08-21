@@ -1,8 +1,27 @@
 from inbox.crispin import RawFolder
 from inbox.models import Folder
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
+from inbox.models.backends.imap import ImapFolderInfo, ImapFolderSyncStatus
 
-from test_save_folder_names import add_imap_status_info_rows
+
+def add_imap_status_info_rows(folder_id, account_id, db_session):
+    """Add placeholder ImapFolderSyncStatus and ImapFolderInfo rows for this
+       folder_id if none exist.
+    """
+    if not db_session.query(ImapFolderSyncStatus).filter_by(
+            account_id=account_id, folder_id=folder_id).all():
+        db_session.add(ImapFolderSyncStatus(
+            account_id=account_id,
+            folder_id=folder_id,
+            state='initial'))
+
+    if not db_session.query(ImapFolderInfo).filter_by(
+            account_id=account_id, folder_id=folder_id).all():
+        db_session.add(ImapFolderInfo(
+            account_id=account_id,
+            folder_id=folder_id,
+            uidvalidity=1,
+            highestmodseq=22))
 
 
 def create_foldersyncstatuses(db, default_account):

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
-                        ForeignKey, Index, String, desc)
+                        ForeignKey, Index, String, DateTime, desc)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.expression import false
@@ -214,10 +214,9 @@ class ImapFolderInfo(MailSyncBase):
     account = relationship(ImapAccount)
     folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
-    # We almost always need the folder name too, so eager load by default.
-    folder = relationship('Folder', lazy='joined',
-                          backref=backref('imapfolderinfo',
-                                          passive_deletes=True))
+    folder = relationship('Folder', backref=backref('imapfolderinfo',
+                                                    uselist=False,
+                                                    passive_deletes=True))
     uidvalidity = Column(BigInteger, nullable=False)
     # Invariant: the local datastore for this folder has always incorporated
     # remote changes up to _at least_ this modseq (we can't guarantee that we
@@ -228,6 +227,7 @@ class ImapFolderInfo(MailSyncBase):
     # therefore will not use this field.
     highestmodseq = Column(BigInteger, nullable=True)
     uidnext = Column(Integer, nullable=True)
+    last_slow_refresh = Column(DateTime)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
@@ -279,7 +279,7 @@ class ImapThread(Thread):
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     @classmethod
-    def from_gmail_message(cls, session, namespace, message):
+    def from_gmail_message(cls, session, namespace_id, message):
         """
         Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
         are not taken into account, even if they change.)
@@ -298,20 +298,21 @@ class ImapThread(Thread):
             if thread is None:
                 thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                              recentdate=message.received_date,
-                             namespace=namespace,
+                             namespace_id=namespace_id,
                              subjectdate=message.received_date,
                              snippet=message.snippet)
         return thread
 
     @classmethod
-    def from_imap_message(cls, session, namespace, message):
+    def from_imap_message(cls, session, namespace_id, message):
         if message.thread is not None:
             # If this message *already* has a thread associated with it, don't
             # create a new one.
             return message.thread
         clean_subject = cleanup_subject(message.subject)
         thread = cls(subject=clean_subject, recentdate=message.received_date,
-                     namespace=namespace, subjectdate=message.received_date,
+                     namespace_id=namespace_id,
+                     subjectdate=message.received_date,
                      snippet=message.snippet)
         return thread
 
