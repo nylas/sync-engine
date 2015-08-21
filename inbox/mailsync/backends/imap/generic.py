@@ -625,6 +625,7 @@ class FolderSyncEngine(Greenlet):
             common.remove_deleted_uids(self.account_id, self.folder_id,
                                        expunged_uids, db_session)
             db_session.commit()
+        self.highestmodseq = new_highestmodseq
 
     def generic_refresh_flags(self, crispin_client):
         now = datetime.utcnow()
