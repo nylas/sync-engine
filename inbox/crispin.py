@@ -738,8 +738,20 @@ class GmailCrispinClient(CrispinClient):
     def condstore_changed_flags(self, modseq):
         data = self.conn.fetch('1:*', ['FLAGS', 'X-GM-LABELS'],
                                modifiers=['CHANGEDSINCE {}'.format(modseq)])
-        return {uid: GmailFlags(ret['FLAGS'], ret['X-GM-LABELS'])
-                for uid, ret in data.items()}
+        results = {}
+        for uid, ret in data.items():
+            if 'FLAGS' not in ret or 'X-GM-LABELS' not in ret:
+                # We might have gotten an unsolicited fetch response that
+                # doesn't have all the data we asked for -- if so, explicitly
+                # fetch flags and labels for that UID.
+                log.info('Got incomplete response in flags fetch', uid=uid,
+                         ret=str(ret))
+                data_for_uid = self.conn.fetch(uid, ['FLAGS', 'X-GM-LABELS'])
+                if not data_for_uid:
+                    continue
+                ret = data_for_uid[uid]
+            results[uid] = GmailFlags(ret['FLAGS'], ret['X-GM-LABELS'])
+        return results
 
     def g_msgids(self, uids):
         """
