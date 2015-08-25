@@ -65,6 +65,7 @@ from __future__ import division
 from datetime import datetime, timedelta
 from gevent import Greenlet, kill, spawn, sleep
 from hashlib import sha256
+import imaplib
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
 from sqlalchemy.exc import IntegrityError
@@ -346,7 +347,24 @@ class FolderSyncEngine(Greenlet):
                 crispin_client.select_folder(self.folder_name,
                                              self.uidvalidity_cb)
                 idling = True
-                crispin_client.idle(IDLE_WAIT)
+                try:
+                    crispin_client.idle(IDLE_WAIT)
+                except Exception as exc:
+                    # With some servers we get e.g.
+                    # 'Unexpected IDLE response: * FLAGS  (...)'
+                    if isinstance(exc, imaplib.IMAP4.error) and \
+                            exc.message.startswith('Unexpected IDLE response'):
+                        log.info('Error initiating IDLE, not idling',
+                                 error=exc)
+                        try:
+                            # Still have to take the connection out of IDLE
+                            # mode to reuse it though.
+                            crispin_client.conn.idle_done()
+                        except AttributeError:
+                            pass
+                        idling = False
+                    else:
+                        raise
             else:
                 idling = False
         # Close IMAP connection before sleeping
