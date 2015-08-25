@@ -125,11 +125,12 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             load_only_columns = ('public_id', 'subject', 'is_draft', 'version',
                                  'from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
                                  'received_date', 'snippet', 'is_read',
-                                 'reply_to_message_id', 'reply_to')
+                                 'reply_to_message_id', 'reply_to',
+                                 'received_date', 'is_sent')
         else:
             load_only_columns = ('public_id', 'is_draft', 'from_addr',
                                  'to_addr', 'cc_addr', 'bcc_addr', 'is_read',
-                                 'is_starred')
+                                 'is_starred', 'received_date', 'is_sent')
         query = query.options(
             subqueryload(Thread.messages).
             load_only(*load_only_columns)
