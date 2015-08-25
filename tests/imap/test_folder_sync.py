@@ -73,8 +73,9 @@ class MockIMAPClient(object):
             data.append('BODY[]')
         if isinstance(items, (int, long)):
             items = [items]
-        elif items == '1:*':
-            items = list(uid_dict)
+        elif isinstance(items, basestring) and re.match('[0-9]+:\*', items):
+            min_uid = int(items.split(':')[0])
+            items = {u for u in uid_dict if u >= min_uid} | {max(uid_dict)}
         for u in items:
             if u in uid_dict:
                 resp[u] = {k: v for k, v in uid_dict[u].items() if k in data}

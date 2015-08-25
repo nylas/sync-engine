@@ -502,9 +502,6 @@ class FolderSyncEngine(Greenlet):
 
         new_uids = set()
         with self.syncmanager_lock:
-            # there is the possibility that another green thread has already
-            # downloaded some message(s) from this batch... check within the
-            # lock
             with session_scope() as db_session:
                 account = Account.get(self.account_id, db_session)
                 folder = Folder.get(self.folder_id, db_session)
@@ -517,6 +514,8 @@ class FolderSyncEngine(Greenlet):
                         new_uids.add(uid)
                 db_session.commit()
 
+        log.info('Committed new UIDs',
+                 new_committed_message_count=len(new_uids))
         # If we downloaded uids, record message velocity (#uid / latency)
         if self.state == 'initial' and len(new_uids):
             self._report_message_velocity(datetime.utcnow() - start,
@@ -572,23 +571,19 @@ class FolderSyncEngine(Greenlet):
             self.folder_name, ['UIDNEXT']).get('UIDNEXT')
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
+        log.info('UIDNEXT changed, checking for new UIDs',
+                 remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
 
         crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
-        # Some servers don't return a UIDNEXT, so we have to actually get the
-        # last UID.
-        if remote_uidnext is None:
-            max_uid = crispin_client.conn.fetch('*', ['UID'])
-            if not max_uid:
-                # No UIDs in folder
-                return
-            remote_uidnext = max(max_uid.keys()) + 1
         with session_scope() as db_session:
             lastseenuid = common.lastseenuid(self.account_id, db_session,
                                              self.folder_id)
-        new_uids = range(lastseenuid + 1, remote_uidnext)
-        for uid in new_uids:
-            self.download_and_commit_uids(crispin_client, [uid])
-        log.info('Saved new UIDs', count=len(new_uids))
+        latest_uids = crispin_client.conn.fetch('{}:*'.format(lastseenuid + 1),
+                                                ['UID']).keys()
+        new_uids = set(latest_uids) - {lastseenuid}
+        if new_uids:
+            for uid in sorted(new_uids):
+                self.download_and_commit_uids(crispin_client, [uid])
         self.uidnext = remote_uidnext
 
     def condstore_refresh_flags(self, crispin_client):
