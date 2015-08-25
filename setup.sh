@@ -291,11 +291,16 @@ fi
 color '35;1' 'Cleaning up...'
 apt-get -y autoremove
 
-mkdir -p /var/lib/inboxapp
+mkdir -p /var/lib/inboxapp/parts
 chown $SUDO_UID:$SUDO_GID /var/lib/inboxapp
 
 mkdir -p /var/log/inboxapp
 chown $SUDO_UID:$SUDO_GID /var/log/inboxapp
+
+mkdir -p /etc/inboxapp
+cp etc/config-dev.json /etc/inboxapp/config.json
+cp etc/secrets-dev.yml /etc/inboxapp/secrets.yml
+chown $SUDO_UID:$SUDO_GID /etc/inboxapp
 
 git config branch.master.rebase true
 
