@@ -25,7 +25,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     override.vm.box_download_checksum_type = "sha256"
     override.vm.box_download_checksum = "b79e900774b6a27500243d28bd9b1770e428faa3d8a3e45997f2a939b2b63570"
     vmware.vmx["memsize"] = "1024"
-    vmware.vmx["numvcpus"] = "2"
+    vmware.vmx["numvcpus"] = "1"
   end
 
   config.ssh.forward_agent = true
