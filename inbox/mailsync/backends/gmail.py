@@ -170,8 +170,8 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                     # the past month in order to get anywhere.
                     since = (datetime.utcnow() - timedelta(days=30)). \
                         strftime('%d-%b-%Y')
-                    inbox_uids = crispin_client.search_uids(
-                        ['X-GM-LABELS inbox', 'SINCE {}'.format(since)])
+                    inbox_uids = set(crispin_client.search_uids(
+                        ['X-GM-LABELS inbox', 'SINCE {}'.format(since)]))
                 uids_to_download = (sorted(unknown_uids - inbox_uids) +
                                     sorted(unknown_uids & inbox_uids))
             else:
