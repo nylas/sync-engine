@@ -544,7 +544,14 @@ class CrispinClient(object):
         return messages
 
     def flags(self, uids):
-        data = self.conn.fetch(uids, ['FLAGS'])
+        if len(uids) > 100:
+            # Some backends abort the connection if you give them a really
+            # long sequence set of individual UIDs, so instead fetch flags for
+            # all UIDs greater than or equal to min(uids).
+            seqset = '{}:*'.format(min(uids))
+        else:
+            seqset = uids
+        data = self.conn.fetch(seqset, ['FLAGS'])
         uid_set = set(uids)
         return {uid: Flags(ret['FLAGS'])
                 for uid, ret in data.items() if uid in uid_set}
