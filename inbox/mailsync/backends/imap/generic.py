@@ -337,8 +337,12 @@ class FolderSyncEngine(Greenlet):
                 kill(change_poller)
 
     def should_idle(self, crispin_client):
-        return (crispin_client.idle_supported() and
-                self.folder_name in crispin_client.folder_names()['inbox'])
+        if not hasattr(self, '_should_idle'):
+            self._should_idle = (
+                crispin_client.idle_supported() and self.folder_name in
+                crispin_client.folder_names()['inbox']
+            )
+        return self._should_idle
 
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:
