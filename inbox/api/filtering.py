@@ -448,6 +448,7 @@ def recurring_events(filters, starts_before, starts_after, ends_before,
     recur_query = recur_query.filter(and_(*after_criteria))
 
     recur_instances = []
+
     for r in recur_query:
         # the occurrences check only checks starting timestamps
         if ends_before and not starts_before:

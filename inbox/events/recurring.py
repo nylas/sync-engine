@@ -26,6 +26,7 @@ def link_overrides(db_session, event):
     # RecurringEvent instance.
     overrides = db_session.query(RecurringEventOverride).\
         filter_by(namespace_id=event.namespace_id,
+                  calendar_id=event.calendar_id,
                   master_event_uid=event.uid,
                   source=event.source).all()
     for o in overrides:
@@ -42,6 +43,7 @@ def link_master(db_session, event):
         if event.master_event_uid:
             master = db_session.query(RecurringEvent).\
                 filter_by(namespace_id=event.namespace_id,
+                          calendar_id=event.calendar_id,
                           uid=event.master_event_uid,
                           source=event.source).first()
             if master:

@@ -95,7 +95,7 @@ def test_create_recurrence(db, default_account, calendar):
     assert event.until is not None
 
 
-def test_link_events_from_override(db, default_account, calendar):
+def test_link_events_from_override(db, default_account, calendar, other_calendar):
     # Test that by creating a recurring event and override separately, we
     # can link them together based on UID and namespace_id when starting
     # from the override.
@@ -104,10 +104,31 @@ def test_link_events_from_override(db, default_account, calendar):
     override = Event(original_start_time=original_start,
                      master_event_uid=master.uid,
                      namespace_id=master.namespace_id,
+                     calendar_id=calendar.id,
                      source='local')
     assert isinstance(override, RecurringEventOverride)
     link_events(db.session, override)
     assert override.master == master
+
+
+def test_linking_events_from_different_calendars(db, default_account,
+                                                 calendar, other_calendar):
+    # Test that two events with the same UID but in different calendars don't
+    # get linked together. This is important because with the Google API, a
+    # recurring events can be in two calendars and have the same UID.
+    # In this case, we create two different recurring events.
+    master = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE)
+    original_start = parse_exdate(master)[0]
+    override = Event(original_start_time=original_start,
+                     master_event_uid=master.uid,
+                     namespace_id=master.namespace_id,
+                     calendar_id=other_calendar.id,
+                     uid='blah',
+                     source='local')
+
+    assert isinstance(override, RecurringEventOverride)
+    link_events(db.session, override)
+    assert override.master == None
 
 
 def test_link_events_from_master(db, default_account, calendar):
@@ -123,6 +144,21 @@ def test_link_events_from_master(db, default_account, calendar):
     assert len(o) == 1
     assert override in master.overrides
     assert override.uid in master.override_uids
+
+
+def test_link_events_from_master_diff_calendars(db, default_account, calendar,
+                                                other_calendar):
+    # Same as the previous test except that we check that it doesn't work across
+    # calendars (see test_link_events_from_master_diff_calendars for more
+    # details).
+    master = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE)
+    original_start = parse_exdate(master)[0]
+    override = recurring_override_instance(db, master, original_start,
+                                           master.start, master.end)
+    override.calendar = other_calendar
+    assert isinstance(master, RecurringEvent)
+    o = link_events(db.session, master)
+    assert len(o) == 0
 
 
 def test_rrule_parsing(db, default_account, calendar):

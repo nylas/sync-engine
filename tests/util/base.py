@@ -436,6 +436,12 @@ def calendar(db, default_account):
 
 
 @fixture(scope='function')
+def other_calendar(db, default_account):
+    return add_fake_calendar(db.session, default_account.namespace.id,
+                             uid='uid2', name='Calendar 2')
+
+
+@fixture(scope='function')
 def event(db, default_account):
     return add_fake_event(db.session, default_account.namespace.id)
 

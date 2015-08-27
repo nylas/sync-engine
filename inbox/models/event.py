@@ -389,6 +389,15 @@ class RecurringEvent(Event):
             overrides = overrides.filter(RecurringEventOverride.start > start)
         if end:
             overrides = overrides.filter(RecurringEventOverride.end < end)
+
+        # Google calendar events have the same uid __globally_. This means
+        # that if I created an event, shared it with you and that I also
+        # shared my calendar with you, override to this events for calendar B
+        # may show up in a query for calendar A.
+        # (https://phab.nylas.com/T3420)
+        overrides = overrides.filter(
+                RecurringEventOverride.calendar_id == self.calendar_id)
+
         events = list(overrides)
         overridden_starts = [e.original_start_time for e in events]
         # Remove cancellations from the override set
