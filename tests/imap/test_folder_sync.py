@@ -7,6 +7,7 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
                                         ImapFolderInfo)
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
+from inbox.mailsync.exc import UidInvalid
 from tests.imap.data import uids, uid_data
 
 
@@ -42,6 +43,7 @@ class MockIMAPClient(object):
     def __init__(self):
         self._data = {}
         self.selected_folder = None
+        self.uidvalidity = 1
 
     def add_folder_data(self, folder_name, uids):
         """Adds fake UID data for the given folder."""
@@ -87,7 +89,7 @@ class MockIMAPClient(object):
     def folder_status(self, folder_name, data=None):
         return {
             'UIDNEXT': max(self._data[folder_name]) + 1,
-            'UIDVALIDITY': 1
+            'UIDVALIDITY': self.uidvalidity
         }
 
 
@@ -146,6 +148,31 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
     saved_uids = db.session.query(ImapUid).filter(
         ImapUid.folder_id == inbox_folder.id)
     assert {u.msg_uid for u in saved_uids} == set(uid_dict)
+
+
+def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
+    uid_dict = uids.example()
+    mock_imapclient.add_folder_data(inbox_folder.name, uid_dict)
+    inbox_folder.imapfolderinfo = ImapFolderInfo(account=generic_account,
+                                                 uidvalidity=1,
+                                                 uidnext=1)
+    db.session.commit()
+    folder_sync_engine = FolderSyncEngine(generic_account.id,
+                                          inbox_folder.name,
+                                          inbox_folder.id,
+                                          generic_account.email_address,
+                                          'custom',
+                                          BoundedSemaphore(1))
+    folder_sync_engine.initial_sync()
+    mock_imapclient.uidvalidity = 2
+    with pytest.raises(UidInvalid):
+        folder_sync_engine.poll_impl()
+
+    new_state = folder_sync_engine.resync_uids()
+
+    assert new_state == 'initial'
+    assert db.session.query(ImapUid).filter(
+        ImapUid.folder_id == inbox_folder.id).all() == []
 
 
 def test_gmail_initial_sync(db, default_account, all_mail_folder,

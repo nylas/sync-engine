@@ -64,7 +64,6 @@ from __future__ import division
 
 from datetime import datetime, timedelta
 from gevent import Greenlet, kill, spawn, sleep
-from hashlib import sha256
 import imaplib
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
@@ -293,7 +292,7 @@ class FolderSyncEngine(Greenlet):
     @retry_crispin
     def resync_uids(self):
         log.bind(state=self.state)
-        log.info('UIDVALIDITY changed')
+        log.warning('UIDVALIDITY changed; initiating resync')
         self.resync_uids_impl()
         return 'initial'
 
@@ -376,66 +375,31 @@ class FolderSyncEngine(Greenlet):
             sleep(self.poll_frequency)
 
     def resync_uids_impl(self):
-        # NOTE: first, let's check if the UIVDALIDITY change was spurious, if
-        # it is, just discard it and go on, if it isn't, drop the relevant
-        # entries (filtering by account and folder IDs) from the imapuid table,
-        # download messages, if necessary - in case a message has changed UID -
-        # update UIDs, and discard orphaned messages. -siro
+        # First, let's check if the UIVDALIDITY change was spurious, if
+        # it is, just discard it and go on.
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, lambda *args: True)
+            remote_uidvalidity = crispin_client.selected_uidvalidity
+            remote_uidnext = crispin_client.selected_uidnext
+            if remote_uidvalidity <= self.uidvalidity:
+                log.debug('UIDVALIDITY unchanged')
+                return
+        # Otherwise, if the UIDVALIDITY really has changed, discard all saved
+        # UIDs for the folder, mark associated messages for garbage-collection,
+        # and return to the 'initial' state to resync.
+        # This will cause message and threads to be deleted and recreated, but
+        # uidinvalidity is sufficiently rare that this tradeoff is acceptable.
         with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
-            folder_info = db_session.query(ImapFolderInfo). \
+            invalid_uids = {
+                uid for uid, in db_session.query(ImapUid.msg_uid).
                 filter_by(account_id=self.account_id,
-                          folder_id=self.folder_id).one()
-            cached_uidvalidity = folder_info.uidvalidity
-            with self.conn_pool.get() as crispin_client:
-                crispin_client.select_folder(self.folder_name,
-                                             lambda *args: True)
-                uidvalidity = crispin_client.selected_uidvalidity
-                uidnext = crispin_client.selected_uidnext
-                if uidvalidity <= cached_uidvalidity:
-                    log.debug('UIDVALIDITY unchanged')
-                    return
-                invalid_uids = db_session.query(ImapUid). \
-                    filter_by(account_id=self.account_id,
-                              folder_id=self.folder_id)
-                data_sha256_message = {uid.message.data_sha256: uid.message
-                                       for uid in invalid_uids}
-                for uid in invalid_uids:
-                    db_session.delete(uid)
-                # NOTE: this is necessary (and OK since it doesn't persist any
-                # data) to maintain the order between UIDs deletion and
-                # insertion. Without this, I was seeing constraints violation
-                # on the imapuid table. -siro
-                db_session.flush()
-                remote_uids = crispin_client.all_uids()
-                for remote_uid in remote_uids:
-                    raw_message = crispin_client.uids([remote_uid])[0]
-                    data_sha256 = sha256(raw_message.body).hexdigest()
-                    if data_sha256 in data_sha256_message:
-                        message = data_sha256_message[data_sha256]
-
-                        # Create a new imapuid
-                        uid = ImapUid(msg_uid=raw_message.uid,
-                                      message=message,
-                                      account_id=self.account_id,
-                                      folder_id=self.folder_id)
-                        uid.update_flags(raw_message.flags)
-                        db_session.add(uid)
-
-                        # Update the existing message's metadata too
-                        common.update_message_metadata(db_session, account,
-                                                       message, uid.is_draft)
-
-                        del data_sha256_message[data_sha256]
-                    else:
-                        self.download_and_commit_uids(crispin_client,
-                                                      [remote_uid])
-                    self.heartbeat_status.publish()
-            for message in data_sha256_message.itervalues():
-                db_session.delete(message)
-            folder_info.uidvalidity = uidvalidity
-            folder_info.highestmodseq = None
-            folder_info.uidnext = uidnext
+                          folder_id=self.folder_id)
+            }
+            common.remove_deleted_uids(self.account_id, self.folder_id,
+                                       invalid_uids, db_session)
+        self.uidvalidity = remote_uidvalidity
+        self.highestmodseq = None
+        self.uidnext = remote_uidnext
 
     @retry_crispin
     def poll_for_changes(self):
@@ -689,6 +653,11 @@ class FolderSyncEngine(Greenlet):
         if not hasattr(self, '_uidvalidity'):
             self._uidvalidity = self._load_imap_folder_info().uidvalidity
         return self._uidvalidity
+
+    @uidvalidity.setter
+    def uidvalidity(self, value):
+        self._update_imap_folder_info('uidvalidity', value)
+        self._uidvalidity = value
 
     @property
     def uidnext(self):
