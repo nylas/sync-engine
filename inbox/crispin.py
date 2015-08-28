@@ -680,12 +680,25 @@ class CrispinClient(object):
         log.info('Idling', timeout=timeout)
         self.conn.idle()
         try:
-            r = self.conn.idle_check(timeout)
+            with self._restore_timeout():
+                r = self.conn.idle_check(timeout)
         except:
             self.conn.idle_done()
             raise
         self.conn.idle_done()
         return r
+
+    @contextlib.contextmanager
+    def _restore_timeout(self):
+        # IMAPClient.idle_check() calls setblocking(1) on the underlying
+        # socket, erasing any previously set timeout. So make sure to restore
+        # the timeout.
+        sock = getattr(self.conn._imap, 'sslobj', self.conn._imap.sock)
+        timeout = sock.gettimeout()
+        try:
+            yield
+        finally:
+            sock.settimeout(timeout)
 
     def condstore_changed_flags(self, modseq):
         data = self.conn.fetch('1:*', ['FLAGS'],
