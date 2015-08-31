@@ -27,6 +27,10 @@ class Namespace(MailSyncBase, HasPublicID):
     type = Column(Enum('root', 'shared_folder'), nullable=False,
                   server_default='root')
 
+    def __str__(self):
+        return "{} <{}>".format(self.public_id, self.account.email_address if
+                                self.account else '')
+
     @property
     def email_address(self):
         if self.account is not None:
@@ -38,3 +42,5 @@ class Namespace(MailSyncBase, HasPublicID):
         q += lambda q: q.filter(
             Namespace.public_id == bindparam('public_id'))
         return q(db_session).params(public_id=public_id).one()
+
+
