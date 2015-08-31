@@ -272,7 +272,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
     @property
     def is_deleted(self):
-        return self.sync_state == 'stopped' and \
+        return self.sync_state in ('stopped', 'killed') and \
             self.sync_should_run is False and \
             self._sync_status.get('sync_disabled_reason') == 'account deleted'
 
