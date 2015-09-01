@@ -486,6 +486,9 @@ get_default_providers = lambda: {
         "smtp": ("smtp.qq.com", 465),
         "auth": "password",
         "domains": ["qq.com", "vip.qq.com"],
+	"folder_map": {"Deleted Messages": "trash",
+			"Sent Messages": "sent",
+			"Junk": "spam"},
         "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "foxmail" : {
@@ -494,6 +497,9 @@ get_default_providers = lambda: {
         "smtp": ("smtp.exmail.qq.com", 465),
         "auth": "password",
         "domains": ["foxmail.com"],
+	"folder_map": {"Deleted Messages": "trash",
+			"Sent Messages": "sent",
+			"Junk": "spam"},
         "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "qq_enterprise": {
@@ -501,6 +507,9 @@ get_default_providers = lambda: {
         "imap":("imap.exmail.qq.com", 993),
         "smtp":("smtp.exmail.qq.com", 465),
         "auth":"password",
+	"folder_map": {"Deleted Messages": "trash",
+			"Sent Messages": "sent",
+			"Junk": "spam"},
         "mx_servers":["mxbiz1.qq.com", "mxbiz2.qq.com"]
     },
     "aliyun":{
