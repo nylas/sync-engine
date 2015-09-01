@@ -39,7 +39,9 @@ class GmailSettingError(ValidationError):
 
 
 class ImapSupportDisabledError(ValidationError):
-    pass
+    def __init__(self, reason=None):
+        super(ImapSupportDisabledError, self).__init__(reason)
+        self.reason = reason
 
 
 class AccessNotEnabledError(Exception):

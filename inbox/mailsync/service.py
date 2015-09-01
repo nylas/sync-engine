@@ -49,7 +49,8 @@ class SyncService(object):
         self.log.info('starting mail sync process',
                       supported_providers=module_registry.keys())
 
-        self.monitors = {}
+        self.syncing_accounts = set()
+        self.email_sync_monitors = {}
         self.contact_sync_monitors = {}
         self.event_sync_monitors = {}
         self.poll_interval = poll_interval
@@ -69,7 +70,7 @@ class SyncService(object):
         retry_with_logging(self._run_impl, self.log)
 
     def stop(self):
-        for k, v in self.monitors.iteritems():
+        for k, v in self.email_sync_monitors.iteritems():
             gevent.kill(v)
         self.keep_running = False
 
@@ -110,13 +111,12 @@ class SyncService(object):
 
             # Perform the appropriate action on each account
             for account_id in start_accounts:
-                if account_id not in self.monitors:
+                if account_id not in self.syncing_accounts:
                     self.start_sync(account_id)
                 # If the account's sync was killed due to an exception, its
                 # monitor sticks around; to restart, manually stop and start it
 
-            stop_accounts = set(self.monitors.keys()) - \
-                set(start_accounts)
+            stop_accounts = self.syncing_accounts - set(start_accounts)
             for account_id in stop_accounts:
                 self.log.info('sync service stopping sync',
                               account_id=account_id)
@@ -144,15 +144,16 @@ class SyncService(object):
                                        .format(acc.sync_host),
                                account_id=account_id)
 
-            elif acc.id not in self.monitors:
+            elif acc.id not in self.syncing_accounts:
                 try:
                     if acc.is_sync_locked and acc.is_killed:
                         acc.sync_unlock()
                     acc.sync_lock()
 
-                    monitor = self.monitor_cls_for[acc.provider](acc)
-                    self.monitors[acc.id] = monitor
-                    monitor.start()
+                    if acc.sync_email:
+                        monitor = self.monitor_cls_for[acc.provider](acc)
+                        self.email_sync_monitors[acc.id] = monitor
+                        monitor.start()
 
                     info = acc.provider_info
                     if info.get('contacts', None) and acc.sync_contacts:
@@ -179,6 +180,7 @@ class SyncService(object):
                         event_sync.start()
 
                     acc.sync_started()
+                    self.syncing_accounts.add(acc.id)
                     db_session.add(acc)
                     db_session.commit()
                     self.log.info('Sync started', account_id=account_id,
@@ -200,8 +202,9 @@ class SyncService(object):
         self.log.info('Stopping monitors', account_id=account_id)
 
         # XXX Can processing this command fail in some way?
-        self.monitors[account_id].shutdown.set()
-        del self.monitors[account_id]
+        if account_id in self.email_sync_monitors:
+            self.email_sync_monitors[account_id].shutdown.set()
+            del self.email_sync_monitors[account_id]
 
         # Stop contacts sync if necessary
         if account_id in self.contact_sync_monitors:
@@ -212,6 +215,8 @@ class SyncService(object):
         if account_id in self.event_sync_monitors:
             self.event_sync_monitors[account_id].shutdown.set()
             del self.event_sync_monitors[account_id]
+
+        self.syncing_accounts.remove(account_id)
 
         fqdn = platform.node()
 

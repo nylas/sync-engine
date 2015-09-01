@@ -2,13 +2,14 @@ import requests
 from sqlalchemy.orm.exc import NoResultFound
 
 from imapclient import IMAPClient
+
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.gmail import GmailAuthCredentials
 from inbox.models.backends.gmail import g_token_manager
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
-from inbox.basicauth import OAuthError, ImapSupportDisabledError
+from inbox.basicauth import (OAuthError, ImapSupportDisabledError)
 from inbox.util.url import url_concat
 from inbox.providers import provider_info
 from inbox.crispin import GmailCrispinClient
@@ -59,11 +60,19 @@ class GmailAuthHandler(OAuthAuthHandler):
             token = g_token_manager.get_token_for_email(account)
             conn.oauth2_login(account.email_address, token)
         except IMAPClient.Error as exc:
+            exc = _process_imap_exception(exc)
+            # Raise all imap disabled errors except authentication_failed
+            # error, swhich we handle differently
+            if isinstance(exc, ImapSupportDisabledError) and \
+                    exc.reason != 'authentication_failed':
+                raise exc
+
             log.error('Error during IMAP XOAUTH2 login',
                       account_id=account.id, email=account.email_address,
                       host=host, port=port, error=exc)
-            if not _auth_is_invalid(exc):
-                raise
+            if not isinstance(exc, ImapSupportDisabledError):
+                raise  # Unknown IMAPClient error, reraise
+
             # If we got an AUTHENTICATIONFAILED response, force a token refresh
             # and try again. If IMAP auth still fails, it's likely that IMAP
             # access is disabled, so propagate that errror.
@@ -72,9 +81,13 @@ class GmailAuthHandler(OAuthAuthHandler):
             try:
                 conn.oauth2_login(account.email_address, token)
             except IMAPClient.Error as exc:
-                if not _auth_is_invalid(exc):
-                    raise
-                raise ImapSupportDisabledError()
+                exc = _process_imap_exception(exc)
+                if not isinstance(exc, ImapSupportDisabledError) or \
+                        exc.reason != 'authentication_failed':
+                    raise exc
+                else:
+                    # Instead of authentication_failed, report imap disabled
+                    raise ImapSupportDisabledError('imap_disabled_for_account')
 
     def create_account(self, db_session, email_address, response):
         email_address = response.get('email')
@@ -111,6 +124,8 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.locale = response.get('locale')
         account.picture = response.get('picture')
         account.home_domain = response.get('hd')
+        account.sync_email = (account.sync_email or
+                              response.get('sync_email', True))
         account.sync_contacts = (account.sync_contacts or
                                  response.get('contacts', True))
         account.sync_events = (account.sync_events or
@@ -148,9 +163,11 @@ class GmailAuthHandler(OAuthAuthHandler):
             auth_creds.refresh_token = new_refresh_token
             auth_creds.is_valid = True
 
-            db_session.add(auth_creds)
-
-        self.verify_config(account)
+        try:
+            self.verify_config(account)
+        except ImapSupportDisabledError:
+            if account.sync_email:
+                raise
 
         # Ensure account has sync enabled.
         account.enable_sync()
@@ -207,6 +224,16 @@ class GmailAuthHandler(OAuthAuthHandler):
                 auth_code = None
 
 
-def _auth_is_invalid(exc):
-    return exc.message.startswith(
-        '[AUTHENTICATIONFAILED] Invalid credentials (Failure)')
+def _process_imap_exception(exc):
+    if 'Lookup failed' in exc.message:
+        # Gmail is disabled for this apps account
+        return ImapSupportDisabledError('gmail_disabled_for_domain')
+    elif 'IMAP access is disabled for your domain.' in exc.message:
+        # IMAP is disabled for this domain
+        return ImapSupportDisabledError('imap_disabled_for_domain')
+    elif exc.message.startswith('[AUTHENTICATIONFAILED] Invalid credentials '
+                                '(Failure)'):
+        return ImapSupportDisabledError('authentication_failed')
+    else:
+        # Unknown IMAPClient error
+        return exc
