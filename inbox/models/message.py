@@ -7,7 +7,8 @@ from flanker import mime
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Index, bindparam)
 from sqlalchemy.dialects.mysql import LONGBLOB
-from sqlalchemy.orm import relationship, backref, validates, joinedload
+from sqlalchemy.orm import (relationship, backref, validates, joinedload,
+                            subqueryload, load_only)
 from sqlalchemy.sql.expression import false
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -518,6 +519,24 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             joinedload(Message.events))
         return q(db_session).params(
             public_id=public_id, namespace_id=namespace_id).one()
+
+    @classmethod
+    def api_loading_options(cls, expand=False):
+        columns = ['public_id', 'is_draft', 'from_addr', 'to_addr', 'cc_addr',
+                   'bcc_addr', 'is_read', 'is_starred', 'received_date',
+                   'is_sent', 'subject', 'snippet', 'version', 'from_addr',
+                   'to_addr', 'cc_addr', 'bcc_addr', 'reply_to',
+                   '_compacted_body', 'thread_id', 'namespace_id']
+        if expand:
+            columns += ['message_id_header', 'in_reply_to', 'references']
+        return (
+            load_only(*columns),
+            subqueryload('parts').joinedload('block'),
+            subqueryload('thread').load_only('public_id', 'discriminator'),
+            subqueryload('events').load_only('public_id', 'discriminator'),
+            subqueryload('messagecategories').joinedload('category')
+        )
+
 
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.

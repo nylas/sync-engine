@@ -4,29 +4,12 @@ import collections
 from datetime import datetime
 
 from sqlalchemy import asc, desc, func, bindparam
-from sqlalchemy.orm import subqueryload
 from inbox.api.kellogs import APIEncoder, encode
 from inbox.models import Transaction, Message, Thread
 from inbox.models.session import session_scope
 from inbox.models.util import transaction_objects
 from inbox.sqlalchemy_ext.util import bakery
 
-
-QUERY_OPTIONS = {
-    Message: (
-        subqueryload('parts').joinedload('block'),
-        subqueryload('thread').load_only('public_id', 'discriminator'),
-        subqueryload('events').load_only('public_id', 'discriminator'),
-        subqueryload('messagecategories').joinedload('category')
-    ),
-    Thread: (
-        subqueryload('messages').load_only(
-            'public_id', 'is_draft', 'from_addr', 'to_addr', 'cc_addr',
-            'bcc_addr', 'is_read', 'is_starred').
-        joinedload('messagecategories').joinedload('category'),
-        subqueryload('messages').joinedload('parts').joinedload('block')
-    )
-}
 
 EVENT_NAME_FOR_COMMAND = {
     'insert': 'create',
@@ -104,7 +87,8 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                                       result_limit, exclude_types=None,
                                       include_types=None,
                                       exclude_folders=True,
-                                      legacy_nsid=False):
+                                      legacy_nsid=False,
+                                      expand=False):
     """
     Return a pair (deltas, new_pointer), where deltas is a list of change
     events, represented as dictionaries:
@@ -199,8 +183,10 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
             query = db_session.query(object_cls).filter(
                 object_cls.id.in_(ids_to_query),
                 object_cls.namespace_id == namespace.id)
-            if object_cls in QUERY_OPTIONS:
-                query = query.options(*QUERY_OPTIONS[object_cls])
+            if object_cls == Thread:
+                query = query.options(*Thread.api_loading_options(expand))
+            elif object_cls == Message:
+                query = query.options(*Message.api_loading_options(expand))
             objects = {obj.id: obj for obj in query}
 
             for trx in latest_trxs:
@@ -216,7 +202,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                         continue
                     repr_ = encode(
                         obj, namespace_public_id=namespace.public_id,
-                        legacy_nsid=legacy_nsid)
+                        legacy_nsid=legacy_nsid, expand=expand)
                     delta['attributes'] = repr_
 
                 results.append((trx.id, delta))
@@ -236,7 +222,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
 def streaming_change_generator(namespace, poll_interval, timeout,
                                transaction_pointer, exclude_types=None,
                                include_types=None, exclude_folders=True,
-                               legacy_nsid=False):
+                               legacy_nsid=False, expand=False):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
@@ -260,7 +246,7 @@ def streaming_change_generator(namespace, poll_interval, timeout,
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
                 exclude_types, include_types, exclude_folders,
-                legacy_nsid=legacy_nsid)
+                legacy_nsid=legacy_nsid, expand=expand)
 
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer

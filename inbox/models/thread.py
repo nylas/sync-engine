@@ -2,7 +2,8 @@ import itertools
 from collections import defaultdict
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index
-from sqlalchemy.orm import relationship, backref, validates, object_session
+from sqlalchemy.orm import (relationship, backref, validates, object_session,
+                            subqueryload)
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -162,6 +163,24 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         if self.starred:
             resp.append({'name': 'starred', 'id': 'starred'})
         return resp
+
+    @classmethod
+    def api_loading_options(cls, expand=False):
+        message_columns = ['public_id', 'is_draft', 'from_addr', 'to_addr',
+                           'cc_addr', 'bcc_addr', 'is_read', 'is_starred',
+                           'received_date', 'is_sent']
+        if expand:
+            message_columns += ['subject', 'snippet', 'version', 'from_addr',
+                                'to_addr', 'cc_addr', 'bcc_addr', 'reply_to']
+        return (
+            subqueryload(Thread.messages).
+            load_only(*message_columns)
+            .joinedload('messagecategories')
+            .joinedload('category'),
+            subqueryload(Thread.messages)
+            .joinedload('parts')
+            .joinedload('block')
+        )
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}

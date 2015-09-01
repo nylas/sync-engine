@@ -1274,15 +1274,16 @@ def sync_deltas():
                           location='args')
     g.parser.add_argument('timeout', type=int,
                           default=LONG_POLL_REQUEST_TIMEOUT, location='args')
+    g.parser.add_argument('view', type=view, location='args')
     # - Begin shim -
     # Remove after folders and labels exposed in the Delta API for everybody,
     # right now, only expose for Edgehill.
     g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
     # - End shim -
-    # TODO(emfree): should support `expand` parameter in delta endpoints.
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
+    expand = args.get('view') == 'expanded'
     # - Begin shim -
     exclude_folders = args.get('exclude_folders')
     if exclude_folders is None:
@@ -1315,7 +1316,7 @@ def sync_deltas():
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
                 exclude_types, include_types, exclude_folders,
-                legacy_nsid=g.legacy_nsid)
+                legacy_nsid=g.legacy_nsid, expand=expand)
 
         response = {
             'cursor_start': cursor,
@@ -1381,6 +1382,7 @@ def stream_changes():
                           location='args')
     g.parser.add_argument('include_types', type=valid_delta_object_types,
                           location='args')
+    g.parser.add_argument('view', type=view, location='args')
     # - Begin shim -
     # Remove after folders and labels exposed in the Delta API for everybody,
     # right now, only expose for Edgehill.
@@ -1393,6 +1395,7 @@ def stream_changes():
     cursor = args['cursor']
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
+    expand = args.get('view') == 'expanded'
 
     # Begin shim #
     exclude_folders = args.get('exclude_folders')
@@ -1423,7 +1426,7 @@ def stream_changes():
         g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=1, timeout=timeout, exclude_types=exclude_types,
         include_types=include_types, exclude_folders=exclude_folders,
-        legacy_nsid=g.legacy_nsid)
+        legacy_nsid=g.legacy_nsid, expand=expand)
     return Response(generator, mimetype='text/event-stream')
 
 

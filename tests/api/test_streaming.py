@@ -117,6 +117,21 @@ def test_exclude_and_include_object_types(db,
     assert all(resp['object'] == 'message' for resp in parsed_responses)
 
 
+def test_expanded_view(db, api_client, thread, message, default_namespace):
+    url = url_concat('/delta/streaming', {'timeout': .1, 'cursor': '0',
+                                          'include_types': 'message,thread',
+                                          'view': 'expanded'})
+    r = api_client.get_raw(url)
+    assert r.status_code == 200
+    responses = r.data.split('\n')
+    parsed_responses = [json.loads(resp) for resp in responses if resp != '']
+    for delta in parsed_responses:
+        if delta['object'] == 'message':
+            assert 'headers' in delta['attributes']
+        elif delta['object'] == 'thread':
+            assert 'messages' in delta['attributes']
+
+
 def test_invalid_timestamp(api_client, default_namespace):
     # Valid UNIX timestamp
     response = api_client.post_data(
