@@ -421,31 +421,6 @@ def message_update_api(public_id):
     return g.encoder.jsonify(message)
 
 
-# TODO Deprecate this endpoint once API usage falls off
-@app.route('/messages/<public_id>/rfc2822', methods=['GET'])
-def raw_message_api(public_id):
-    try:
-        valid_public_id(public_id)
-        message = g.db_session.query(Message).filter(
-            Message.public_id == public_id,
-            Message.namespace_id == g.namespace.id).one()
-    except NoResultFound:
-        raise NotFoundError("Couldn't find message {0}".format(public_id))
-
-    if message.full_body is None:
-        raise NotFoundError("Couldn't find message {0}".format(public_id))
-
-    if message.full_body is not None:
-        b64_contents = base64.b64encode(message.full_body.data)
-    else:
-        g.log.error("Message without full_body attribute: id='{0}'"
-                    .format(message.id))
-        raise NotFoundError(
-                    "Couldn't find raw contents for message `{0}` "
-                    .format(public_id))
-    return g.encoder.jsonify({"rfc2822": b64_contents})
-
-
 # Folders / Labels
 @app.route('/folders')
 @app.route('/labels')
