@@ -553,8 +553,14 @@ class FolderSyncEngine(Greenlet):
             saved_status.update_metrics(metrics)
 
     def get_new_uids(self, crispin_client):
-        remote_uidnext = crispin_client.conn.folder_status(
-            self.folder_name, ['UIDNEXT']).get('UIDNEXT')
+        try:
+            remote_uidnext = crispin_client.conn.folder_status(
+                self.folder_name, ['UIDNEXT']).get('UIDNEXT')
+        except ValueError:
+            # Work around issue where ValueError is raised on parsing STATUS
+            # response.
+            log.warning('Error getting UIDNEXT', exc_info=True)
+            remote_uidnext = None
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
         log.info('UIDNEXT changed, checking for new UIDs',
