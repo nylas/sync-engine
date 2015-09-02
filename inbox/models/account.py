@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum, inspect, bindparam)
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import true, false
+from sqlalchemy.sql.expression import false
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
 from inbox.util.file import Lock
@@ -57,9 +57,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
     # If True, throttle initial sync to reduce resource load
     throttled = Column(Boolean, server_default=false())
-
-    # local flags & data
-    save_raw_messages = Column(Boolean, server_default=true())
 
     # if True we sync contacts/events/email
     # NOTE: these columns are meaningless for EAS accounts
