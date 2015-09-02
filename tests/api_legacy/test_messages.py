@@ -69,7 +69,7 @@ def test_rfc822_format(stub_message_from_raw, api_client, mime_message):
 
     results = api_client.client.get(full_path,
                                     headers={'Accept': 'message/rfc822'})
-    assert results.data == mime_message.to_string()
+    assert results.data == stub_message_from_raw.full_body.data
 
 
 def test_sender_and_participants(stub_message, api_client):
