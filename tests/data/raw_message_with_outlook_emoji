@@ -1,0 +1,104 @@
+From: "Edward Test" <ed@example.com>
+To: "John Paul Test" <john@example.com>
+Subject: Smiley
+Thread-Topic: Smiley
+Thread-Index: AQHQ5LKeWxugXw4roE+fHlPO0MpKoQ==
+Date: Tue, 1 Sep 2015 12:35:01 +0000
+Message-ID: <CY1PR10MB0521064804BF73AC6B8A8B33A06A0@CY1PR10MB0521.namprd10.prod.outlook.com>
+Accept-Language: en-US, fr-FR
+Content-Language: en-US
+X-MS-Has-Attach: yes
+X-MS-Exchange-Organization-SCL: -1
+X-MS-TNEF-Correlator: <CY1PR10MB0521064804BF73AC6B8A8B33A06A0@CY1PR10MB0521.namprd10.prod.outlook.com>
+MIME-Version: 1.0
+X-MS-Exchange-Organization-MessageDirectionality: Originating
+X-MS-Exchange-Organization-AuthSource: CY1PR10MB0521.namprd10.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Internal
+X-MS-Exchange-Organization-AuthMechanism: 04
+X-Originating-IP: [93.15.6.123]
+X-MS-Exchange-Organization-Network-Message-Id: 0e8895ac-53d3-4980-e37c-08d2b2c9c1a9
+Return-Path: karim@nylas.com
+X-Microsoft-Antispam: UriScan:;BCL:0;PCL:0;RULEID:;SRVR:CY1PR10MB0524;
+X-MS-Exchange-Organization-AVStamp-Service: 1.0
+X-Exchange-Antispam-Report-Test: UriScan:;
+X-Exchange-Antispam-Report-CFA-Test: BCL:0;PCL:0;RULEID:(601004)(8121501046)(3002001);SRVR:CY1PR10MB0524;BCL:0;PCL:0;RULEID:;SRVR:CY1PR10MB0524;
+X-Forefront-Antispam-Report: SFV:SKI;SFS:;DIR:INB;SFP:;SCL:-1;SRVR:CY1PR10MB0524;H:CY1PR10MB0521.namprd10.prod.outlook.com;FPR:;SPF:None;LANG:;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 01 Sep 2015 12:35:01.7780
+ (UTC)
+X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
+X-MS-Exchange-CrossTenant-Id: b6c65e69-9405-47aa-a7f8-15d1677da46c
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: CY1PR10MB0524
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:01.7032739
+X-Microsoft-Exchange-Diagnostics:
+    1;CY1PR10MB0524;2:ZA/7m1XNc3HddxGefo1tfWOSi2XV/6oTCOhjozxTvXEaCmqyxlXvo7W/o91PkzF7iBnAFqhppqq1ejY7joMvPdI8RA1EVYNNgeKaUwCJCJS4c93QegPRzwqre6L/P8s3xwaf3DWJJAa/VlEleGKLxMffk824BCCkpueJudlBzQQ=;3:iGSquPQkFKV6Q76W/8esrDcNJb9qd5aeMwWuPA5TbCMcnKeSJOwxu+yyrLqXie8iU0cH5crz1QtGTH9IhbTQcm4aHbkATgWKq7d+0wvMJS7vBTKei9g+0HLwiLquWFk6Jehgo31gis6bc9XTfWhgUg==;25:7bgSswYhSqYKVTWmXC4guRdBW0r8zFF62bRsFyVM4N26xqgslQ+fwFnr050WAUF46bBIWRVhgNV0M7ueD4I0AEANfWZRG6owHdvlW49ULlHDYOoqptjHT/TdTx6eecusc3t2oUxfR81b6NyoOp+N8w==;4:5lY8OcoOi2sh4aJEE2f7sH+gTQj7A1htfAJ2xLOmLHoyA/dUXddkcVWacpHZT+BL+N3mlPcN2JGAw3GBK2M7Tzs85mIoSQm62YkwlLvBZbqLMSUwXNMK0uQoK1udGC5WBIjS0J8B/WQzZJL8ms+3ZpHKqOpORzMlz6/9nVzyphzOSkTvlUGrAojr+UdOeV8njX37Iwznl/6jyqsIU4HG9A==;23:s5FopbZE8UoBxKmRx6mlaz6ss1BccMSLDVKH5zldz7AKxIZ5C7nyCKdW0b21wMP5fWLyLVorOxBMwH+5NKfeGoi8Y5THrcFZ7XgkXgHYOYj7ssv4Yeqa0JKTCBiIdCOKfP3/YQX50wt6s4LsF3NHXJuElGHS4vZ/KP2YXm0NYTLFTQ48UD8berklTavBUvJz
+X-Microsoft-Exchange-Diagnostics:
+    1;CY1PR10MB0524;5:ISXWdCwtHSu3e/Qq8y4sUqFMnv6WRkgSgF7FinebXrjNOtfgZlNBJg2IYSmXChwBbfIWKOpL4PkLZQcAZFa+hmLIAsIrPNKHtWt9Z0WpOvgaVts85ep2zfgikwKmKkFoHcYB6e6JPE3wasXm/ZFjlw==;24:RFL1gHR2gr8Ew0GY5+Ex/BUxG8PzAac6u8gLL8VgC8mEvUQo26omfRqsPJ86mPclIXxJPWUkqeTzg+/jIuOP9oRSfUu0+aPa97I04VrKtro=;20:T5bhLLOD9ww4ZucWqB1bLkfYIq/8/Xl74fnU+QjDe8o7OBQLMGVMUm7ms/CQ69rW1yyOxwdsHMKnDaMIUj/ftA==
+X-Microsoft-Exchange-Diagnostics:
+    1;CY1PR10MB0521;9:mdP+ore0izyTgvwAFMJFjAliOy6wOS2QPjJjTySqkJ2p3xYwy26ja6wiUCgWJ/7hWCDiL13mko9pxGAzHHy0W6bPvR9JHP2PaOecbnyom5Zp30+NTILrr4z29Dlih3iC
+Content-type: multipart/mixed;
+    boundary="B_3524048720_5836019"
+
+> This message is in MIME format. Since your mail reader does not understand
+this format, some or all of this message may not be legible.
+
+--B_3524048720_5836019
+Content-type: multipart/alternative;
+    boundary="B_3524048720_5820507"
+
+
+--B_3524048720_5820507
+Content-type: text/plain;
+    charset="US-ASCII"
+Content-transfer-encoding: 7bit
+
+
+
+
+
+--B_3524048720_5820507
+Content-type: text/html;
+    charset="US-ASCII"
+Content-transfer-encoding: quoted-printable
+
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8">
+<style type=3D"text/css" style=3D"display:none;"><!-- P {margin-top:0;margin-bo=
+ttom:0;} --></style>
+</head>
+<body dir=3D"ltr">
+<div id=3D"divtagdefaultwrapper" style=3D"font-size:12pt;color:#000000;backgrou=
+nd-color:#FFFFFF;font-family:Calibri,Arial,Helvetica,sans-serif;">
+<p><img class=3D"EmojiInsert" src=3D"cid:3f0ea351-779e-48b3-bfa9-7c2a9e373aeb" =
+alt=3D"??" style=3D"vertical-align:bottom"><br>
+</p>
+</div>
+</body>
+</html>
+
+
+--B_3524048720_5820507--
+
+
+--B_3524048720_5836019
+Content-type: image/png; name=" =?UTF-8?B?T3V0bG9va0Vtb2ppLfCfmIo=?=.png";
+ x-mac-type="504E4766"
+Content-ID: <3f0ea351-779e-48b3-bfa9-7c2a9e373aeb>
+Content-disposition: attachment;
+    filename*=UTF-8''OutlookEmoji-%F0%9F%98%8A.png
+Content-transfer-encoding: base64
+
+
+iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAGXRFWHRTb2Z0d2FyZQBBZG9i
+ZSBJbWFnZVJlYWR5ccllPAAAAYpJREFUeNpi/P//PwO1ACM2wf9njBWAVD4QBwCxApLUAyDe
+AMQTGU3OPkDRA3QUIxaD+oFUAREOaQQa2IDTMKBB84FUAgk+WwA0MBFmGBOaixJIDKYEoD64
+65igBjkge+3CrW94TUCTr4eGMdxl8TCZxMYHDIZR1xk2HPiA1SCQOEgepA4J5CMbFgAPhM1v
+wfTFW9+xGgYTh6lD1s8IdKIAkH4PEz1w9jOYVpBiZ1CQZMMw7MHzXwwPnv0Esx2MeRESxmcY
+WYCUAbJiFAVYAMgCbJbAvPmAWjmACZqS4aHdOOs5wdgEBcWE5a8Y0HIGPAIOwETtjXkYJqIq
+xAAgeQM1ThTzkQ2biB5mC7a8xZ7kgeICvMzoYTsRJaMDY3U9chIBpaMHz34xxPsKgwMcFIsL
+gckB5KL+YllkgyYAg6oQJW9Ck8h+5NgFhd3GAx/humAGI2cGIHYEGvYBW0YHGTgf2YX4MjkQ
+F4IMwlkEIeXVfByGwsqzAwTLMywGg7wNcvED9AIR3TCAAAMAqh+p+YMVeBQAAAAASUVORK5C
+YII=
+--B_3524048720_5836019--
+
+

@@ -84,6 +84,24 @@ def raw_message_with_inline_name_attachment():
         return f.read()
 
 
+@pytest.fixture
+def raw_message_with_outlook_emoji():
+    # Message with a MIME part that has an invalid attachment.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_outlook_emoji')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
+def raw_message_with_outlook_emoji_inline():
+    # Message with a MIME part that has an invalid attachment.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_outlook_emoji_inline')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
 def test_message_from_synced(db, new_message_from_synced, default_namespace):
     m = new_message_from_synced
     assert m.namespace_id == default_namespace.id
@@ -395,7 +413,6 @@ def test_sanitize_subject(default_account, mime_message):
     assert m.subject == u'Your UPS Package was delivered'
 
 
-@pytest.mark.only
 def test_attachments_filename_parsing(default_account,
                                       raw_message_with_filename_attachment,
                                       raw_message_with_name_attachment):
@@ -416,3 +433,25 @@ def test_inline_attachments_filename_parsing(default_account,
                            raw_message_with_inline_name_attachment)
     assert len(m.attachments) == 1
     assert m.attachments[0].block.filename == u"Capture d'e\u0301cran 2015-08-13 20.58.24.png"
+
+
+def test_attachments_emoji_filename_parsing(default_account,
+                                            raw_message_with_outlook_emoji):
+    m = create_from_synced(default_account,
+                           raw_message_with_outlook_emoji)
+    assert len(m.attachments) == 1
+    assert m.attachments[0].block.filename == u'OutlookEmoji-\U0001f60a.png'
+    assert m.attachments[0].block.content_type == 'image/png'
+    assert m.attachments[0].content_id == '<3f0ea351-779e-48b3-bfa9-7c2a9e373aeb>'
+    assert m.attachments[0].content_disposition == 'attachment'
+
+
+def test_attachments_emoji_filename_parsing(default_account,
+                                            raw_message_with_outlook_emoji_inline):
+    m = create_from_synced(default_account,
+                           raw_message_with_outlook_emoji_inline)
+    assert len(m.attachments) == 1
+    assert m.attachments[0].block.filename == u'OutlookEmoji-\U0001f60a.png'
+    assert m.attachments[0].block.content_type == 'image/png'
+    assert m.attachments[0].content_id == '<3f0ea351-779e-48b3-bfa9-7c2a9e373aeb>'
+    assert m.attachments[0].content_disposition == 'inline'
