@@ -3,15 +3,13 @@ from gevent import Greenlet, joinall, sleep, GreenletExit, event
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.util.debug import bind_context
-from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.concurrency import retry_with_logging
 from inbox.util.itert import partition
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.heartbeat.status import clear_heartbeat_status
 
 THROTTLE_WAIT = 60
-
-mailsync_session_scope = session_scope
 
 
 class MailsyncError(Exception):
@@ -62,11 +60,8 @@ class BaseMailSyncMonitor(Greenlet):
         Provider for `account_id`.
     heartbeat : int
         How often to check for commands.
-    retry_fail_classes : list
-        Exceptions to *not* retry on.
-
     """
-    def __init__(self, account, heartbeat=1, retry_fail_classes=[]):
+    def __init__(self, account, heartbeat=1):
         bind_context(self, 'mailsyncmonitor', account.id)
         self.shutdown = event.Event()
         # how often to check inbox, in seconds
@@ -76,20 +71,16 @@ class BaseMailSyncMonitor(Greenlet):
         self.namespace_id = account.namespace.id
         self.email_address = account.email_address
         self.provider_name = account.provider
-        self.retry_fail_classes = retry_fail_classes
 
         Greenlet.__init__(self)
 
     def _run(self):
-        return retry_and_report_killed(self._run_impl,
-                                       account_id=self.account_id,
-                                       logger=self.log,
-                                       fail_classes=self.retry_fail_classes)
+        return retry_with_logging(self._run_impl, account_id=self.account_id,
+                                  logger=self.log)
 
     def _run_impl(self):
-        sync = Greenlet(retry_and_report_killed, self.sync,
-                        account_id=self.account_id, logger=self.log,
-                        fail_classes=self.retry_fail_classes)
+        sync = Greenlet(retry_with_logging, self.sync,
+                        account_id=self.account_id, logger=self.log)
         sync.start()
 
         while not sync.ready():

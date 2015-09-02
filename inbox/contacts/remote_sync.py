@@ -11,7 +11,6 @@ from inbox.contacts.google import GoogleContactsProvider
 from inbox.contacts.icloud import ICloudContactsProvider
 from inbox.util.debug import bind_context
 from inbox.models.session import session_scope
-from inbox.basicauth import ValidationError
 
 
 CONTACT_SYNC_PROVIDER_MAP = {'gmail': GoogleContactsProvider,
@@ -56,7 +55,6 @@ class ContactSync(BaseSyncMonitor):
                                  CONTACT_SYNC_FOLDER_NAME,
                                  provider_name,
                                  poll_frequency=poll_frequency,
-                                 retry_fail_classes=[ValidationError],
                                  scope='contacts')
 
     def sync(self):

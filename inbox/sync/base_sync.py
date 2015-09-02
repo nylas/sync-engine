@@ -3,7 +3,7 @@ from gevent import event, Greenlet, sleep
 from nylas.logging import get_logger
 logger = get_logger()
 
-from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.concurrency import retry_with_logging
 from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models import Account
@@ -25,12 +25,11 @@ class BaseSyncMonitor(Greenlet):
     """
     def __init__(self, account_id, namespace_id, email_address, folder_id,
                  folder_name, provider_name, poll_frequency=1,
-                 retry_fail_classes=[], scope=None):
+                 scope=None):
 
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
-        self.retry_fail_classes = retry_fail_classes
         self.scope = scope
 
         self.log = logger.new(account_id=account_id)
@@ -46,10 +45,8 @@ class BaseSyncMonitor(Greenlet):
     def _run(self):
         # Bind greenlet-local logging context.
         self.log = self.log.new(account_id=self.account_id)
-        return retry_and_report_killed(self._run_impl,
-                                       account_id=self.account_id,
-                                       logger=self.log,
-                                       fail_classes=self.retry_fail_classes)
+        return retry_with_logging(self._run_impl, account_id=self.account_id,
+                                  logger=self.log)
 
     def _run_impl(self):
         # Return true/false based on whether the greenlet succeeds or throws

@@ -3,7 +3,7 @@ import gevent
 from nylas.logging import get_logger
 from inbox.models import Message
 from inbox.models.session import session_scope
-from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.concurrency import retry_with_logging
 from inbox.util.debug import bind_context
 
 log = get_logger()
@@ -47,8 +47,7 @@ class DeleteHandler(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
-        return retry_and_report_killed(self._run_impl,
-                                       account_id=self.account_id)
+        return retry_with_logging(self._run_impl, account_id=self.account_id)
 
     def _run_impl(self):
         while True:

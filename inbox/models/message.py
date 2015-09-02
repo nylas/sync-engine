@@ -231,10 +231,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     with_self=parsed.content_type.is_singlepart()):
                 try:
                     if mimepart.content_type.is_multipart():
-                        log.warning('multipart sub-part found',
-                                    account_id=account.id,
-                                    folder_name=folder_name,
-                                    mid=mid)
                         continue  # TODO should we store relations?
                     msg._parse_mimepart(mid, mimepart, account.namespace.id,
                                         html_parts, plain_parts)

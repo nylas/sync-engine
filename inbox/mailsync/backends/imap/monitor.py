@@ -7,9 +7,9 @@ from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
 from inbox.models import Account, Folder
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
+from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (MailsyncError,
-                                          mailsync_session_scope,
                                           thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.heartbeat.status import clear_heartbeat_status
@@ -47,7 +47,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         list of tuples (folder_name, folder_id) for each folder we want to sync
         (in order).
         """
-        with mailsync_session_scope() as db_session:
+        with session_scope() as db_session:
             with connection_pool(self.account_id).get() as crispin_client:
                 # Get a fresh list of the folder names from the remote
                 remote_folders = crispin_client.folders()
@@ -185,7 +185,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             log.error(
                 'Error authenticating; stopping sync', exc_info=True,
                 account_id=self.account_id, logstash_tag='mark_invalid')
-            with mailsync_session_scope() as db_session:
+            with session_scope() as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid()
                 account.update_sync_error(str(exc))

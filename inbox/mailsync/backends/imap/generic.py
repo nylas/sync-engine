@@ -71,7 +71,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.basicauth import ValidationError
-from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.concurrency import retry_with_logging
 from inbox.util.debug import bind_context
 from inbox.util.misc import or_none
 from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
@@ -157,10 +157,8 @@ class FolderSyncEngine(Greenlet):
         self.log = log.new(account_id=self.account_id, folder=self.folder_name)
         # eagerly signal the sync status
         self.heartbeat_status.publish()
-        return retry_and_report_killed(self._run_impl,
-                                       account_id=self.account_id,
-                                       folder_name=self.folder_name,
-                                       logger=log)
+        return retry_with_logging(self._run_impl, account_id=self.account_id,
+                                  logger=log)
 
     def _run_impl(self):
         try:

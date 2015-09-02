@@ -194,13 +194,8 @@ def _exc_callback():
     gevent.sleep(5)
 
 
-def _fail_callback():
-    log.error('Max retries reached. Aborting', exc_info=True)
-
-
 retry_crispin = functools.partial(
-    retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback,
-    fail_callback=_fail_callback, max_count=10, reset_interval=150)
+    retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback)
 
 
 class CrispinClient(object):
