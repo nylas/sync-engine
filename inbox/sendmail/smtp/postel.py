@@ -97,6 +97,26 @@ class SMTP_SSL_VerifyCerts(smtplib.SMTP_SSL):
         self.file = smtplib.SSLFakeFile(new_socket)
         return new_socket
 
+    def rset(self):
+        """Wrap rset() in order to correctly surface SMTP exceptions.
+        SMTP.sendmail() does e.g.:
+            # ...
+            (code, resp) = self.data(msg)
+            if code != 250:
+                self.rset()
+                raise SMTPDataError(code, resp)
+            # ...
+        But some servers will disconnect rather than respond to RSET, causing
+        SMTPServerDisconnected rather than SMTPDataError to be raised. This
+        basically obfuscates the actual server error.
+
+        See also http://bugs.python.org/issue16005
+        """
+        try:
+            smtplib.SMTP_SSL.rset(self)
+        except smtplib.SMTPServerDisconnected:
+            log.warning('Server disconnect during SMTP rset', exc_info=True)
+
 
 class SMTP_VerifyCerts(smtplib.SMTP):
     """ Derived class which connects via starttls and actually
@@ -127,6 +147,26 @@ class SMTP_VerifyCerts(smtplib.SMTP):
             self.esmtp_features = {}
             self.does_esmtp = 0
         return (resp, reply)
+
+    def rset(self):
+        """Wrap rset() in order to correctly surface SMTP exceptions.
+        SMTP.sendmail() does e.g.:
+            # ...
+            (code, resp) = self.data(msg)
+            if code != 250:
+                self.rset()
+                raise SMTPDataError(code, resp)
+            # ...
+        But some servers will disconnect rather than respond to RSET, causing
+        SMTPServerDisconnected rather than SMTPDataError to be raised. This
+        basically obfuscates the actual server error.
+
+        See also http://bugs.python.org/issue16005
+        """
+        try:
+            smtplib.SMTP.rset(self)
+        except smtplib.SMTPServerDisconnected:
+            log.warning('Server disconnect during SMTP rset', exc_info=True)
 
 
 def _transform_ssl_error(strerror):
