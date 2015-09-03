@@ -26,8 +26,8 @@ def upgrade():
     engine = main_engine(pool_size=1, max_overflow=0)
     if not engine.has_table('easfoldersyncstatus'):
         return
-    op.drop_constraint(u'account_id', 'easfoldersyncstatus', type_='unique')
-    op.create_unique_constraint(u'account_id', 'easfoldersyncstatus',
+    op.drop_constraint(u'account_id_2', 'easfoldersyncstatus', type_='unique')
+    op.create_unique_constraint(u'account_id_2', 'easfoldersyncstatus',
                                 ['account_id', 'device_id', 'eas_folder_id',
                                  'deleted_at'])
     conn.execute(text("set @@foreign_key_checks = 1;"))
@@ -44,7 +44,7 @@ def downgrade():
     engine = main_engine(pool_size=1, max_overflow=0)
     if not engine.has_table('easfoldersyncstatus'):
         return
-    op.drop_constraint(u'account_id', 'easfoldersyncstatus', type_='unique')
-    op.create_unique_constraint(u'account_id', 'easfoldersyncstatus',
+    op.drop_constraint(u'account_id_2', 'easfoldersyncstatus', type_='unique')
+    op.create_unique_constraint(u'account_id_2', 'easfoldersyncstatus',
                                 ['account_id', 'device_id', 'eas_folder_id'])
     conn.execute(text("set @@foreign_key_checks = 1;"))
