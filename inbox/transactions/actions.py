@@ -25,7 +25,7 @@ from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 save_draft, delete_draft, save_sent_email,
                                 create_folder, create_label, update_folder,
-                                update_label, delete_folder, delete_label)
+                                update_label)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 
@@ -49,9 +49,7 @@ ACTION_FUNCTION_MAP = {
     'create_folder': create_folder,
     'create_label': create_label,
     'update_folder': update_folder,
-    'delete_folder': delete_folder,
-    'update_label': update_label,
-    'delete_label': delete_label
+    'update_label': update_label
 }
 
 

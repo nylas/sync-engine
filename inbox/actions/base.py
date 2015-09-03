@@ -80,24 +80,11 @@ def create_label(account_id, category_id, db_session):
     remote_create(account, category_id, db_session)
 
 
-def delete_label(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    assert account.provider == 'gmail'
-    remote_delete = module_registry[account.provider].remote_delete_label
-    remote_delete(account, category_id, db_session)
-
-
 def update_folder(account_id, category_id, db_session, args):
     old_name = args['old_name']
     account = db_session.query(Account).get(account_id)
     remote_update = module_registry[account.provider].remote_update_folder
     remote_update(account, category_id, db_session, old_name)
-
-
-def delete_folder(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    remote_delete = module_registry[account.provider].remote_delete_folder
-    remote_delete(account, category_id, db_session)
 
 
 def update_label(account_id, category_id, db_session, args):
