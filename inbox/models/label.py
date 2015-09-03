@@ -66,5 +66,4 @@ class Label(MailSyncBase):
         return obj
 
     __table_args__ = \
-        (UniqueConstraint('account_id', 'name', 'canonical_name',
-                          'deleted_at'),)
+        (UniqueConstraint('account_id', 'name', 'canonical_name'),)

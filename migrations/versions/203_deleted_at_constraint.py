@@ -21,13 +21,6 @@ def upgrade():
     op.create_unique_constraint(u'namespace_id', 'category',
                                 ['namespace_id', 'name', 'display_name',
                                  'deleted_at'])
-    op.drop_constraint(u'account_id', 'folder', type_='unique')
-    op.create_unique_constraint(u'account_id', 'folder',
-                                ['account_id', 'name', 'deleted_at'])
-    op.drop_constraint(u'account_id', 'label', type_='unique')
-    op.create_unique_constraint(u'account_id', 'label',
-                                ['account_id', 'name', 'canonical_name',
-                                 'deleted_at'])
 
     from inbox.ignition import main_engine
     engine = main_engine(pool_size=1, max_overflow=0)
@@ -43,12 +36,6 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     conn.execute(text("set @@foreign_key_checks = 0;"))
-    op.drop_constraint(u'account_id', 'label', type_='unique')
-    op.create_unique_constraint(u'account_id', 'label',
-                                ['account_id', 'name', 'canonical_name'])
-    op.drop_constraint(u'account_id', 'folder', type_='unique')
-    op.create_unique_constraint(u'account_id', 'folder',
-                                ['account_id', 'name'])
     op.drop_constraint(u'namespace_id', 'category', type_='unique')
     op.create_unique_constraint(u'namespace_id', 'category',
                                 ['namespace_id', 'name', 'display_name'])
