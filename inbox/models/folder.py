@@ -86,4 +86,4 @@ class Folder(MailSyncBase):
         q += lambda q: q.filter(cls.id == bindparam('id_'))
         return q(session).params(id_=id_).first()
 
-    __table_args__ = (UniqueConstraint('account_id', 'name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'name', 'deleted_at'),)

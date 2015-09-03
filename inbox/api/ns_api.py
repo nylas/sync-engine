@@ -434,7 +434,8 @@ def folders_labels_query_api():
     else:
         results = g.db_session.query(Category)
 
-    results = results.filter(Category.namespace_id == g.namespace.id)
+    results = results.filter(Category.namespace_id == g.namespace.id,
+                             Category.deleted_at == None)
     results = results.order_by(asc(Category.id))
 
     if args['view'] == 'count':
@@ -461,7 +462,8 @@ def folders_labels_api_impl(public_id):
     try:
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
-            Category.public_id == public_id).first()
+            Category.public_id == public_id,
+            Category.deleted_at == None).one()
     except NoResultFound:
         raise NotFoundError('Object not found')
     return g.encoder.jsonify(category)
@@ -480,6 +482,10 @@ def folders_labels_create_api():
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
                                        type_=category_type)
+    if category.deleted_at:
+        category = Category(namespace_id=g.namespace.id, name=None,
+                            display_name=display_name, type_=category_type)
+        g.db_session.add(category)
     g.db_session.flush()
 
     if category_type == 'folder':
@@ -499,7 +505,8 @@ def folder_label_update_api(public_id):
     try:
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
-            Category.public_id == public_id).one()
+            Category.public_id == public_id,
+            Category.deleted_at == None).one()
     except NoResultFound:
         raise InputError("Couldn't find {} {}".format(
             category_type, public_id))
@@ -526,6 +533,53 @@ def folder_label_update_api(public_id):
     # rather than waiting for sync to pick it up?
 
     return g.encoder.jsonify(category)
+
+
+@app.route('/folders/<public_id>', methods=['DELETE'])
+@app.route('/labels/<public_id>', methods=['DELETE'])
+def folder_label_delete_api(public_id):
+    category_type = g.namespace.account.category_type
+    valid_public_id(public_id)
+    try:
+        category = g.db_session.query(Category).filter(
+            Category.namespace_id == g.namespace.id,
+            Category.public_id == public_id,
+            Category.deleted_at == None).one()
+    except NoResultFound:
+        raise InputError("Couldn't find {} {}".format(
+            category_type, public_id))
+    if category.name is not None:
+        raise InputError("Cannot modify a standard {}".format(category_type))
+
+    if category.type_ == 'folder':
+        messages_with_category = g.db_session.query(MessageCategory).filter(
+            MessageCategory.category_id == category.id).exists()
+        messages_exist = g.db_session.query(messages_with_category).scalar()
+        if messages_exist:
+            return err(403, "Folder {} cannot be deleted because it contains "
+                            "messages.".format(public_id))
+
+        deleted_at = datetime.utcnow()
+        category.deleted_at = deleted_at
+        folders = category.folders if g.namespace.account.discriminator != 'easaccount' \
+            else category.easfolders
+        for folder in folders:
+            folder.deleted_at = deleted_at
+
+        schedule_action('delete_folder', category, g.namespace.id,
+                        g.db_session)
+    else:
+        deleted_at = datetime.utcnow()
+        category.deleted_at = deleted_at
+        for label in category.labels:
+            label.deleted_at = deleted_at
+
+        schedule_action('delete_label', category, g.namespace.id,
+                        g.db_session)
+
+    g.db_session.commit()
+
+    return g.encoder.jsonify(None)
 
 
 # -- Begin tags API shim

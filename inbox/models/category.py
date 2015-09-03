@@ -73,5 +73,6 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
             return self.display_name[8:]
         return self.display_name
 
-    __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name'),
+    __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name',
+                                       'deleted_at'),
                       UniqueConstraint('namespace_id', 'public_id'))
