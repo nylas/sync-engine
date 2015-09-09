@@ -46,7 +46,7 @@ msgpack-python==0.4.2
 guppy==0.1.10
 redis==2.10.3
 hiredis==0.1.5
-mock==1.0.1
+mock==1.3.0
 mockredispy==2.9.0.10
 vobject==0.8.1c
 lxml==3.4.2
