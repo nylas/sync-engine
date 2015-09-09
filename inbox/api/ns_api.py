@@ -479,21 +479,22 @@ def folders_labels_create_api():
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
 
-    # Categories that are to be deleted must first be deleted on the provider's
-    # end, then on ours. The result is a nonzero moment of time between sending
-    # a DELETE request to a category and when it is actually deleted. Thus, we
-    # must prevent returning a category that is in that deleting period and
-    # scheduling a remote folder create. This is to ensure the new category has
-    # a different public_id than the first
-    category_exists_query = g.db_session.query(Category).filter(
+    # We do not allow creating a category with the same name as a
+    # deleted category /until/ the corresponding folder/label
+    # delete syncback is performed. This is a limitation but is the
+    # simplest way to prevent the creation of categories with duplicate
+    # names; it also hinders creation in the one case only (namely,
+    # delete category with display_name "x" via the API -> quickly
+    # try to create a category with the same display_name).
+    category = g.db_session.query(Category).filter(
         Category.namespace_id == g.namespace.id,
-        Category.name == None, Category.display_name == display_name,
-        Category.type_ == category_type).exists()
-    category_exists = g.db_session.query(category_exists_query).scalar()
+        Category.name == None,
+        Category.display_name == display_name,
+        Category.type_ == category_type).first()
 
-    if category_exists:
+    if category:
         return err(403, "{} with name {} already exists".
-                        format(category_type))
+                        format(category_type, display_name))
 
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
