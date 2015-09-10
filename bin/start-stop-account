@@ -10,13 +10,16 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('--start', action="store_true", default=False)
     parser.add_option('--stop', action="store_true", default=False)
+    parser.add_option('--softdelete', action="store_true", default=False)
     parser.add_option('--email', action="store", dest="email", default=None)
     parser.add_option('--id', action="store", dest="account_id", default=None)
     parser.add_option('--server', action="store", dest="server", default=None)
     options, remainder = parser.parse_args(sys.argv[1:])
     if options.start == options.stop:
-        print "usage: start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
-        print "       start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
+        print "usage:   start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
+        print "         start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
+        print "example: start-stop-account --stop --id 1000 --softdelete"
+        print "         start-stop-account --start --email karim@nylas.com"
         sys.exit(-1)
 
     with session_scope() as db_session:
@@ -34,9 +37,12 @@ def main():
             else:
                 account.enable_sync(None)
         elif options.stop:
-            print "Stopping account %s" % account.email_address
-
-            account.disable_sync()
+            if options.softdelete:
+                print "Marking account %s as deleted." % account.email_address
+                account.mark_deleted()
+            else:
+                print "Stopping account %s" % account.email_address
+                account.disable_sync()
 
         db_session.commit()
 

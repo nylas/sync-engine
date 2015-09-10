@@ -9,25 +9,11 @@ from inbox.models.event import Event, RecurringEvent
 from inbox.events.util import MalformedEventError
 from inbox.events.ical import events_from_ics, import_attached_events
 from tests.util.base import (absolute_path, add_fake_calendar,
-                             add_fake_thread, generic_account)
+                             add_fake_thread, generic_account,
+                             add_fake_msg_with_calendar_part)
 
 FIXTURES = './events/fixtures/'
 
-
-def add_fake_msg_with_calendar_part(db_session, account, ics_str):
-    parsed = mime.create.multipart('mixed')
-    parsed.append(
-        mime.create.attachment('text/calendar',
-                               ics_str,
-                               disposition=None)
-    )
-    msg = Message.create_from_synced(
-        account, 22, '[Gmail]/All Mail', datetime.utcnow(), parsed.to_string())
-    msg.from_addr = [('Ben Bitdiddle', 'ben@inboxapp.com')]
-    msg.thread = add_fake_thread(db_session, account.namespace.id)
-
-    assert msg.has_attached_events
-    return msg
 
 
 def test_invalid_ical(db, default_account):

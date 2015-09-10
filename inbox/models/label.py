@@ -32,7 +32,7 @@ class Label(MailSyncBase):
                   nullable=False)
     canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=True)
 
-    category_id = Column(Integer, ForeignKey(Category.id))
+    category_id = Column(Integer, ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
         Category,
         backref=backref('labels',

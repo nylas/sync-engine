@@ -40,7 +40,7 @@ class Folder(MailSyncBase):
                   nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
-    category_id = Column(Integer, ForeignKey(Category.id))
+    category_id = Column(Integer, ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
         Category,
         backref=backref('folders',
