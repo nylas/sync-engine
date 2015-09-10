@@ -203,6 +203,24 @@ def test_filtering(db, api_client, default_namespace):
                for r in results), "Returns a list of string"
 
 
+def test_query_target(db, api_client, thread, default_namespace):
+    cat = Category(namespace_id=default_namespace.id,
+                   name='inbox', display_name='Inbox', type_='label')
+    for _ in range(3):
+        message = add_fake_message(db.session, default_namespace.id, thread,
+                                   to_addr=[('Bob', 'bob@foocorp.com')],
+                                   from_addr=[('Alice', 'alice@foocorp.com')],
+                                   subject='some subject')
+        message.categories.add(cat)
+    db.session.commit()
+
+    results = api_client.get_data('/messages?in=inbox')
+    assert len(results) == 3
+
+    count = api_client.get_data('/messages?in=inbox&view=count')
+    assert count['count'] == 3
+
+
 def test_ordering(api_client, db, default_namespace):
     for i in range(3):
         thr = add_fake_thread(db.session, default_namespace.id)

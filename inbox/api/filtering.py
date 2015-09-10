@@ -178,12 +178,11 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     }
 
     if view == 'count':
-        target = func.count(Message.id)
+        query = bakery(lambda s: s.query(func.count(Message.id)))
     elif view == 'ids':
-        target = Message.public_id
+        query = bakery(lambda s: s.query(Message.public_id))
     else:
-        target = Message
-    query = bakery(lambda s: s.query(target))
+        query = bakery(lambda s: s.query(Message))
     query += lambda q: q.join(Thread)
     query += lambda q: q.filter(
         Message.namespace_id == bindparam('namespace_id'),
