@@ -16,7 +16,7 @@ PROVIDER = 'generic'
 
 __all__ = ['set_remote_starred', 'set_remote_unread', 'remote_move',
            'remote_save_draft', 'remote_delete_draft', 'remote_create_folder',
-           'remote_update_folder']
+           'remote_update_folder', 'remote_delete_folder']
 
 # STOPSHIP(emfree):
 # * should update local UID state here after action succeeds, instead of
@@ -83,6 +83,15 @@ def remote_update_folder(account, category_id, db_session, old_name):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
         crispin_client.conn.rename_folder(old_name, category.display_name)
+
+
+@retry_crispin
+def remote_delete_folder(account, category_id, db_session):
+    category = db_session.query(Category).get(category_id)
+    with writable_connection_pool(account.id).get() as crispin_client:
+        crispin_client.conn.delete_folder(category.display_name)
+    db_session.delete(category)
+    db_session.commit()
 
 
 @retry_crispin
