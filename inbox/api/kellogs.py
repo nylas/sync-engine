@@ -113,7 +113,8 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             'email_address': obj.account.email_address,
             'name': obj.account.name,
             'provider': obj.account.provider,
-            'organization_unit': obj.account.category_type
+            'organization_unit': obj.account.category_type,
+            'sync_state': obj.account.sync_state
         }
 
     elif isinstance(obj, Account) and not legacy_nsid:
@@ -129,11 +130,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             'organization_unit': obj.category_type,
 
             'provider': obj.provider,
-
-            # TODO add capabilities/scope (i.e. mail, contacts, cal, etc.)
-
-            # 'status':  'syncing',  # TODO what are values here
-            # 'last_sync':  1398790077,  # tuesday 4/29
+            'sync_state': obj.sync_state
         }
 
     elif isinstance(obj, Message):
