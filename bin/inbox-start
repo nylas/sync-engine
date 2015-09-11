@@ -53,7 +53,8 @@ def signal_handler(signum, frame):
 def main(prod, enable_tracer, config, process_num):
     """ Launch the Nylas sync service. """
     configure_logging(log_level=inbox_config.get('LOGLEVEL'))
-    os.environ["SENTRY_DSN"] = inbox_config.get("SENTRY_DSN", "")
+    # os.environ["SENTRY_DSN"] = inbox_config.get("SENTRY_DSN", "")
+    os.environ["SENTRY_DSN"] = "https://41c1a5a9b3564745901592cbdbae621a:b829477035f84fecab757f156b8237d8@sentry.nylas.com/7"
 
     if config is not None:
         from inbox.util.startup import load_overrides
