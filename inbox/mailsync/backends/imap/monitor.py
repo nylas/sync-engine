@@ -177,7 +177,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         try:
             self.start_delete_handler()
             folders = set()
-            assert False, 'testing phab'
             self.start_new_folder_sync_engines(folders)
             while True:
                 sleep(self.refresh_frequency)
