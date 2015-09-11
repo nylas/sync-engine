@@ -150,11 +150,12 @@ class CrispinConnectionPool(object):
             # thing to do.
             log.info('IMAP connection error; discarding connection',
                      exc_info=True)
-            if client is not None:
+            if (client is not None and not
+                    isinstance(exc, (imaplib.IMAP4.abort, socket.error))):
                 try:
                     client.logout()
-                except:
-                    log.error('Error on IMAP logout', exc_info=True)
+                except Exception:
+                    log.info('Error on IMAP logout', exc_info=True)
                 client = None
             raise exc
         except:
