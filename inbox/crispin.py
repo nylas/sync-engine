@@ -156,7 +156,7 @@ class CrispinConnectionPool(object):
                     client.logout()
                 except Exception:
                     log.info('Error on IMAP logout', exc_info=True)
-                client = None
+            client = None
             raise exc
         except:
             raise
