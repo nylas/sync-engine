@@ -209,6 +209,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
             self.disable_sync(reason)
             self.sync_state = 'invalid'
 
+    def mark_deleted(self):
+        """
+        Soft-delete the account.
+        """
+        self.disable_sync('account deleted')
+
     def sync_stopped(self, reason=None):
         """
         Record transition to stopped state. Should be called after the

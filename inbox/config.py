@@ -3,9 +3,6 @@ import os
 import yaml
 from urllib import quote_plus as urlquote
 
-# to configure SENTRY_DSN (below)
-import nylas.logging.sentry
-
 __all__ = ['config', 'engine_uri']
 
 
@@ -117,8 +114,6 @@ if 'MYSQL_PASSWORD' not in config:
     raise Exception(
         'Missing secrets config file? Run `sudo cp etc/secrets-dev.yml '
         '/etc/inboxapp/secrets.yml` and retry')
-
-nylas.logging.sentry.SENTRY_DSN = config.get('SENTRY_DSN')
 
 
 def engine_uri(database=None):

@@ -430,12 +430,13 @@ class RecurringEventOverride(Event):
                        'inherit_condition': (id == Event.id)}
     __table_args__ = None
 
-    master_event_id = Column(ForeignKey('event.id'))
+    master_event_id = Column(ForeignKey('event.id', ondelete='CASCADE'))
     master_event_uid = Column(String(767, collation='ascii_general_ci'),
                               index=True)
     original_start_time = Column(FlexibleDateTime)
     master = relationship(RecurringEvent, foreign_keys=[master_event_id],
-                          backref=backref('overrides', lazy="dynamic"))
+                          backref=backref('overrides', lazy="dynamic",
+                                          cascade='all, delete-orphan'))
 
     def update(self, event):
         super(RecurringEventOverride, self).update(event)

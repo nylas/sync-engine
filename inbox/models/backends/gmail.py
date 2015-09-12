@@ -343,7 +343,9 @@ class GmailAuthCredentials(MailSyncBase):
 
     refresh_token_secret = relationship(
         Secret,
-        backref=backref('gmail_auth_credentials', cascade='all, delete-orphan')
+        cascade='all, delete-orphan',
+        single_parent=True,
+        backref=backref('gmail_auth_credentials')
     )
 
     @hybrid_property

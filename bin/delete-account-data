@@ -29,7 +29,8 @@ from inbox.heartbeat.status import clear_heartbeat_status
 
 @click.command()
 @click.argument('account_id', type=int)
-def delete_account_data(account_id):
+@click.option('--dry-run', is_flag=True)
+def delete_account_data(account_id, dry_run):
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
 
@@ -61,7 +62,7 @@ def delete_account_data(account_id):
     # Delete data in database
     try:
         print 'Deleting database data'
-        delete_namespace(account_id, namespace_id)
+        delete_namespace(account_id, namespace_id, dry_run=dry_run)
     except Exception as e:
         print 'Database data deletion failed! Error: {}'.format(str(e))
         return -1

@@ -17,6 +17,7 @@ def test_account(db, api_client, generic_account, gmail_account):
     assert resp_data['email_address'] == generic_account.email_address
     assert resp_data['name'] == generic_account.name
     assert resp_data['organization_unit'] == 'folder'
+    assert 'sync_state' in resp_data
 
     # Because we're using the gmail account namespace
     api_client = new_api_client(db, gmail_account.namespace)
@@ -26,3 +27,4 @@ def test_account(db, api_client, generic_account, gmail_account):
     assert resp_data['id'] == gmail_account.namespace.public_id
     assert resp_data['provider'] == 'gmail'
     assert resp_data['organization_unit'] == 'label'
+    assert 'sync_state' in resp_data

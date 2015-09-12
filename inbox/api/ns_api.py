@@ -479,6 +479,23 @@ def folders_labels_create_api():
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
 
+    # We do not allow creating a category with the same name as a
+    # deleted category /until/ the corresponding folder/label
+    # delete syncback is performed. This is a limitation but is the
+    # simplest way to prevent the creation of categories with duplicate
+    # names; it also hinders creation in the one case only (namely,
+    # delete category with display_name "x" via the API -> quickly
+    # try to create a category with the same display_name).
+    category = g.db_session.query(Category).filter(
+        Category.namespace_id == g.namespace.id,
+        Category.name == None,
+        Category.display_name == display_name,
+        Category.type_ == category_type).first()
+
+    if category:
+        return err(403, "{} with name {} already exists".
+                        format(category_type, display_name))
+
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
                                        type_=category_type)

@@ -46,9 +46,11 @@ def db(dbloader):
 
 @yield_fixture(scope='function')
 def empty_db(request, config):
-    testdb = TestDB(config, None)
+    from inbox.models.session import new_session
+    testdb = TestDB()
+    testdb.session = new_session(testdb.engine)
     yield testdb
-    testdb.teardown()
+    testdb.session.close()
 
 
 def mock_redis_client(*args, **kwargs):
@@ -206,17 +208,9 @@ def gmail_account(db):
 
     account = db.session.query(GmailAccount).first()
     if account is None:
-        with db.session.no_autoflush:
-            namespace = Namespace()
-            account = GmailAccount(
-                email_address='almondsunshine@gmail.com',
-                refresh_token='tearsofgold',
-                sync_host=platform.node(),
-                namespace=namespace)
-            account.password = 'COyPtHmj9E9bvGdN'
-            db.session.add(account)
-    db.session.commit()
-
+        return add_fake_gmail_account(db.session, email_address='almondsunshine',
+                                      refresh_token='tearsofgold',
+                                      password='COyPtHmj9E9bvGdN')
     return account
 
 
@@ -272,6 +266,28 @@ def add_fake_account(db_session, email_address='test@nilas.com'):
     db_session.add(account)
     db_session.commit()
     return account
+
+
+def add_fake_gmail_account(db_session, email_address='test@nilas.com',
+                           refresh_token='tearsofgold',
+                           password='COyPtHmj9E9bvGdN'):
+    from inbox.models import Account, Namespace
+    from inbox.models.backends.gmail import GmailAccount
+    import platform
+
+    with db_session.no_autoflush:
+        namespace = Namespace()
+
+        account = GmailAccount(
+            email_address=email_address,
+            refresh_token=refresh_token,
+            sync_host=platform.node(),
+            namespace=namespace)
+        account.password = password
+
+        db_session.add(account)
+        db_session.commit()
+        return account
 
 
 def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
@@ -373,6 +389,19 @@ def add_fake_event(db_session, namespace_id, calendar=None,
     return event
 
 
+def add_fake_contact(db_session, namespace_id, name='Ben Bitdiddle',
+                     email_address='inboxapptest@gmail.com', uid='22'):
+    from inbox.models import Contact
+    contact = Contact(namespace_id=namespace_id,
+                      name=name,
+                      email_address=email_address,
+                      uid=uid)
+
+    db_session.add(contact)
+    db_session.commit()
+    return contact
+
+
 def add_fake_category(db_session, namespace_id, display_name, name=None):
     from inbox.models import Category
     category = Category(namespace_id=namespace_id,
@@ -414,14 +443,7 @@ def label(db, default_account):
 
 @fixture
 def contact(db, default_account):
-    from inbox.models import Contact
-    contact = Contact(namespace_id=default_account.namespace.id,
-                      name='Ben Bitdiddle',
-                      email_address='inboxapptest@gmail.com',
-                      uid='22')
-    db.session.add(contact)
-    db.session.commit()
-    return contact
+    return add_fake_contact(db.session, default_account.namespace.id)
 
 
 @fixture
@@ -488,3 +510,24 @@ def new_message_from_synced(db, default_account, mime_message):
     new_msg.is_read = True
     new_msg.is_starred = False
     return new_msg
+
+
+def add_fake_msg_with_calendar_part(db_session, account, ics_str, thread=None):
+    from inbox.models import Message
+    parsed = mime.create.multipart('mixed')
+    parsed.append(
+        mime.create.attachment('text/calendar',
+                               ics_str,
+                               disposition=None)
+    )
+    msg = Message.create_from_synced(
+        account, 22, '[Gmail]/All Mail', datetime.utcnow(), parsed.to_string())
+    msg.from_addr = [('Ben Bitdiddle', 'ben@inboxapp.com')]
+
+    if thread is None:
+        msg.thread = add_fake_thread(db_session, account.namespace.id)
+    else:
+        msg.thread = thread
+
+    assert msg.has_attached_events
+    return msg

@@ -72,7 +72,7 @@ def transaction_objects():
     }
 
 
-def delete_namespace(account_id, namespace_id):
+def delete_namespace(account_id, namespace_id, dry_run=False):
     """
     Delete all the data associated with a namespace from the database.
     USE WITH CAUTION.
@@ -112,7 +112,7 @@ def delete_namespace(account_id, namespace_id):
             filters['easfoldersyncstatus'] = ('account_id', account_id)
 
     for cls in filters:
-        _batch_delete(engine, cls, filters[cls])
+        _batch_delete(engine, cls, filters[cls], dry_run=dry_run)
 
     # Use a single delete for the other tables. Rows from tables which contain
     # cascade-deleted foreign keys to other tables deleted here (or above)
@@ -129,20 +129,30 @@ def delete_namespace(account_id, namespace_id):
     for table in ('folder', 'label'):
         filters[table] = ('account_id', account_id)
     filters['namespace'] = ('id', namespace_id)
-    filters['account'] = ('id', account_id)
 
     for table, (column, id_) in filters.iteritems():
         print 'Performing bulk deletion for table: {}'.format(table)
         start = time.time()
 
-        engine.execute(query.format(table, column, id_))
+        if not dry_run:
+            engine.execute(query.format(table, column, id_))
+        else:
+            print query.format(table, column, id_)
 
         end = time.time()
         print 'Completed bulk deletion for table: {}, time taken: {}'.\
             format(table, end - start)
 
+    # Delete the account object manually to get rid of the various objects
+    # associated with it (e.g: secrets, tokens, etc.)
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        if dry_run is False:
+            db_session.delete(account)
+            db_session.commit()
 
-def _batch_delete(engine, table, (column, id_)):
+
+def _batch_delete(engine, table, (column, id_), dry_run=False):
     count = engine.execute(
         'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
         scalar()
@@ -160,7 +170,10 @@ def _batch_delete(engine, table, (column, id_)):
     query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
 
     for i in range(0, batches):
-        engine.execute(query)
+        if dry_run is False:
+            engine.execute(query)
+        else:
+            print query
 
     end = time.time()
     print 'Completed batch deletion for table: {}, time taken: {}'.\
