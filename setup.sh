@@ -292,7 +292,7 @@ color '35;1' 'Cleaning up...'
 apt-get -y autoremove
 
 mkdir -p /var/lib/inboxapp/parts
-chown $SUDO_UID:$SUDO_GID /var/lib/inboxapp
+chown -R $SUDO_UID:$SUDO_GID /var/lib/inboxapp
 
 mkdir -p /var/log/inboxapp
 chown $SUDO_UID:$SUDO_GID /var/log/inboxapp
