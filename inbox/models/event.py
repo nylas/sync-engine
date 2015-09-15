@@ -478,6 +478,17 @@ class InflatedEvent(Event):
         self.namespace_id = master.namespace_id
         self.calendar_id = master.calendar_id
 
+        # Our calendar autoimport code sometimes creates recurring events.
+        # When expanding those events, their inflated events are associated
+        # with an existing message. Because of this, SQLAlchemy tries
+        # to flush them, which we forbid.
+        # There's no real good way to prevent this, so we set to None
+        # the reference to message. API users can still look up
+        # the master event if they want to know the message associated with
+        # this recurring event.
+        self.message_id = None
+        self.message = None
+
 
 def insert_warning(mapper, connection, target):
     log.warn("InflatedEvent {} shouldn't be committed".format(target))

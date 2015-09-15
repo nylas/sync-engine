@@ -3,6 +3,7 @@ import urllib
 import pytest
 from inbox.models import Event, Calendar
 from tests.api.base import api_client
+from tests.util.base import message
 
 __all__ = ['api_client']
 
@@ -146,3 +147,31 @@ def test_api_override_serialization(db, api_client, default_namespace,
     assert events[0].get('recurrence') is not None
     assert events[1].get('object') == 'event'
     assert events[1].get('status') == 'cancelled'
+
+
+def test_api_expand_recurring_message(db, api_client, message,
+                                      recurring_event):
+    # This is a regression test for https://phab.nylas.com/T3556
+    # ("InflatedEvent should not be committed" exception in API").
+    event = recurring_event
+    event.message = message
+    db.session.commit()
+
+    events = api_client.get_data('/events?expand_recurring=false')
+    assert len(events) == 1
+
+    # Make sure the recurrence info is on the recurring event
+    for e in events:
+        if e['title'] == 'recurring-weekly':
+            assert e.get('recurrence') is not None
+            assert e.get('message_id') is not None
+
+    r = api_client.get_raw('/events?expand_recurring=true')
+    assert r.status_code == 200
+
+    all_events = api_client.get_data('/events?expand_recurring=true')
+    assert len(all_events) != 0
+
+    for event in all_events:
+        assert event['master_event_id'] is not None
+        assert 'message_id' not in event

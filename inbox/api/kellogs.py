@@ -6,7 +6,8 @@ from flask import Response
 
 from inbox.models import (Message, Contact, Calendar, Event, When,
                           Thread, Namespace, Block, Category, Account)
-from inbox.models.event import RecurringEvent, RecurringEventOverride
+from inbox.models.event import (RecurringEvent, RecurringEventOverride,
+                                InflatedEvent)
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -289,6 +290,11 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
                                                  legacy_nsid=legacy_nsid)
             if obj.master:
                 resp['master_event_id'] = obj.master.public_id
+        if isinstance(obj, InflatedEvent):
+            del resp['message_id']
+            if obj.master:
+                resp['master_event_id'] = obj.master.public_id
+
         return resp
 
     elif isinstance(obj, Calendar):
