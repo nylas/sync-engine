@@ -154,7 +154,8 @@ class FolderSyncEngine(Greenlet):
 
     def _run(self):
         # Bind greenlet-local logging context.
-        self.log = log.new(account_id=self.account_id, folder=self.folder_name)
+        self.log = log.new(account_id=self.account_id, folder=self.folder_name,
+                           provider=self.provider_name)
         # eagerly signal the sync status
         self.heartbeat_status.publish()
         return retry_with_logging(self._run_impl, account_id=self.account_id,
