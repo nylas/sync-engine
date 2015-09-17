@@ -9,11 +9,9 @@ from inbox.models.event import Event, RecurringEvent
 from inbox.events.util import MalformedEventError
 from inbox.events.ical import events_from_ics, import_attached_events
 from tests.util.base import (absolute_path, add_fake_calendar,
-                             add_fake_thread, generic_account,
-                             add_fake_msg_with_calendar_part)
+                             generic_account, add_fake_msg_with_calendar_part)
 
 FIXTURES = './events/fixtures/'
-
 
 
 def test_invalid_ical(db, default_account):
@@ -409,7 +407,7 @@ def test_invalid_rsvp(db, default_account):
 
 
 def test_rsvp_for_other_provider(db, default_account):
-    # Test that we don't save RSVP replies which aren't to a Nylas
+    # Test that we don't save RSVP replies which aren't replies to a Nylas
     # invite.
     data = None
     with open(absolute_path(FIXTURES + 'invalid_rsvp2.ics')) as fd:
@@ -425,3 +423,22 @@ def test_rsvp_for_other_provider(db, default_account):
         Event.uid == "234252cccc@google.com").all()
 
     assert len(ev) == 0
+
+
+def test_truncate_bogus_sequence_numbers(db, default_account):
+    data = None
+    with open(absolute_path(FIXTURES + 'bogus_sequence_number.ics')) as fd:
+        data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == "234252cccc@google.com").one()
+
+    # Check that the sequence number got truncated to the biggest possible
+    # number.
+    assert ev.sequence_number == 2147483647L

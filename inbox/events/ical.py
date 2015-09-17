@@ -231,6 +231,13 @@ def events_from_ics(namespace, calendar, ics_str):
             uid = str(component.get('uid'))
             sequence_number = int(component.get('sequence'))
 
+            # Some services (I'm looking at you, http://www.foogi.me/)
+            # don't follow the spec and generate icalendar files with
+            # ridiculously big sequence numbers. Truncate them to fit in
+            # our db.
+            if sequence_number > 2147483647:
+                sequence_number = 2147483647
+
             event = Event(
                 namespace=namespace,
                 calendar=calendar,

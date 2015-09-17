@@ -491,8 +491,8 @@ class FolderSyncEngine(Greenlet):
                 account = Account.get(self.account_id, db_session)
                 folder = Folder.get(self.folder_id, db_session)
                 for msg in raw_messages:
-                    uid = self.create_message(db_session, account, folder,
-                                              msg)
+                    uid = self.create_message(db_session, account,
+                                              folder, msg)
                     if uid is not None:
                         db_session.add(uid)
                         db_session.flush()
