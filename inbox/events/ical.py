@@ -60,12 +60,10 @@ def events_from_ics(namespace, calendar, ics_str):
 
             all_day = False
             if isinstance(start, datetime) and isinstance(end, datetime):
-                original_start_tz = str(original_start.tzinfo)
+                tzid = str(original_start.tzinfo)
+                if tzid in timezones_table:
+                    original_start_tz = timezones_table[tzid]
 
-                # icalendar doesn't parse Windows timezones yet
-                # (see: https://github.com/collective/icalendar/issues/44)
-                # so we look if the timezone isn't in our Windows-TZ
-                # to Olson-TZ table.
                 if original_start.tzinfo is None:
                     tzid = component.get('dtstart').params.get('TZID', None)
                     assert tzid in timezones_table,\
@@ -75,7 +73,7 @@ def events_from_ics(namespace, calendar, ics_str):
                     original_start_tz = corresponding_tz
 
                     local_timezone = pytz.timezone(corresponding_tz)
-                    start = local_timezone.localize(original_start)
+                    original_start = local_timezone.localize(original_start)
 
                 if original_end.tzinfo is None:
                     tzid = component.get('dtend').params.get('TZID', None)
@@ -84,7 +82,11 @@ def events_from_ics(namespace, calendar, ics_str):
 
                     corresponding_tz = timezones_table[tzid]
                     local_timezone = pytz.timezone(corresponding_tz)
-                    end = local_timezone.localize(original_end)
+                    original_end = local_timezone.localize(original_end)
+
+                # Now that we have tz-aware datetimes, convert them to UTC
+                start = original_start.astimezone(pytz.UTC)
+                end = original_end.astimezone(pytz.UTC)
 
             elif isinstance(start, date) and isinstance(end, date):
                 all_day = True

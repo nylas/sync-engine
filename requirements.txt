@@ -38,7 +38,7 @@ pyinstrument==0.12
 simplejson==3.6.0
 Flask-RESTful==0.3.2
 uritemplate==0.6
-git+https://github.com/collective/icalendar.git#egg=icalendar
+icalendar==3.9.1
 pynacl==0.3.0
 pyaml==14.05.7
 enum34==1.0.4

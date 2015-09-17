@@ -3,7 +3,7 @@
 # (https://github.com/regebro/tzlocal)
 import pytz
 
-timezones_table = {
+windows_timezones = {
     'AUS Central Standard Time': 'Australia/Darwin',
     'AUS Eastern Standard Time': 'Australia/Sydney',
     'Afghanistan Standard Time': 'Asia/Kabul',
@@ -112,4 +112,6 @@ timezones_table = {
 
 # Also add the Olson DB timezones (e.g: Europe/Paris, etc.)
 olson_timezones = {tz: tz for tz in pytz.all_timezones}
+timezones_table = {}
+timezones_table.update(windows_timezones)
 timezones_table.update(olson_timezones)

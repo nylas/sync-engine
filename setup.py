@@ -65,6 +65,7 @@ setup(
              'bin/migrate-bodies',
              'bin/migrate-account',
              'bin/migrate-account-bulk',
+             'bin/migrate-timezones',
              'bin/summary-stats',
              'bin/start-stop-account',
              'bin/inbox-auth',
