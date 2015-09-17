@@ -380,7 +380,7 @@ def test_handle_quota_exceeded():
     provider._get_access_token = mock.Mock(return_value='token')
     items = provider._get_resource_list('https://googleapis.com/testurl')
     # Check that we slept, then retried.
-    gevent.sleep.assert_called_once()
+    assert gevent.sleep.called
     assert items == ['A', 'B', 'C']
 
 
@@ -400,7 +400,7 @@ def test_handle_internal_server_error():
     provider._get_access_token = mock.Mock(return_value='token')
     items = provider._get_resource_list('https://googleapis.com/testurl')
     # Check that we slept, then retried.
-    gevent.sleep.assert_called_once(30)
+    assert gevent.sleep.called
     assert items == ['A', 'B', 'C']
 
 

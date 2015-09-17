@@ -40,7 +40,7 @@ def test_connection_discarded_on_imap_errors():
     while not pool._queue.empty():
         item = pool._queue.get()
         assert item is None
-    conn.logout.assert_called()
+    assert conn.logout.called
 
 
 def test_connection_retained_on_other_errors():
@@ -49,4 +49,4 @@ def test_connection_retained_on_other_errors():
         with pool.get() as conn:
             raise ValueError
     assert conn in pool._queue
-    conn.logout.assert_not_called()
+    assert conn.logout.called == False
