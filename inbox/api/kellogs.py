@@ -328,8 +328,15 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             # if obj is actually a message attachment (and not merely an
             # uploaded file), set additional properties
             resp.update({
-                'message_ids': [p.message.public_id for p in obj.parts]
-            })
+                'message_ids': [p.message.public_id for p in obj.parts]})
+
+            content_ids = list({p.content_id for p in obj.parts
+                                if p.content_id is not None})
+            content_id = None
+            if len(content_ids) > 0:
+                content_id = content_ids[0]
+
+            resp.update({'content_id': content_id})
 
         return resp
 
