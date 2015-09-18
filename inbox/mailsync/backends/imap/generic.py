@@ -560,6 +560,11 @@ class FolderSyncEngine(Greenlet):
             # response.
             log.warning('Error getting UIDNEXT', exc_info=True)
             remote_uidnext = None
+        except imaplib.IMAP4.error as e:
+            if '[NONEXISTENT]' in e.message:
+                raise FolderMissingError()
+            else:
+                raise e
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
         log.info('UIDNEXT changed, checking for new UIDs',

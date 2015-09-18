@@ -120,7 +120,6 @@ def test_gmail_handle_folder_renames(db, default_account):
 def test_save_gmail_folder_names(db, default_account):
     monitor = GmailSyncMonitor(default_account)
     folder_names_and_roles = {
-        ('Inbox', 'inbox'),
         ('[Gmail]/All Mail', 'all'),
         ('[Gmail]/Trash', 'trash'),
         ('[Gmail]/Spam', 'spam'),
@@ -143,7 +142,6 @@ def test_save_gmail_folder_names(db, default_account):
     # Casing on "Inbox" is different to make what we get from folder listing
     # consistent with what we get in X-GM-LABELS during sync.
     expected_saved_names_and_roles = {
-        ('Inbox', 'inbox'),
         ('[Gmail]/All Mail', 'all'),
         ('[Gmail]/Trash', 'trash'),
         ('[Gmail]/Spam', 'spam'),
@@ -176,3 +174,53 @@ def test_handle_trailing_whitespace(db, default_account):
             Folder.account_id == default_account.id)
     )
     assert saved_folder_data == {('Miscellania', None), ('Inbox', 'inbox')}
+
+
+def test_imap_remote_delete(db, default_account):
+    monitor = ImapSyncMonitor(default_account)
+    folders = {
+        ('All', 'inbox'),
+        ('Trash', 'trash'),
+        ('Applications', None),
+    }
+
+    new_folders = {
+        ('All', 'inbox'),
+        ('Trash', 'trash')
+    }
+    original_raw_folders = [RawFolder(*args) for args in
+                            folders]
+    new_raw_folders = [RawFolder(*args) for args in new_folders]
+    monitor.save_folder_names(db.session, original_raw_folders)
+    original_folders = db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()
+
+    assert len(original_folders) == 3
+    for label in original_folders:
+        assert label.category != None
+
+    original_categories = {f.canonical_name: f.category.display_name for f in
+                            original_folders}
+
+    for folder in folders:
+        display_name, role = folder
+        assert original_categories[role] == display_name
+
+    monitor.save_folder_names(db.session, new_raw_folders)
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id).all())
+    assert saved_folder_data == new_folders
+
+    renamed_folders = db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()
+
+    for folder in renamed_folders:
+        assert label.category != None
+
+    renamed_categories = {f.canonical_name: f.category.display_name for f in
+                            renamed_folders}
+
+    for folder in new_folders:
+        display_name, role = folder
+        assert renamed_categories[role] == display_name

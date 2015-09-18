@@ -8,6 +8,7 @@ from inbox.actions.backends.generic import (set_remote_starred,
                                             uids_by_folder)
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.models.category import Category
+from imaplib import IMAP4
 
 PROVIDER = 'gmail'
 
@@ -50,6 +51,11 @@ def remote_update_label(account, category_id, db_session, old_name):
 def remote_delete_label(account, category_id, db_session):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.conn.delete_folder(category.display_name)
+        try:
+            crispin_client.conn.delete_folder(category.display_name)
+        except IMAP4.error:
+            # Label has already been deleted on remote. Treat delete as
+            # no-op.
+            pass
     db_session.delete(category)
     db_session.commit()

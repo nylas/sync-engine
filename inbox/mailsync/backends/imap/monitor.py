@@ -5,7 +5,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.basicauth import ValidationError
 from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
-from inbox.models import Account, Folder
+from inbox.models import Account, Folder, Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
@@ -108,7 +108,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         for name in discard:
             log.info('Folder deleted from remote', account_id=self.account_id,
                      name=name)
-            db_session.delete(local_folders[name])
+            cat = db_session.query(Category).get(local_folders[name].category_id)
+            if cat is not None:
+                db_session.delete(cat)
             del local_folders[name]
 
         # Create new folders

@@ -9,6 +9,7 @@ from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.models.backends.imap import ImapUid
 from inbox.models.folder import Folder
 from inbox.models.category import Category
+from imaplib import IMAP4
 
 log = get_logger()
 
@@ -89,7 +90,12 @@ def remote_update_folder(account, category_id, db_session, old_name):
 def remote_delete_folder(account, category_id, db_session):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.conn.delete_folder(category.display_name)
+        try:
+            crispin_client.conn.delete_folder(category.display_name)
+        except IMAP4.error:
+            # Folder has already been deleted on remote. Treat delete as
+            # no-op.
+            pass
     db_session.delete(category)
     db_session.commit()
 
