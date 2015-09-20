@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, String, Text, Boolean,
-                        UniqueConstraint, ForeignKey, DateTime)
-from sqlalchemy.orm import relationship, backref
+                        UniqueConstraint, ForeignKey, DateTime, inspect)
+from sqlalchemy.orm import relationship, backref, object_session
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -36,6 +36,16 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions):
 
     __table_args__ = (UniqueConstraint('namespace_id', 'provider_name',
                                        'name', 'uid', name='uuid'),)
+
+    @property
+    def should_suppress_transaction_creation(self):
+        if (self in object_session(self).new or
+                self in object_session(self).deleted):
+            return False
+        obj_state = inspect(self)
+        return not (inspect(self).attrs.name.history.has_changes() or
+                    inspect(self).attrs.description.history.has_changes() or
+                    inspect(self).attrs.read_only.history.has_changes())
 
     def update(self, calendar):
         self.uid = calendar.uid
