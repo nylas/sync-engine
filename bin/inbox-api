@@ -3,6 +3,7 @@ import os
 import sys
 import signal
 import click
+import gevent_openssl; gevent_openssl.monkey_patch()
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable

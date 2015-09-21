@@ -1,5 +1,7 @@
 import datetime
 import getpass
+from backports import ssl
+import imapclient
 from imapclient import IMAPClient
 import socket
 
@@ -58,7 +60,13 @@ class GenericAuthHandler(AuthHandler):
         """
         host, port = account.imap_endpoint
         try:
-            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993))
+            context = imapclient.create_default_context()
+            # don't check if certificate hostname doesn't match target hostname
+            context.check_hostname = False
+            # don't check if the certificate is trusted by a certificate authority
+            context.verify_mode = ssl.CERT_NONE
+            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993),
+                              ssl_context=context)
             if port != 993:
                 # Raises an exception if TLS can't be established
                 conn._imap.starttls()

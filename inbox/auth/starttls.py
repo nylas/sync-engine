@@ -2,7 +2,7 @@
 # Custom SSLContext may be passed starting from Python 2.7.9.
 # http://hg.python.org/cpython/rev/8d6516949a71/
 import imaplib
-import ssl
+from backports import ssl
 
 Commands = {
     'STARTTLS': ('NONAUTH',)
