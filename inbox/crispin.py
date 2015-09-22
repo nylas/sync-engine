@@ -689,7 +689,7 @@ class CrispinClient(object):
         # IMAPClient.idle_check() calls setblocking(1) on the underlying
         # socket, erasing any previously set timeout. So make sure to restore
         # the timeout.
-        sock = getattr(self.conn._imap, 'sslsock', self.conn._imap.sock)
+        sock = getattr(self.conn._imap, 'sslobj', self.conn._imap.sock)
         timeout = sock.gettimeout()
         try:
             yield

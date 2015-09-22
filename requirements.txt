@@ -20,8 +20,8 @@ chardet==2.1.1
 setproctitle==1.1.8
 gdata==2.0.18
 git+https://github.com/nylas/dateutil.git#egg=python-dateutil
-hg+https://bitbucket.org/mjs0/imapclient#egg=imapclient
 git+https://github.com/khamidou/flanker.git#egg=flanker
+hg+https://bitbucket.org/mjs0/imapclient@39f4cf55344#egg=imapclient
 alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
@@ -53,6 +53,3 @@ lxml==3.4.2
 arrow==0.5.4
 hypothesis==1.10.3
 statsd==3.1
-pyopenssl>=0.11
-gevent_openssl==1.1
-git+https://github.com/alekstorm/backports.ssl.git#egg=backports.ssl
