@@ -473,14 +473,14 @@ get_default_providers = lambda: {
     },
     "yeah.net": {
         "type": "generic",
-        "imap": ("imap.yeah.net",993),
-        "smtp": ("smtp.yeah.net",465),
+        "imap": ("imap.yeah.net", 993),
+        "smtp": ("smtp.yeah.net", 465),
         "auth": "password",
         "domains": ["yeah.net"],
         "mx_servers": ["yeahmx00.mxmail.netease.com",
                        "yeahmx01.mxmail.netease.com"]
     },
-    "qq" : {
+    "qq": {
         "type": "generic",
         "imap": ("imap.qq.com", 993),
         "smtp": ("smtp.qq.com", 465),
@@ -491,7 +491,7 @@ get_default_providers = lambda: {
                        "Junk": "spam"},
         "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
-    "foxmail" : {
+    "foxmail": {
         "type": "generic",
         "imap": ("imap.exmail.qq.com", 993),
         "smtp": ("smtp.exmail.qq.com", 465),
@@ -503,39 +503,40 @@ get_default_providers = lambda: {
         "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
     },
     "qq_enterprise": {
-        "type":"generic",
-        "imap":("imap.exmail.qq.com", 993),
-        "smtp":("smtp.exmail.qq.com", 465),
-        "auth":"password",
+        "type": "generic",
+        "imap": ("imap.exmail.qq.com", 993),
+        "smtp": ("smtp.exmail.qq.com", 465),
+        "auth": "password",
         "folder_map": {"Deleted Messages": "trash",
                        "Sent Messages": "sent",
                        "Junk": "spam"},
-        "mx_servers":["mxbiz1.qq.com", "mxbiz2.qq.com"]
+        "mx_servers": ["mxbiz1.qq.com", "mxbiz2.qq.com"]
     },
-    "aliyun":{
-        "type":"generic",
-        "imap":("imap.aliyun.com", 993),
-        "smtp":("smtp.aliyun.com", 465),
-        "auth":"password",
-        "domains":"aliyun",
-        "mx_servers":["mx2.mail.aliyun.com"]
+    "aliyun": {
+        "type": "generic",
+        "imap": ("imap.aliyun.com", 993),
+        "smtp": ("smtp.aliyun.com", 465),
+        "auth": "password",
+        "domains": "aliyun",
+        "mx_servers": ["mx2.mail.aliyun.com"]
     },
-    "139":{
-        "type":"generic",
-        "imap":("imap.139.com", 993),
-        "smtp":("smtp.139.com", 465),
-        "auth":"password",
-        "domains":["139.com"],
-        "mx_servers":["mx1.mail.139.com",
-                      "mx2.mail.139.com",
-                      "mx3.mail.139.com"]
+    "139": {
+        "type": "generic",
+        "imap": ("imap.139.com", 993),
+        "smtp": ("smtp.139.com", 465),
+        "auth": "password",
+        "domains": ["139.com"],
+        "mx_servers": ["mx1.mail.139.com",
+                       "mx2.mail.139.com",
+                       "mx3.mail.139.com"]
     },
     "custom": {
         "type": "generic",
         "auth": "password",
         "folder_map": {"INBOX.Archive": "archive",
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
-                       "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
+                       "INBOX.Trash": "trash", "INBOX.Sent Items": "sent",
+                       "INBOX.Sent": "sent"},
     }
 }
 
