@@ -162,3 +162,13 @@ class OAuthAuthHandler(AuthHandler):
             raise OAuthError()
 
         return userinfo_dict
+
+
+class OAuthRequestsWrapper(requests.auth.AuthBase):
+    """Helper class for setting the Authorization header on HTTP requests."""
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = 'Bearer {}'.format(self.token)
+        return r

@@ -1,52 +1,80 @@
-from inbox.crispin import GmailCrispinClient
-from inbox.models import Account, Folder
-from inbox.providers import provider_info
-from inbox.search.backends.imap import IMAPSearchClient
-from inbox.mailsync.backends.imap.generic import uidvalidity_cb
+import requests
+from sqlalchemy import desc
+from inbox.basicauth import OAuthError
+from inbox.search.base import SearchBackendException
+from inbox.auth.oauth import OAuthRequestsWrapper
+from inbox.models import Message, Thread
+from inbox.models.backends.gmail import g_token_manager
+from nylas.logging import get_logger
+
+log = get_logger()
 
 PROVIDER = 'gmail'
 SEARCH_CLS = 'GmailSearchClient'
 
 
-class GmailSearchClient(IMAPSearchClient):
-    def _open_crispin_connection(self, db_session):
-        account = db_session.query(Account).get(self.account_id)
-        conn = account.auth_handler.connect_account(account)
-        self.crispin_client = GmailCrispinClient(self.account_id,
-                                                 provider_info('gmail'),
-                                                 account.email_address,
-                                                 conn,
-                                                 readonly=True)
+class GmailSearchClient(object):
+    def __init__(self, account):
+        self.account = account
 
-    def _search_folder(self, db_session, folder, search_query):
-        self.crispin_client.select_folder(folder.name, uidvalidity_cb)
+    def search_messages(self, db_session, search_query, offset=0, limit=40):
+        g_msgids = self._search(search_query, limit=limit)
+        query = db_session.query(Message). \
+                filter(Message.namespace_id == self.account.namespace.id,
+                       Message.g_msgid.in_(g_msgids)). \
+                order_by(desc(Message.received_date))
+
+        if offset:
+            query = query.offset(offset)
+
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def search_threads(self, db_session, search_query, offset=0, limit=40):
+        g_msgids = self._search(search_query, limit=limit)
+        query = db_session.query(Thread). \
+                join(Message). \
+                filter(Thread.namespace_id == self.account.namespace.id,
+                       Message.namespace_id == self.account.namespace.id,
+                       Message.g_msgid.in_(g_msgids)). \
+                order_by(desc(Message.received_date))
+
+        if offset:
+            query = query.offset(offset)
+
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def _search(self, search_query, limit):
         try:
-            try:
-                query = search_query.encode('ascii')
-                matching_uids = self.crispin_client.conn.gmail_search(query)
-            except UnicodeEncodeError:
-                matching_uids = \
-                    self.crispin_client.conn.gmail_search(search_query,
-                                                          charset="UTF-8")
-        except Exception as e:
-            self.log.debug('Search error', error=e)
-            raise
-
-        self.log.debug('Search found message for folder',
-                        folder_name=folder.name,
-                        matching_uids=len(matching_uids))
-
-        return matching_uids
-
-    def _search(self, db_session, search_query):
-        self._open_crispin_connection(db_session)
-        folders = db_session.query(Folder).filter(
-            Folder.account_id == self.account_id).all()
-
-        imap_uids = set()
-
-        for folder in folders:
-            imap_uids.update(self._search_folder(db_session,
-                                                  folder, search_query))
-        self._close_crispin_connection()
-        return imap_uids
+            token = g_token_manager.get_token_for_email(self.account)
+        except OAuthError:
+            raise SearchBackendException(
+                "This search can't be performed because the account's "
+                "credentials are out of date. Please reauthenticate and try "
+                "again.", 403)
+        ret = requests.get(
+            u'https://www.googleapis.com/gmail/v1/users/me/messages',
+            params={'q': search_query,
+                    'maxResults': limit},
+            auth=OAuthRequestsWrapper(token))
+        log.info('Gmail API search request completed',
+                 elapsed=ret.elapsed.total_seconds())
+        if ret.status_code != 200:
+            log.critical('HTTP error making search request',
+                         account_id=self.account.id,
+                         url=ret.url,
+                         response=ret.content)
+            raise SearchBackendException(
+                "Error issuing search request", 503, server_error=ret.content)
+        data = ret.json()
+        if 'messages' not in data:
+            return []
+        # Note that the Gmail API returns g_msgids in hex format. So for
+        # example the IMAP X-GM-MSGID 1438297078380071706 corresponds to
+        # 13f5db9286538b1a in the API response we have here.
+        return [int(m['id'], 16) for m in data['messages']]

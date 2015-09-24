@@ -7,6 +7,7 @@ import gevent
 import requests
 import uuid
 
+from inbox.auth.oauth import OAuthRequestsWrapper
 from inbox.basicauth import AccessNotEnabledError
 from inbox.config import config
 from nylas.logging import get_logger
@@ -150,7 +151,8 @@ class GoogleEventsProvider(object):
         while True:
             if next_page_token is not None:
                 params['pageToken'] = next_page_token
-            r = requests.get(url, params=params, auth=OAuth(token))
+            r = requests.get(url, params=params,
+                             auth=OAuthRequestsWrapper(token))
             if r.status_code == 200:
                 data = r.json()
                 items += data['items']
@@ -196,7 +198,9 @@ class GoogleEventsProvider(object):
               'calendars/{}/events/{}'.format(urllib.quote(calendar_uid),
                                               urllib.quote(event_uid))
         token = self._get_access_token()
-        response = requests.request(method, url, auth=OAuth(token), **kwargs)
+        response = requests.request(method, url,
+                                    auth=OAuthRequestsWrapper(token),
+                                    **kwargs)
         return response
 
     def create_remote_event(self, event, **kwargs):
@@ -293,7 +297,7 @@ class GoogleEventsProvider(object):
         r = requests.post(WATCH_CALENDARS_URL,
                           data=json.dumps(data),
                           headers=headers,
-                          auth=OAuth(token))
+                          auth=OAuthRequestsWrapper(token))
 
         if r.status_code == 200:
             data = r.json()
@@ -332,7 +336,7 @@ class GoogleEventsProvider(object):
         r = requests.post(watch_url,
                           data=json.dumps(data),
                           headers=headers,
-                          auth=OAuth(token))
+                          auth=OAuthRequestsWrapper(token))
 
         if r.status_code == 200:
             data = r.json()
@@ -543,13 +547,3 @@ def _dump_event(event):
                 dump['attendees'].append(attendee)
 
     return dump
-
-
-class OAuth(requests.auth.AuthBase):
-    """Helper class for setting the Authorization header on HTTP requests."""
-    def __init__(self, token):
-        self.token = token
-
-    def __call__(self, r):
-        r.headers['Authorization'] = 'Bearer {}'.format(self.token)
-        return r

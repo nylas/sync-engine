@@ -1,5 +1,4 @@
 import os
-import base64
 import email.header
 import uuid
 import gevent
@@ -40,7 +39,7 @@ from inbox.sendmail.base import (create_message_from_json, update_draft,
 from nylas.logging import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
-from inbox.search.base import get_search_client
+from inbox.search.base import get_search_client, SearchBackendException
 from inbox.transactions import delta_sync
 from inbox.api.err import err, APIException, NotFoundError, InputError
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
@@ -241,11 +240,16 @@ def thread_search_api():
         return err(400, err_string)
 
     search_client = get_search_client(g.namespace.account)
-    results = search_client.search_threads(g.db_session, args['q'],
-                                            offset=args['offset'],
-                                            limit=args['limit'])
-
-    return g.encoder.jsonify(results)
+    try:
+        results = search_client.search_threads(g.db_session, args['q'],
+                                               offset=args['offset'],
+                                               limit=args['limit'])
+        return g.encoder.jsonify(results)
+    except SearchBackendException as exc:
+        kwargs = {}
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
 
 
 @app.route('/threads/<public_id>')
@@ -370,11 +374,16 @@ def message_search_api():
         return err(400, err_string)
 
     search_client = get_search_client(g.namespace.account)
-    results = search_client.search_messages(g.db_session, args['q'],
-                                            offset=args['offset'],
-                                            limit=args['limit'])
-
-    return g.encoder.jsonify(results)
+    try:
+        results = search_client.search_messages(g.db_session, args['q'],
+                                                offset=args['offset'],
+                                                limit=args['limit'])
+        return g.encoder.jsonify(results)
+    except SearchBackendException as exc:
+        kwargs = {}
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
 
 
 @app.route('/messages/<public_id>', methods=['GET'])
