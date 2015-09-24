@@ -613,9 +613,22 @@ class FolderSyncEngine(Greenlet):
             local_uids = common.local_uids(self.account_id, db_session,
                                            self.folder_id)
             expunged_uids = set(local_uids).difference(remote_uids)
-            common.remove_deleted_uids(self.account_id, self.folder_id,
-                                       expunged_uids, db_session)
-            db_session.commit()
+
+        if expunged_uids:
+            # If new UIDs have appeared since we last checked in
+            # get_new_uids, save them first. We want to always have the
+            # latest UIDs before expunging anything, in order to properly
+            # capture draft revisions.
+            with session_scope() as db_session:
+                lastseenuid = common.lastseenuid(self.account_id, db_session,
+                                                 self.folder_id)
+            if remote_uids and lastseenuid < max(remote_uids):
+                log.info('Downloading new UIDs before expunging')
+                self.get_new_uids(crispin_client)
+            with session_scope() as db_session:
+                common.remove_deleted_uids(self.account_id, self.folder_id,
+                                           expunged_uids, db_session)
+                db_session.commit()
         self.highestmodseq = new_highestmodseq
 
     def generic_refresh_flags(self, crispin_client):
