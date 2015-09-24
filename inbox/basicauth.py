@@ -18,10 +18,6 @@ class NotSupportedError(AuthError):
     pass
 
 
-class PermissionsError(Exception):
-    pass
-
-
 class OAuthError(ValidationError):
     pass
 

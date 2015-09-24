@@ -1,6 +1,7 @@
 """Provide Google contacts."""
-
 import posixpath
+import random
+import gevent
 from datetime import datetime
 
 import gdata.auth
@@ -9,7 +10,7 @@ import gdata.contacts.client
 
 from nylas.logging import get_logger
 logger = get_logger()
-from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
+from inbox.basicauth import ConnectionError, ValidationError
 from inbox.basicauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
@@ -156,7 +157,7 @@ class GoogleContactsProvider(object):
 
         Raises
         ------
-        ValidationError, PermissionsError
+        ValidationError
             If no data could be fetched because of invalid credentials or
             insufficient permissions, respectively.
 
@@ -170,24 +171,22 @@ class GoogleContactsProvider(object):
         if sync_from_dt:
             query.updated_min = datetime.isoformat(sync_from_dt) + 'Z'
         query.showdeleted = True
-        google_client = self._get_google_client()
-        try:
-            results = google_client.GetContacts(q=query).entry
-            return [self._parse_contact_result(result) for result in results]
-        except gdata.client.RequestError as e:
-            # This is nearly always because we authed with Google OAuth
-            # credentials for which the contacts API is not enabled.
-            self.log.info('contact sync request failure', message=e)
-            raise PermissionsError('contact sync request failure')
-        except gdata.client.Unauthorized:
-            self.log.warning(
-                        'Invalid access token; refreshing and retrying')
-            # Raises an OAuth error if no valid token exists
-            with session_scope() as db_session:
-                account = db_session.query(GmailAccount).get(self.account_id)
-                g_token_manager.get_token_for_contacts(
-                        account, force_refresh=True)
-
-            # Retry - there must be some valid credentials left
-            return self.get_items(self, sync_from_dt=sync_from_dt,
-                                  max_results=max_results)
+        while True:
+            try:
+                google_client = self._get_google_client()
+                results = google_client.GetContacts(q=query).entry
+                return [self._parse_contact_result(result) for result in
+                        results]
+            except gdata.client.RequestError as e:
+                self.log.info('contact sync request failure; retrying',
+                              message=e)
+                gevent.sleep(30 + random.randrange(0, 60))
+            except gdata.client.Unauthorized:
+                self.log.warning(
+                            'Invalid access token; refreshing and retrying')
+                # Raises an OAuth error if no valid token exists
+                with session_scope() as db_session:
+                    account = db_session.query(GmailAccount).get(
+                        self.account_id)
+                    g_token_manager.get_token_for_contacts(
+                            account, force_refresh=True)
