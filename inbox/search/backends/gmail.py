@@ -19,6 +19,8 @@ class GmailSearchClient(object):
 
     def search_messages(self, db_session, search_query, offset=0, limit=40):
         g_msgids = self._search(search_query, limit=limit)
+        if not g_msgids:
+            return []
         query = db_session.query(Message). \
                 filter(Message.namespace_id == self.account.namespace.id,
                        Message.g_msgid.in_(g_msgids)). \
@@ -34,6 +36,8 @@ class GmailSearchClient(object):
 
     def search_threads(self, db_session, search_query, offset=0, limit=40):
         g_msgids = self._search(search_query, limit=limit)
+        if not g_msgids:
+            return []
         query = db_session.query(Thread). \
                 join(Message). \
                 filter(Thread.namespace_id == self.account.namespace.id,
