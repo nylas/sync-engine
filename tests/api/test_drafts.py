@@ -64,8 +64,8 @@ def patch_remote_save_draft(monkeypatch):
 
     saved_drafts = []
 
-    def mock_remote_save_draft(account, fname, message, db_sess, date=None):
-        saved_drafts.append((message, date))
+    def mock_remote_save_draft(account, message, db_sess):
+        saved_drafts.append(message)
 
     # Patch both, just in case
     monkeypatch.setattr('inbox.actions.backends.generic.remote_save_draft',

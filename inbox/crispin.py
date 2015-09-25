@@ -623,48 +623,43 @@ class CrispinClient(object):
 
         return results
 
-    def delete_draft(self, inbox_uid, message_id_header):
+    def delete_draft(self, message_id_header):
         """
-        Delete a draft, as identified either by its X-Inbox-Id or by its
-        Message-Id header. We first delete the message from the Drafts folder,
+        Delete a draft, as identified by its Message-Id header. We first delete
+        the message from the Drafts folder,
         and then also delete it from the Trash folder if necessary.
 
         """
+        log.info('Trying to delete draft', message_id_header=message_id_header)
         drafts_folder_name = self.folder_names()['drafts'][0]
-        self.conn.select_folder(drafts_folder_name)
-        self._delete_message(inbox_uid, message_id_header)
+        assert self.selected_folder_name == drafts_folder_name
+        draft_deleted = self._delete_message(message_id_header)
+        if draft_deleted:
+            trash_folder_name = self.folder_names()['trash'][0]
+            self.conn.select_folder(trash_folder_name)
+            self._delete_message(message_id_header)
+        return draft_deleted
 
-        trash_folder_name = self.folder_names()['trash'][0]
-        self.conn.select_folder(trash_folder_name)
-        self._delete_message(inbox_uid, message_id_header)
-
-    def _delete_message(self, inbox_uid, message_id_header):
+    def _delete_message(self, message_id_header):
         """
-        Delete a message from the selected folder, using either the X-Inbox-Id
-        header or the Message-Id header to locate it. Does nothing if no
-        matching messages are found, or if more than one matching message is
-        found.
+        Delete a message from the selected folder, using the Message-Id header
+        to locate it. Does nothing if no matching messages are found, or if
+        more than one matching message is found.
 
         """
-        assert inbox_uid or message_id_header, 'Need at least one header'
-        if inbox_uid:
-            matching_uids = self.find_by_header('X-Inbox-Id', inbox_uid)
-        else:
-            matching_uids = self.find_by_header('Message-Id',
-                                                message_id_header)
+        matching_uids = self.find_by_header('Message-Id', message_id_header)
         if not matching_uids:
             log.error('No remote messages found to delete',
-                      inbox_uid=inbox_uid,
                       message_id_header=message_id_header)
-            return
+            return False
         if len(matching_uids) > 1:
             log.error('Multiple remote messages found to delete',
-                      inbox_uid=inbox_uid,
                       message_id_header=message_id_header,
                       uids=matching_uids)
-            return
+            return False
         self.conn.delete_messages(matching_uids)
         self.conn.expunge()
+        return True
 
     def logout(self):
         self.conn.logout()

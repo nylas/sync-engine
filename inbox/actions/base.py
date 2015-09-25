@@ -26,8 +26,6 @@ at-least-once semantics.
 from inbox.actions.backends import module_registry
 
 from inbox.models import Account, Message
-from inbox.sendmail.base import generate_attachments
-from inbox.sendmail.message import create_email
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -108,27 +106,8 @@ def update_label(account_id, category_id, db_session, args):
     remote_update(account, category_id, db_session, old_name)
 
 
-def _create_email(account, message):
-    blocks = [p.block for p in message.attachments]
-    attachments = generate_attachments(blocks)
-    from_name, from_email = message.from_addr[0]
-    msg = create_email(from_name=from_name,
-                       from_email=from_email,
-                       reply_to=message.reply_to,
-                       inbox_uid=message.inbox_uid,
-                       to_addr=message.to_addr,
-                       cc_addr=message.cc_addr,
-                       bcc_addr=message.bcc_addr,
-                       subject=message.subject,
-                       html=message.body,
-                       in_reply_to=message.in_reply_to,
-                       references=message.references,
-                       attachments=attachments)
-    return msg
-
-
 def save_draft(account_id, message_id, db_session, args):
-    """ Sync a new/updated draft back to the remote backend. """
+    """ Sync a new draft back to the remote backend. """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)
     version = args.get('version')
@@ -145,9 +124,30 @@ def save_draft(account_id, message_id, db_session, args):
         log.warning('tried to save outdated version of draft')
         return
 
-    mimemsg = _create_email(account, message)
     remote_save_draft = module_registry[account.provider].remote_save_draft
-    remote_save_draft(account, mimemsg, db_session, message.created_at)
+    remote_save_draft(account, message, db_session)
+
+
+def update_draft(account_id, message_id, db_session, args):
+    """ Sync an updated draft back to the remote backend. """
+    message = db_session.query(Message).get(message_id)
+    version = args.get('version')
+    if message is None:
+        log.info('tried to save nonexistent message as draft',
+                 message_id=message_id, account_id=account_id)
+        return
+    if not message.is_draft:
+        log.warning('tried to save non-draft message as draft',
+                    message_id=message_id,
+                    account_id=account_id)
+        return
+    if version != message.version:
+        log.warning('tried to save outdated version of draft')
+        return
+
+    account = db_session.query(Account).get(account_id)
+    remote_update_draft = module_registry[account.provider].remote_update_draft
+    remote_update_draft(account, message, db_session)
 
 
 def delete_draft(account_id, draft_id, db_session, args):
@@ -177,6 +177,5 @@ def save_sent_email(account_id, message_id, db_session):
                  message_id=message_id, account_id=account_id)
         return
 
-    mimemsg = _create_email(account, message)
     remote_save_sent = module_registry[account.provider].remote_save_sent
-    remote_save_sent(account, mimemsg, message.created_at)
+    remote_save_sent(account, message)

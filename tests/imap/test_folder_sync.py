@@ -1,4 +1,3 @@
-import re
 import pytest
 from hashlib import sha256
 from gevent.lock import BoundedSemaphore
@@ -8,7 +7,7 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
 from inbox.mailsync.exc import UidInvalid
-from tests.imap.data import uids, uid_data
+from tests.imap.data import uids, uid_data, mock_imapclient
 
 
 def create_folder_with_syncstatus(account, name, canonical_name,
@@ -35,72 +34,6 @@ def all_mail_folder(db, default_account):
 def trash_folder(db, default_account):
     return create_folder_with_syncstatus(default_account, '[Gmail]/Trash',
                                          'trash', db.session)
-
-
-class MockIMAPClient(object):
-    """A bare-bones stand-in for an IMAPClient instance, used to test sync
-    logic without requiring a real IMAP account and server."""
-    def __init__(self):
-        self._data = {}
-        self.selected_folder = None
-        self.uidvalidity = 1
-
-    def add_folder_data(self, folder_name, uids):
-        """Adds fake UID data for the given folder."""
-        self._data[folder_name] = uids
-
-    def search(self, criteria):
-        assert self.selected_folder is not None
-        uid_dict = self._data[self.selected_folder]
-        if criteria == ['ALL']:
-            return uid_dict.keys()
-        if criteria == ['X-GM-LABELS inbox']:
-            return [k for k, v in uid_dict.items()
-                    if ('\\Inbox,') in v['X-GM-LABELS']]
-
-        if re.match('X-GM-THRID [0-9]*', criteria[0]):
-            thrid = int(criteria[0].split()[1])
-            return [u for u, v in uid_dict.items() if v['X-GM-THRID'] == thrid]
-
-    def select_folder(self, folder_name, readonly):
-        self.selected_folder = folder_name
-        return self.folder_status(folder_name)
-
-    def fetch(self, items, data):
-        assert self.selected_folder is not None
-        uid_dict = self._data[self.selected_folder]
-        resp = {}
-        if 'BODY.PEEK[]' in data:
-            data.remove('BODY.PEEK[]')
-            data.append('BODY[]')
-        if isinstance(items, (int, long)):
-            items = [items]
-        elif isinstance(items, basestring) and re.match('[0-9]+:\*', items):
-            min_uid = int(items.split(':')[0])
-            items = {u for u in uid_dict if u >= min_uid} | {max(uid_dict)}
-        for u in items:
-            if u in uid_dict:
-                resp[u] = {k: v for k, v in uid_dict[u].items() if k in data}
-        return resp
-
-    def capabilities(self):
-        return []
-
-    def folder_status(self, folder_name, data=None):
-        return {
-            'UIDNEXT': max(self._data[folder_name]) + 1,
-            'UIDVALIDITY': self.uidvalidity
-        }
-
-
-@pytest.fixture
-def mock_imapclient(monkeypatch):
-    conn = MockIMAPClient()
-    monkeypatch.setattr(
-        'inbox.crispin.CrispinConnectionPool._new_raw_connection',
-        lambda *args: conn
-    )
-    return conn
 
 
 def test_initial_sync(db, generic_account, inbox_folder, mock_imapclient):

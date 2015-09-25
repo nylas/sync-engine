@@ -23,9 +23,10 @@ from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
 from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
-                                save_draft, delete_draft, save_sent_email,
-                                create_folder, create_label, update_folder,
-                                update_label, delete_folder, delete_label)
+                                save_draft, update_draft, delete_draft,
+                                save_sent_email, create_folder, create_label,
+                                update_folder, update_label, delete_folder,
+                                delete_label)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 
@@ -41,6 +42,7 @@ ACTION_FUNCTION_MAP = {
     'move': move,
     'change_labels': change_labels,
     'save_draft': save_draft,
+    'update_draft': update_draft,
     'delete_draft': delete_draft,
     'save_sent_email': save_sent_email,
     'create_event': create_event,

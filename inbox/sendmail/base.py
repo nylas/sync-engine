@@ -278,22 +278,13 @@ def update_draft(db_session, account, draft, to_addr=None,
     draft.contacts = []
     update_contacts_from_message(db_session, draft, account.namespace)
 
-    prior_inbox_uid = draft.inbox_uid
-    prior_message_id_header = draft.message_id_header
-
     # Update version  + inbox_uid (is_created is already set)
     draft.version += 1
     draft.regenerate_inbox_uid()
 
     # Sync to remote
-    schedule_action('save_draft', draft, draft.namespace.id, db_session,
+    schedule_action('update_draft', draft, draft.namespace.id, db_session,
                     version=draft.version)
-    # Delete previous version on remote
-    schedule_action('delete_draft', draft,
-                    draft.namespace.id, db_session,
-                    inbox_uid=prior_inbox_uid,
-                    message_id_header=prior_message_id_header)
-
     db_session.commit()
     return draft
 
