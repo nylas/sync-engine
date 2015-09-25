@@ -58,6 +58,8 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 
 
 class PhoneNumber(MailSyncBase):
+    STRING_LENGTH = 64
+
     contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
                         index=True)
     contact = relationship(Contact,
@@ -65,8 +67,8 @@ class PhoneNumber(MailSyncBase):
                                            cascade='all, delete-orphan',
                                            lazy='joined'))
 
-    type = Column(String(64), nullable=True)
-    number = Column(String(64), nullable=False)
+    type = Column(String(STRING_LENGTH), nullable=True)
+    number = Column(String(STRING_LENGTH), nullable=False)
 
 
 class MessageContactAssociation(MailSyncBase):
