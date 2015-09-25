@@ -5,6 +5,12 @@ from inbox.models.session import session_scope
 from inbox.models.account import Account
 import optparse
 
+def print_usage():
+    print "usage:   start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
+    print "         start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
+    print "example: start-stop-account --stop --id 1000 --softdelete"
+    print "         start-stop-account --start --email karim@nylas.com"
+
 
 def main():
     parser = optparse.OptionParser()
@@ -16,10 +22,7 @@ def main():
     parser.add_option('--server', action="store", dest="server", default=None)
     options, remainder = parser.parse_args(sys.argv[1:])
     if options.start == options.stop:
-        print "usage:   start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
-        print "         start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
-        print "example: start-stop-account --stop --id 1000 --softdelete"
-        print "         start-stop-account --start --email karim@nylas.com"
+        print_usage()
         sys.exit(-1)
 
     with session_scope() as db_session:
@@ -28,6 +31,9 @@ def main():
                 Account.email_address == options.email).one()
         elif options.account_id:
             account = db_session.query(Account).get(options.account_id)
+        else:
+            print_usage()
+            sys.exit(-1)
 
         if options.start:
             print "Starting account %s" % account.email_address
