@@ -6,7 +6,6 @@ import gevent
 import os
 import socket
 import platform
-import signal
 import sys
 
 import click
@@ -26,17 +25,9 @@ from nylas.util.debug import Tracer
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
-sync_service = None
-
 # Set a default timeout for sockets.
 SOCKET_TIMEOUT = 2 * 60
 socket.setdefaulttimeout(SOCKET_TIMEOUT)
-
-
-def signal_handler(signum, frame):
-    print 'Signal handler called with signal', signum
-    sync_service.stop()
-    sys.stdout.flush()
 
 
 @click.command()
@@ -72,9 +63,6 @@ def main(prod, enable_tracer, config, process_num):
              total_processes=total_processes,
              recursion_limit=sys.getrecursionlimit())
 
-    # Catch SIGTERM so that we can gracefully exit
-    signal.signal(signal.SIGTERM, signal_handler)
-
     print >>sys.stderr, """\033[1;95m
       _   _       _
      | \ | |     | |
@@ -103,7 +91,6 @@ def main(prod, enable_tracer, config, process_num):
         port = 16384 + process_num
         gevent.spawn(run_profiler, '0.0.0.0', port)
 
-    global sync_service
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
 

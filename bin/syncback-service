@@ -6,8 +6,6 @@ also starts up the syncback service.)
 
 """
 import os
-import sys
-import signal
 from setproctitle import setproctitle
 setproctitle('inbox_syncback_service')
 
@@ -20,14 +18,6 @@ from nylas.logging import configure_logging
 from inbox.config import config as inbox_config
 from inbox.transactions.actions import SyncbackService
 from inbox.util.startup import preflight, load_overrides
-
-syncback = None
-
-
-def signal_handler(signum, frame):
-    print 'Signal handler called with signal', signum
-    syncback.stop()
-    sys.stdout.flush()
 
 
 @click.command()
@@ -51,11 +41,6 @@ def main(prod, config):
 
 
 def start():
-    global syncback
-
-    # Catch SIGTERM so that we can gracefully exit
-    signal.signal(signal.SIGTERM, signal_handler)
-
     # Start the syncback service, and just hang out forever
     syncback = SyncbackService()
     syncback.start()

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import sys
-import signal
 import click
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
@@ -24,16 +23,6 @@ from inbox.util.startup import preflight, load_overrides
 
 syncback = None
 http_server = None
-def signal_handler(signum, frame):
-    print 'Signal handler called with signal', signum
-    try:
-        syncback.stop()
-    except:
-        # Ignore errors while stopping, there's not much we can do at this
-        # point.
-        pass
-    http_server.stop()
-    sys.stdout.flush()
 
 
 @click.command()
@@ -62,16 +51,10 @@ def main(prod, start_syncback, config, port):
 
 
 def start(port, start_syncback):
-    global syncback
-    global http_server
-
     # We need to import this down here, because this in turn imports
     # ignition.engine, which has to happen *after* we read any config overrides
     # for the database parameters. Boo for imports with side-effects.
     from inbox.api.srv import app
-
-    # Catch SIGTERM so that we can gracefully exit
-    signal.signal(signal.SIGTERM, signal_handler)
 
     if start_syncback:
         # start actions service
@@ -84,16 +67,10 @@ def start(port, start_syncback):
     http_server = WSGIServer(('', int(port)), app, log=nylas_logger,
                              handler_class=NylasWSGIHandler)
     nylas_logger.info('Starting API server', port=port)
-    try:
-        http_server.serve_forever()
-    except:
-        # Shouldn't ever return, however when we kill due to signal handler,
-        # sometimes an error is output that we simply want to ignore as there
-        # isn't anything special we can do to handle it.
-        pass
+    http_server.serve_forever()
 
-    syncback.join()
-    print "exiting normally."
+    if start_syncback:
+        syncback.join()
 
 if __name__ == '__main__':
     main()
