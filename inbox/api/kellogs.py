@@ -26,6 +26,16 @@ def format_categories(categories):
              categories]
 
 
+def format_phone_numbers(phone_numbers):
+    formatted_phone_numbers = []
+    for number in phone_numbers:
+        formatted_phone_numbers.append({
+            'type': number.type,
+            'number': number.number,
+        })
+    return formatted_phone_numbers
+
+
 def encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
     try:
         return _encode(obj, namespace_public_id, expand,
@@ -259,7 +269,8 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             'object': 'contact',
             public_id_key_name: _get_namespace_public_id(obj),
             'name': obj.name,
-            'email': obj.email_address
+            'email': obj.email_address,
+            'phone_numbers': format_phone_numbers(obj.phone_numbers)
         }
 
     elif isinstance(obj, Event):

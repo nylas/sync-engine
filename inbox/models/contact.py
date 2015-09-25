@@ -24,7 +24,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     provider_name = Column(String(64))
 
     name = Column(Text)
-    # phone_number = Column(String(64))
 
     raw_data = Column(Text)
 
@@ -46,12 +45,28 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     def validate_length(self, key, value):
         return value if value is None else value[:MAX_TEXT_LENGTH]
 
+    @property
+    def versioned_relationships(self):
+        return ['phone_numbers']
+
     def merge_from(self, new_contact):
         # This must be updated when new fields are added to the class.
         merge_attrs = ['name', 'email_address', 'raw_data']
         for attr in merge_attrs:
             if getattr(self, attr) != getattr(new_contact, attr):
                 setattr(self, attr, getattr(new_contact, attr))
+
+
+class PhoneNumber(MailSyncBase):
+    contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
+                        index=True)
+    contact = relationship(Contact,
+                           backref=backref('phone_numbers',
+                                           cascade='all, delete-orphan',
+                                           lazy='joined'))
+
+    type = Column(String(64), nullable=True)
+    number = Column(String(64), nullable=False)
 
 
 class MessageContactAssociation(MailSyncBase):
