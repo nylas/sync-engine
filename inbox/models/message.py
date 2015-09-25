@@ -236,7 +236,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     msg._parse_mimepart(mid, mimepart, account.namespace.id,
                                         html_parts, plain_parts)
                 except (mime.DecodingError, AttributeError, RuntimeError,
-                        TypeError, binascii.Error) as e:
+                        TypeError, binascii.Error, UnicodeDecodeError) as e:
                     log.error('Error parsing message MIME parts',
                               folder_name=folder_name, account_id=account.id,
                               error=e)
