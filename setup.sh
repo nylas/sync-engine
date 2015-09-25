@@ -173,9 +173,9 @@ fi
 color '35;1' 'Ensuring setuptools and pip versions...'
 # If python-setuptools is actually the old 'distribute' fork of setuptools,
 # then the first 'pip install setuptools' will be a no-op.
-pip install 'pip>=1.5.6' 'setuptools>=17.1'
+pip install 'pip>=1.5.6' 'setuptools>=5.3'
 hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
-pip install 'pip>=1.5.6' 'setuptools>=17.1'
+pip install 'pip>=1.5.6' 'setuptools>=5.3'
 
 # Doing pip upgrade setuptools leaves behind this problematic symlink
 rm -rf /usr/lib/python2.7/dist-packages/setuptools.egg-info
