@@ -30,6 +30,8 @@ class GenericAuthHandler(AuthHandler):
             account = GenericAccount(namespace=namespace)
 
         account.email_address = response['email']
+        if response.get('name'):
+            account.name = response['name']
         account.password = response['password']
         account.date = datetime.datetime.utcnow()
 
