@@ -676,25 +676,12 @@ class CrispinClient(object):
         log.info('Idling', timeout=timeout)
         self.conn.idle()
         try:
-            with self._restore_timeout():
-                r = self.conn.idle_check(timeout)
+            r = self.conn.idle_check(timeout)
         except:
             self.conn.idle_done()
             raise
         self.conn.idle_done()
         return r
-
-    @contextlib.contextmanager
-    def _restore_timeout(self):
-        # IMAPClient.idle_check() calls setblocking(1) on the underlying
-        # socket, erasing any previously set timeout. So make sure to restore
-        # the timeout.
-        sock = getattr(self.conn._imap, 'sslobj', self.conn._imap.sock)
-        timeout = sock.gettimeout()
-        try:
-            yield
-        finally:
-            sock.settimeout(timeout)
 
     def condstore_changed_flags(self, modseq):
         data = self.conn.fetch('1:*', ['FLAGS'],
@@ -924,10 +911,10 @@ class GmailCrispinClient(CrispinClient):
         list
         """
         uids = [long(uid) for uid in
-                self.conn.search('X-GM-THRID {}'.format(g_thrid))]
+                self.conn.search(['X-GM-THRID', g_thrid])]
         # UIDs ascend over time; return in order most-recent first
         return sorted(uids, reverse=True)
 
     def find_by_header(self, header_name, header_value):
-        criteria = ['HEADER {} {}'.format(header_name, header_value)]
+        criteria = ['HEADER', header_name, header_value]
         return self.conn.search(criteria)

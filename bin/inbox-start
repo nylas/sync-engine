@@ -2,9 +2,9 @@
 from gevent import monkey
 monkey.patch_all()
 import gevent
+import gevent_openssl; gevent_openssl.monkey_patch()
 
 import os
-import socket
 import platform
 import sys
 
@@ -25,9 +25,7 @@ from nylas.util.debug import Tracer
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
-# Set a default timeout for sockets.
-SOCKET_TIMEOUT = 2 * 60
-socket.setdefaulttimeout(SOCKET_TIMEOUT)
+sync_service = None
 
 
 @click.command()

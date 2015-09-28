@@ -1,5 +1,7 @@
 import datetime
 import getpass
+from backports import ssl
+import imapclient
 from imapclient import IMAPClient
 import socket
 
@@ -8,7 +10,7 @@ import sqlalchemy.orm.exc
 from nylas.logging import get_logger
 log = get_logger()
 
-from inbox.auth.base import AuthHandler
+from inbox.auth.base import AuthHandler, SOCKET_TIMEOUT
 import inbox.auth.starttls
 from inbox.basicauth import ValidationError, UserRecoverableConfigError
 from inbox.models import Namespace
@@ -60,7 +62,11 @@ class GenericAuthHandler(AuthHandler):
         """
         host, port = account.imap_endpoint
         try:
-            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993))
+            context = imapclient.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993),
+                              ssl_context=context, timeout=SOCKET_TIMEOUT)
             if port != 993:
                 # Raises an exception if TLS can't be established
                 conn._imap.starttls()

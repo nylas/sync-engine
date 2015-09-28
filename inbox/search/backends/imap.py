@@ -90,11 +90,7 @@ class IMAPSearchClient(object):
     def _search(self, db_session, search_query):
         self._open_crispin_connection(db_session)
         if ':' not in search_query:
-            try:
-                query = search_query.encode('ascii')
-                criteria = 'TEXT {}'.format(query)
-            except UnicodeEncodeError:
-                criteria = u'TEXT {}'.format(search_query)
+                criteria = ['TEXT', search_query]
         else:
             criteria = re.sub('(\w+:[ ]?)', format_key, search_query)
 

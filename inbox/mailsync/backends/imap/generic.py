@@ -244,6 +244,8 @@ class FolderSyncEngine(Greenlet):
 
     def _report_initial_sync_end(self):
         with session_scope() as db_session:
+            # SQLAlchemy for this folder may raise an error here if the newly
+            # synced account does not have a large inbox.
             q = db_session.query(Folder).get(self.folder_id)
             q.initial_sync_end = datetime.utcnow()
 

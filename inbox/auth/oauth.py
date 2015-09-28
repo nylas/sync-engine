@@ -1,9 +1,11 @@
 import urllib
 import requests
-from imapclient import IMAPClient
 import socket
+import imapclient
+from imapclient import IMAPClient
+from backports import ssl
 from simplejson import JSONDecodeError
-from inbox.auth.base import AuthHandler
+from inbox.auth.base import AuthHandler, SOCKET_TIMEOUT
 from inbox.basicauth import ConnectionError, OAuthError
 from inbox.models.backends.oauth import token_manager
 from nylas.logging import get_logger
@@ -31,7 +33,11 @@ class OAuthAuthHandler(AuthHandler):
     def _get_IMAP_connection(self, account):
         host, port = account.imap_endpoint
         try:
-            conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
+            context = imapclient.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993),
+                              ssl_context=context, timeout=SOCKET_TIMEOUT)
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,
