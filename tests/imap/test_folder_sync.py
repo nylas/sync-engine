@@ -54,7 +54,7 @@ class MockIMAPClient(object):
         uid_dict = self._data[self.selected_folder]
         if criteria == ['ALL']:
             return uid_dict.keys()
-        if criteria == ['X-GM-LABELS', 'inbox']:
+        if criteria == ['X-GM-LABELS inbox']:
             return [k for k, v in uid_dict.items()
                     if ('\\Inbox,') in v['X-GM-LABELS']]
 

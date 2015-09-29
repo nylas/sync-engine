@@ -2,8 +2,6 @@ from abc import ABCMeta, abstractmethod
 from inbox.providers import providers
 from inbox.basicauth import NotSupportedError
 
-SOCKET_TIMEOUT = 2 * 60
-
 
 def handler_from_provider(provider_name):
     """Return an authentication handler for the given provider.
