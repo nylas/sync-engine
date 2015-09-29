@@ -13,6 +13,9 @@ from nylas.logging import get_logger, find_first_app_frame_and_name
 log = get_logger()
 
 
+MAX_SANE_TRX_TIME_MS = 30000
+
+
 cached_engine = None
 
 
@@ -48,19 +51,30 @@ def new_session(engine, versioned=True):
         metric_name = 'db.{}.{}.{}'.format(engine.url.database, modname,
                                            funcname)
 
-        @event.listens_for(session, 'after_transaction_create')
-        def after_transaction_create(session, transaction):
-            transaction_start_map[hash(transaction)] = time.time()
+        @event.listens_for(session, 'after_begin')
+        def after_begin(session, transaction, connection):
+            # It's okay to key on the session object here, because each session
+            # binds to only one engine/connection. If this changes in the
+            # future such that a session may encompass multiple engines, then
+            # we'll have to get more sophisticated.
+            transaction_start_map[session] = time.time()
 
-        @event.listens_for(session, 'after_transaction_end')
-        def after_transaction_end(session, transaction):
-            start_time = transaction_start_map.get(hash(transaction))
+        @event.listens_for(session, 'after_commit')
+        @event.listens_for(session, 'after_rollback')
+        def end(session):
+            start_time = transaction_start_map.get(session)
             if not start_time:
                 return
 
-            latency = int((time.time() - start_time) * 1000)
+            del transaction_start_map[session]
+
+            t = time.time()
+            latency = int((t - start_time) * 1000)
             statsd_client.timing(metric_name, latency)
             statsd_client.incr(metric_name)
+            if latency > MAX_SANE_TRX_TIME_MS:
+                log.warning('Long transaction', latency=latency,
+                            modname=modname, funcname=funcname)
 
     return session
 
