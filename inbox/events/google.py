@@ -151,15 +151,23 @@ class GoogleEventsProvider(object):
         while True:
             if next_page_token is not None:
                 params['pageToken'] = next_page_token
-            r = requests.get(url, params=params,
-                             auth=OAuthRequestsWrapper(token))
-            if r.status_code == 200:
+            try:
+                r = requests.get(url, params=params,
+                                 auth=OAuthRequestsWrapper(token))
+                r.raise_for_status()
                 data = r.json()
                 items += data['items']
                 next_page_token = data.get('nextPageToken')
                 if next_page_token is None:
                     return items
-            else:
+
+            except requests.exceptions.SSLError:
+                self.log.warning(
+                    'SSLError making Google Calendar API requestl retrying',
+                    url=url, exc_info=True)
+                gevent.sleep(30 + random.randrange(0, 60))
+                continue
+            except requests.HTTPError:
                 self.log.warning(
                     'HTTP error making Google Calendar API request', url=r.url,
                     response=r.content, status=r.status_code)
@@ -188,7 +196,7 @@ class GoogleEventsProvider(object):
                         log.warning('API not enabled; returning empty result')
                         raise AccessNotEnabledError()
                 # Unexpected error; raise.
-                r.raise_for_status()
+                raise
 
     def _make_event_request(self, method, calendar_uid, event_uid=None,
                             **kwargs):
@@ -333,17 +341,23 @@ class GoogleEventsProvider(object):
         headers = {
             'content-type': 'application/json'
         }
-        r = requests.post(watch_url,
-                          data=json.dumps(data),
-                          headers=headers,
-                          auth=OAuthRequestsWrapper(token))
+        try:
+            r = requests.post(watch_url,
+                              data=json.dumps(data),
+                              headers=headers,
+                              auth=OAuthRequestsWrapper(token))
+        except requests.exceptions.SSLError:
+            self.log.warning(
+                'SSLError subscribing to Google push notifications',
+                url=watch_url, exc_info=True)
+            return
 
         if r.status_code == 200:
             data = r.json()
             return data.get('expiration')
         else:
             self.handle_watch_errors(r)
-            return None
+            return
 
     def handle_watch_errors(self, r):
         self.log.warning(
