@@ -453,3 +453,12 @@ def test_contacts_updated(api_client):
 
     r = api_client.get_data('/threads?to=joe@example.com')
     assert len(r) == 1
+
+    # Check that contacts aren't created for garbage recipients.
+    r = api_client.post_data('/drafts',
+                             {'to': [{'name': 'who', 'email': 'nope'}]})
+    assert r.status_code == 200
+    r = api_client.get_data('/threads?to=nope')
+    assert len(r) == 0
+    r = api_client.get_data('/contacts?filter=nope')
+    assert len(r) == 0

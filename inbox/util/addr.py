@@ -4,6 +4,13 @@ from flanker.mime.message.headers.parsing import normalize
 from flanker.mime.message.headers.encodedword import decode
 
 
+def valid_email(email_address):
+    parsed = address.parse(email_address, addr_spec_only=True)
+    if isinstance(parsed, address.EmailAddress):
+        return True
+    return False
+
+
 def canonicalize_address(addr):
     """Gmail addresses with and without periods are the same."""
     parsed_address = address.parse(addr, addr_spec_only=True)

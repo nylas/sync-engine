@@ -1,4 +1,5 @@
 import uuid
+from inbox.util.addr import valid_email
 from inbox.util.addr import canonicalize_address as canonicalize
 from inbox.models import Contact, MessageContactAssociation
 
@@ -43,6 +44,8 @@ def update_contacts_from_message(db_session, message, namespace):
             if field is None:
                 continue
             for name, email_address in field:
+                if not valid_email(email_address):
+                    continue
                 canonicalized_address = canonicalize(email_address)
                 contact = contact_map.get(canonicalized_address)
                 message.contacts.append(MessageContactAssociation(

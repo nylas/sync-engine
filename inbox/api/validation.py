@@ -9,6 +9,7 @@ from inbox.models.when import parse_as_when
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import InputError, NotFoundError, ConflictError
 from inbox.api.kellogs import encode
+from inbox.util.addr import valid_email
 
 MAX_LIMIT = 1000
 
@@ -308,14 +309,6 @@ def valid_delta_object_types(types_arg):
         if type_ not in allowed_types:
             raise InputError('Invalid object type {}'.format(type_))
     return types
-
-
-def valid_email(email_address):
-    parsed = address.parse(email_address, addr_spec_only=True)
-    if isinstance(parsed, address.EmailAddress):
-        return True
-
-    return False
 
 
 def validate_draft_recipients(draft):
