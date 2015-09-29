@@ -67,7 +67,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 except NoResultFound:
                     log.error('Missing Folder object when starting sync',
                               folder_name=folder_name)
-                    raise MailsyncError("Missing Folder '{}' on account {}"
+                    raise MailsyncError(u"Missing Folder '{}' on account {}"
                                         .format(folder_name, self.account_id))
             return sync_folder_names_ids
 
