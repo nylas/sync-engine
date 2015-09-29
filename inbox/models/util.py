@@ -170,10 +170,9 @@ def _batch_delete(engine, table, (column, id_), dry_run=False):
     query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
 
     for i in range(0, batches):
+        print query
         if dry_run is False:
             engine.execute(query)
-        else:
-            print query
 
     end = time.time()
     print 'Completed batch deletion for table: {}, time taken: {}'.\
