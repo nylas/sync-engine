@@ -15,7 +15,7 @@ def load_models():
     from inbox.models.folder import Folder
     from inbox.models.message import Message, MessageCategory
     from inbox.models.namespace import Namespace
-    from inbox.models.search import SearchIndexCursor
+    from inbox.models.search import ContactSearchIndexCursor
     from inbox.models.secret import Secret
     from inbox.models.thread import Thread
     from inbox.models.transaction import Transaction
@@ -25,7 +25,7 @@ def load_models():
     exports = [Account, MailSyncBase, ActionLog, Block, Part,
                MessageContactAssociation, Contact, PhoneNumber, Calendar,
                DataProcessingCache, Event, Folder,
-               Message, Namespace, SearchIndexCursor, Secret,
+               Message, Namespace, ContactSearchIndexCursor, Secret,
                Thread, Transaction, When, Time, TimeSpan, Date, DateSpan,
                Label, Category, MessageCategory]
     return exports

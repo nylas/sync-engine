@@ -4,9 +4,9 @@ from inbox.models.base import MailSyncBase
 from inbox.models.transaction import Transaction
 
 
-class SearchIndexCursor(MailSyncBase):
+class ContactSearchIndexCursor(MailSyncBase):
     """
-    Store the id of the last Transaction indexed into Elasticsearch.
+    Store the id of the last Transaction indexed into CloudSearch.
     Is namespace-agnostic.
 
     """

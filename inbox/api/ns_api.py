@@ -33,6 +33,7 @@ from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
                                        calculate_group_counts, is_stale)
 import inbox.contacts.crud
+from inbox.contacts.search import ContactSearchClient
 from inbox.sendmail.base import (create_message_from_json, update_draft,
                                  delete_draft, create_draft_from_mime,
                                  SendMailException)
@@ -712,6 +713,23 @@ def contact_api():
     if args['view'] == 'ids':
         return g.encoder.jsonify([r for r, in results])
 
+    return g.encoder.jsonify(results)
+
+
+@app.route('/contacts/search', methods=['GET'])
+def contact_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    if not args['q']:
+        err_string = ('GET HTTP method must include query'
+                      ' url parameter')
+        g.log.error(err_string)
+        return err(400, err_string)
+
+    search_client = ContactSearchClient(g.namespace.id)
+    results = search_client.search_contacts(g.db_session, args['q'],
+                                            offset=args['offset'],
+                                            limit=args['limit'])
     return g.encoder.jsonify(results)
 
 

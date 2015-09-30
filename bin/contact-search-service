@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+""" Start the contact search indexing service. """
+import os
+from setproctitle import setproctitle
+
+import click
+from gevent import monkey
+
+from inbox.log import configure_logging
+from inbox.transactions.search import ContactSearchIndexService
+from inbox.config import config as inbox_config
+from inbox.util.startup import preflight
+
+setproctitle('nylas-contact-search-index-service')
+monkey.patch_all()
+
+
+@click.command()
+@click.option('--prod/--no-prod', default=False,
+              help='Disables the autoreloader and potentially other '
+                   'non-production features.')
+@click.option('-c', '--config', default=None,
+              help='Path to JSON configuration file.')
+def main(prod, config):
+    """ Launch the contact search index service. """
+    configure_logging(log_level=inbox_config.get('LOGLEVEL'))
+
+    if config is not None:
+        from inbox.util.startup import load_overrides
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
+
+    if not prod:
+        preflight()
+
+    contact_search_indexer = ContactSearchIndexService()
+
+    contact_search_indexer.start()
+    contact_search_indexer.join()
+
+if __name__ == '__main__':
+    main()
