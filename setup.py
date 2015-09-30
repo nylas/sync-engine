@@ -32,7 +32,6 @@ setup(
         "simplejson>=3.6.0",
         "imapclient>=0.13",
         "Flask>=0.10.1",
-        "futures>=2.1.3",
         "Flask-RESTful==0.3.2",
         "pynacl>=0.2.3",
         "flanker>=0.4.26",
