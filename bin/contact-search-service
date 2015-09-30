@@ -6,10 +6,11 @@ from setproctitle import setproctitle
 import click
 from gevent import monkey
 
-from inbox.log import configure_logging
 from inbox.transactions.search import ContactSearchIndexService
 from inbox.config import config as inbox_config
 from inbox.util.startup import preflight
+
+from nylas.logging import configure_logging
 
 setproctitle('nylas-contact-search-index-service')
 monkey.patch_all()
