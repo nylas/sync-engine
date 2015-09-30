@@ -78,7 +78,11 @@ setup(
              'bin/get-object',
              'bin/syncback-service',
              'bin/test_contact_groups',
-             'bin/migrate-tags'],
+             'bin/migrate-tags',
+             'bin/contact-search-service',
+             'bin/contact-search-backfill',
+             'bin/contact-search-delete-index',
+             ],
 
     # See:
     # https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
