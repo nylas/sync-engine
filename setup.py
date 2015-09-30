@@ -41,7 +41,8 @@ setup(
         "vobject>=0.8.1c",
         "lxml>=3.4.2",
         "arrow==0.5.4",
-        "statsd>=3.1"
+        "statsd>=3.1",
+        "boto3>=1.1.4"
     ],
     dependency_links=[],
 
