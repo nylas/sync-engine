@@ -1,3 +1,4 @@
+import re
 import json
 
 import boto3
@@ -65,6 +66,11 @@ def get_doc_service():
         endpoint_url='https://{0}'.format(doc_service_url))
 
 
+def _strip_non_numeric(phone_number):
+    digits = [ch for ch in phone_number if re.match('[0-9]', ch)]
+    return ''.join(digits)
+
+
 def cloudsearch_contact_repr(contact):
     # strip display name out of email address
     parsed = address.parse(contact.email_address)
@@ -74,7 +80,8 @@ def cloudsearch_contact_repr(contact):
         'namespace_id': contact.namespace_id,
         'name': contact.name or '',
         'email_address': email_address,
-        'phone_numbers': [p.number for p in contact.phone_numbers]
+        'phone_numbers': [_strip_non_numeric(p.number)
+                          for p in contact.phone_numbers]
     }
 
 
