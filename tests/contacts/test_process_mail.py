@@ -1,7 +1,7 @@
 """Sanity-check our logic for updating contact data from message addressees
 during a sync."""
 from inbox.models import Contact
-from tests.util.base import add_fake_message, thread
+from tests.util.base import add_fake_message
 
 
 def test_update_contacts_from_message(db, default_namespace, thread):
@@ -43,3 +43,29 @@ def test_addresses_canonicalized(db, default_namespace, thread):
     # the same contact.
     assert len(msg.contacts) == 3
     assert len(set(association.contact for association in msg.contacts)) == 1
+
+
+def test_handle_noreply_addresses(db, default_namespace, thread):
+    add_fake_message(
+        db.session, default_namespace.id, thread,
+        from_addr=[('Alice', 'drive-shares-noreply@google.com')])
+    add_fake_message(
+        db.session, default_namespace.id, thread,
+        from_addr=[('Bob', 'drive-shares-noreply@google.com')])
+
+    noreply_contact = db.session.query(Contact).filter(
+        Contact.namespace == default_namespace,
+        Contact.email_address == 'drive-shares-noreply@google.com').one()
+    assert noreply_contact.name is None
+
+    add_fake_message(
+        db.session, default_namespace.id, thread,
+        from_addr=[('Alice', 'alice@example.com')])
+    add_fake_message(
+        db.session, default_namespace.id, thread,
+        from_addr=[('Alice Lastname', 'alice@example.com')])
+
+    contact = db.session.query(Contact).filter(
+        Contact.namespace == default_namespace,
+        Contact.email_address == 'alice@example.com').first()
+    assert contact.name is not None

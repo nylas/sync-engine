@@ -48,5 +48,13 @@ def update_contacts_from_message(db_session, message, namespace):
                     continue
                 canonicalized_address = canonicalize(email_address)
                 contact = contact_map.get(canonicalized_address)
+                # Hackily address the condition that you get mail from e.g.
+                # "Ben Gotow (via Google Drive) <drive-shares-noreply@google.com"
+                # "Christine Spang (via Google Drive) <drive-shares-noreply@google.com"
+                # and so on: rather than creating many contacts with
+                # varying name, null out the name for the existing contact.
+                if contact.name != name and 'noreply' in canonicalized_address:
+                    contact.name = None
+
                 message.contacts.append(MessageContactAssociation(
                     contact=contact, field=field_name))
