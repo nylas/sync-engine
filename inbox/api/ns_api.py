@@ -1,8 +1,8 @@
 import os
-import email.header
 import uuid
 import gevent
 import time
+from email.header import Header
 from datetime import datetime
 
 from flask import request, g, Blueprint, make_response, Response
@@ -1154,7 +1154,7 @@ def file_download_api(public_id):
     try:
         name = name.encode('latin-1')
     except UnicodeEncodeError:
-        name = email.header.Header(name, 'utf-8').encode()
+        name = Header(name, 'utf-8').encode()
     response.headers['Content-Disposition'] = \
         'attachment; filename={0}'.format(name)
     g.log.info(response.headers)

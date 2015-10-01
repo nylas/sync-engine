@@ -1,5 +1,4 @@
 import socket
-import os
 import sys
 from gevent import monkey; monkey.patch_all(aggressive=False)
 from code import InteractiveConsole

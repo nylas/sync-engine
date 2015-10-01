@@ -28,6 +28,6 @@ actually available via e.g.
 
 from pkgutil import extend_path
 __path__ = extend_path(__path__, __name__)
-from inbox.models.backends import module_registry as backend_module_registry
+from inbox.models.backends import module_registry as backend_module_registry  # noqa
 from inbox.models.meta import load_models
 locals().update({model.__name__: model for model in load_models()})

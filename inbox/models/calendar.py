@@ -43,9 +43,9 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions):
                 self in object_session(self).deleted):
             return False
         obj_state = inspect(self)
-        return not (inspect(self).attrs.name.history.has_changes() or
-                    inspect(self).attrs.description.history.has_changes() or
-                    inspect(self).attrs.read_only.history.has_changes())
+        return not (obj_state.attrs.name.history.has_changes() or
+                    obj_state.attrs.description.history.has_changes() or
+                    obj_state.attrs.read_only.history.has_changes())
 
     def update(self, calendar):
         self.uid = calendar.uid

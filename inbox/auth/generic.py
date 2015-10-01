@@ -9,7 +9,7 @@ from nylas.logging import get_logger
 log = get_logger()
 
 from inbox.auth.base import AuthHandler
-import inbox.auth.starttls
+import inbox.auth.starttls  # noqa
 from inbox.basicauth import ValidationError, UserRecoverableConfigError
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount

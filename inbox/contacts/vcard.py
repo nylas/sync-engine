@@ -169,7 +169,7 @@ class VCard(defaultdict):
     associated methods,
     each dict item is a list of tuples
     i.e.:
-    >>> vcard['EMAIL']
+    >>> VCard['EMAIL']
     [('hanz@wurst.com', ['WORK', 'PREF']), ('hanz@wurst.net', ['HOME'])]
 
     self.href: unique id (really just the url) of the VCard

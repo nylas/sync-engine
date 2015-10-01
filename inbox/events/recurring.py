@@ -60,10 +60,10 @@ def parse_rrule(event):
         else:
             start = event.start.datetime
         try:
-            rrule = rrulestr(event.rrule, dtstart=start,
+            rule = rrulestr(event.rrule, dtstart=start,
                              compatible=True)
 
-            return rrule
+            return rule
         except Exception as e:
             log.error("Error parsing RRULE entry", event_id=event.id,
                       error=e, exc_info=True)

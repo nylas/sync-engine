@@ -97,13 +97,11 @@ class HasEmailAddress(object):
     """
     Provides an email_address attribute, which returns as value whatever you
     set it to, but uses a canonicalized form for comparisons. So e.g.
-    >>> db_session.query(Account).filter_by(
-    ...    email_address='ben.bitdiddle@gmail.com').all()
-    [...]
+        db_session.query(Account).filter_by(
+           email_address='ben.bitdiddle@gmail.com').all()
     and
-    >>> db_session.query(Account).filter_by(
-    ...    email_address='ben.bitdiddle@gmail.com').all()
-    [...]
+        db_session.query(Account).filter_by(
+           email_address='ben.bitdiddle@gmail.com').all()
     will return the same results, because the two Gmail addresses are
     equivalent.
 
