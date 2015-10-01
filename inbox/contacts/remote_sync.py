@@ -80,6 +80,15 @@ class ContactSync(BaseSyncMonitor):
                     'Got remote item with null uid'
                 assert isinstance(new_contact.uid, basestring)
 
+                if (not new_contact.deleted and
+                        db_session.query(Contact).filter(
+                            Contact.namespace == account.namespace,
+                            Contact.email_address == new_contact.email_address,
+                            Contact.name == new_contact.name).first()):
+                    # Skip creating a new contact if we've already imported one
+                    # (e.g., from mail).
+                    continue
+
                 try:
                     existing_contact = db_session.query(Contact).filter(
                         Contact.namespace == account.namespace,
