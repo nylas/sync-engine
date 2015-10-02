@@ -50,9 +50,10 @@ def start():
 
 @app.after_request
 def finish(response):
-    if response.status_code == 200:
-        g.db_session.commit()
-    g.db_session.close()
+    if hasattr(g, 'db_session'):
+        if response.status_code == 200:
+            g.db_session.commit()
+        g.db_session.close()
     return response
 
 
@@ -64,13 +65,13 @@ def handle_input_error(error):
     return response
 
 
-@app.route('/calendar_list_update/<public_account_id>', methods=['POST'])
-def calendar_update(public_account_id):
+@app.route('/calendar_list_update/<account_public_id>', methods=['POST'])
+def calendar_update(account_public_id):
 
     try:
-        valid_public_id(public_account_id)
+        valid_public_id(account_public_id)
         account = g.db_session.query(GmailAccount) \
-                  .filter(GmailAccount.public_id == public_account_id) \
+                  .filter(GmailAccount.public_id == account_public_id) \
                   .one()
         account.handle_gpush_notification()
         return resp(200)
@@ -78,17 +79,17 @@ def calendar_update(public_account_id):
         raise InputError('Invalid public ID')
     except NoResultFound:
         g.log.info('Getting push notifications for non-existing account',
-                    account_public_id=public_account_id)
+                    account_public_id=account_public_id)
         raise NotFoundError("Couldn't find account `{0}`"
-                            .format(public_account_id))
+                            .format(account_public_id))
 
 
-@app.route('/calendar_update/<public_calendar_id>', methods=['POST'])
-def event_update(public_calendar_id):
+@app.route('/calendar_update/<calendar_public_id>', methods=['POST'])
+def event_update(calendar_public_id):
     try:
-        valid_public_id(public_calendar_id)
+        valid_public_id(calendar_public_id)
         calendar = g.db_session.query(Calendar) \
-                  .filter(Calendar.public_id == public_calendar_id) \
+                  .filter(Calendar.public_id == calendar_public_id) \
                   .one()
         calendar.handle_gpush_notification()
         return resp(200)
@@ -96,6 +97,6 @@ def event_update(public_calendar_id):
         raise InputError('Invalid public ID')
     except NoResultFound:
         g.log.info('Getting push notifications for non-existing calendar',
-                    calendar_public_id=public_calendar_id)
+                    calendar_public_id=calendar_public_id)
         raise NotFoundError("Couldn't find calendar `{0}`"
-                            .format(public_calendar_id))
+                            .format(calendar_public_id))
