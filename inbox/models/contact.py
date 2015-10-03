@@ -64,8 +64,7 @@ class PhoneNumber(MailSyncBase):
                         index=True)
     contact = relationship(Contact,
                            backref=backref('phone_numbers',
-                                           cascade='all, delete-orphan',
-                                           lazy='joined'))
+                                           cascade='all, delete-orphan'))
 
     type = Column(String(STRING_LENGTH), nullable=True)
     number = Column(String(STRING_LENGTH), nullable=False)
