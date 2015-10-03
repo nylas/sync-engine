@@ -70,15 +70,19 @@ def _strip_non_numeric(phone_number):
     digits = [ch for ch in phone_number if re.match('[0-9]', ch)]
     return ''.join(digits)
 
+# CloudSearch doesn't like these characters, and Exchange sends them to us.
+non_printable_chars_regex = re.compile('[\x01\x02\x03\x04\x05\x06\x07\x08]')
+
 
 def cloudsearch_contact_repr(contact):
     # strip display name out of email address
     parsed = address.parse(contact.email_address)
     email_address = parsed.address if parsed else ''
+    name = non_printable_chars_regex.sub('', contact.name or '')
     return {
         'id': contact.id,
         'namespace_id': contact.namespace_id,
-        'name': contact.name or '',
+        'name': name,
         'email_address': email_address,
         'phone_numbers': [_strip_non_numeric(p.number)
                           for p in contact.phone_numbers]
