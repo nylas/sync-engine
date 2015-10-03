@@ -80,7 +80,7 @@ def new_session(engine, versioned=True):
 
 
 @contextmanager
-def session_scope(versioned=True, debug=False):
+def session_scope(namespace_id=None, versioned=True, debug=False):
     """
     Provide a transactional scope around a series of operations.
 

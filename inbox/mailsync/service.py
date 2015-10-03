@@ -129,7 +129,7 @@ class SyncService(object):
         If that account doesn't exist, does nothing.
 
         """
-        with session_scope() as db_session:
+        with session_scope(account_id) as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
                 self.log.error('no such account', account_id=account_id)
@@ -221,7 +221,7 @@ class SyncService(object):
         fqdn = platform.node()
 
         # Update the state in the database (if necessary)
-        with session_scope() as db_session:
+        with session_scope(account_id) as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
                 self.log.error('No such account', account_id=account_id)

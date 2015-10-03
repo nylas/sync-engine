@@ -53,6 +53,7 @@ def auth():
         namespace_public_id = ns_parts[1]
         valid_public_id(namespace_public_id)
 
+        # STOPSHIP(emfree): fix
         with session_scope() as db_session:
             try:
                 namespace = db_session.query(Namespace) \
@@ -70,6 +71,7 @@ def auth():
 
         g.namespace_public_id = request.authorization.username
 
+        # STOPSHIP(emfree): fix
         with session_scope() as db_session:
             try:
                 valid_public_id(g.namespace_public_id)
@@ -101,6 +103,7 @@ def ns_all():
     # We do this outside the blueprint to support the case of an empty
     # public_id.  However, this means the before_request isn't run, so we need
     # to make our own session
+    # STOPSHIP(emfree): fix
     with session_scope() as db_session:
         parser = reqparse.RequestParser(argument_class=ValidatableArgument)
         parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,

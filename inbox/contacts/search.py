@@ -200,7 +200,7 @@ def index_namespace(namespace_id):
         indexed = 0
         current_records = set()
         docs = []
-        with session_scope() as db_session:
+        with session_scope(namespace_id) as db_session:
             query = db_session.query(Contact).options(
                 joinedload("phone_numbers")).filter_by(
                     namespace_id=namespace_id)

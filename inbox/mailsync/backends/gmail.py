@@ -145,7 +145,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
         try:
             remote_uids = sorted(crispin_client.all_uids(), key=int)
             with self.syncmanager_lock:
-                with session_scope() as db_session:
+                with session_scope(self.namespace_id) as db_session:
                     local_uids = common.local_uids(self.account_id, db_session,
                                                    self.folder_id)
                     common.remove_deleted_uids(
@@ -194,7 +194,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 kill(change_poller)
 
     def resync_uids_impl(self):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             imap_folder_info_entry = db_session.query(ImapFolderInfo)\
                 .options(load_only('uidvalidity', 'highestmodseq'))\
                 .filter_by(account_id=self.account_id,
@@ -313,7 +313,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
             return
         new_uids = set()
         with self.syncmanager_lock:
-            with session_scope() as db_session:
+            with session_scope(self.namespace_id) as db_session:
                 account = Account.get(self.account_id, db_session)
                 folder = Folder.get(self.folder_id, db_session)
                 raw_messages = self.__deduplicate_message_object_creation(
@@ -401,7 +401,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
 
     @property
     def throttled(self):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
             throttled = account.throttled
 

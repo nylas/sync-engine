@@ -8,6 +8,7 @@ import IPython
 
 
 def user_console(user_email_address):
+    # STOPSHIP(emfree): fix
     with session_scope() as db_session:
         account = db_session.query(Account).filter_by(
             email_address=user_email_address).one()
@@ -41,11 +42,10 @@ def start_console(user_email_address=None):
     # You can also do this with
     # $ python -m imapclient.interact -H <host> -u <user> ...
     # but we want to use our session and crispin so we're not.
-    with session_scope() as db_session:  # noqa
-        if user_email_address:
-            user_console(user_email_address)
-        else:
-            IPython.embed()
+    if user_email_address:
+        user_console(user_email_address)
+    else:
+        IPython.embed()
 
 
 def start_client_console(user_email_address=None):

@@ -238,7 +238,7 @@ class SMTPConnection(object):
 
     # OAuth2 authentication
     def _smtp_oauth2_try_refresh(self):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
             self.auth_token = token_manager.get_token(
                 account, force_refresh=True)

@@ -174,7 +174,7 @@ class SyncbackWorker(gevent.Greenlet):
                 extra_args=self.extra_args)
 
             for _ in range(ACTION_MAX_NR_OF_RETRIES):
-                with session_scope() as db_session:
+                with session_scope(self.account_id) as db_session:
                     try:
                         action_log_entry = db_session.query(ActionLog).get(
                             self.action_log_id)
@@ -197,7 +197,7 @@ class SyncbackWorker(gevent.Greenlet):
 
                     except Exception:
                         log_uncaught_errors(log, account_id=self.account_id)
-                        with session_scope() as db_session:
+                        with session_scope(self.account_id) as db_session:
                             action_log_entry.retries += 1
                             if (action_log_entry.retries ==
                                     ACTION_MAX_NR_OF_RETRIES):

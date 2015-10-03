@@ -135,7 +135,7 @@ class GoogleEventsProvider(object):
                 raise
 
     def _get_access_token(self, force_refresh=False):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             acc = db_session.query(Account).get(self.account_id)
             # This will raise OAuthError if OAuth access was revoked. The
             # BaseSyncMonitor loop will catch this, clean up, and exit.

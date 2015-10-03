@@ -56,7 +56,7 @@ class DeleteHandler(gevent.Greenlet):
             gevent.sleep(self.message_ttl.total_seconds())
 
     def check(self, current_time):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             dangling_messages = db_session.query(Message).filter(
                 Message.namespace_id == self.namespace_id,
                 Message.deleted_at <= current_time - self.message_ttl

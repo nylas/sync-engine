@@ -60,7 +60,7 @@ class ICloudContactsProvider(object):
                        raw_data=cardstring)
 
     def get_items(self, sync_from_dt=None, max_results=100000):
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             account = db_session.query(GenericAccount).get(self.account_id)
             email_address = account.email_address
             password = account.password

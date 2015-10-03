@@ -242,7 +242,7 @@ def streaming_change_generator(namespace, poll_interval, timeout,
     encoder = APIEncoder(legacy_nsid=legacy_nsid)
     start_time = time.time()
     while time.time() - start_time < timeout:
-        with session_scope() as db_session:
+        with session_scope(namespace.id) as db_session:
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
                 exclude_types, include_types, exclude_folders,

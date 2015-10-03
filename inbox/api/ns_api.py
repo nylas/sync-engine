@@ -1417,7 +1417,7 @@ def sync_deltas():
 
     start_time = time.time()
     while time.time() - start_time < timeout:
-        with session_scope() as db_session:
+        with session_scope(g.namespace.id) as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
                 exclude_types, include_types, exclude_folders,

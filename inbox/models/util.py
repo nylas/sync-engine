@@ -101,7 +101,7 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
                   'contact', 'event', 'dataprocessingcache']:
         filters[table] = ('namespace_id', namespace_id)
 
-    with session_scope() as db_session:
+    with session_scope(namespace_id) as db_session:
         account = db_session.query(Account).get(account_id)
         if account.discriminator != 'easaccount':
             filters['imapuid'] = ('account_id', account_id)
@@ -145,7 +145,7 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
 
     # Delete the account object manually to get rid of the various objects
     # associated with it (e.g: secrets, tokens, etc.)
-    with session_scope() as db_session:
+    with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
         if dry_run is False:
             db_session.delete(account)

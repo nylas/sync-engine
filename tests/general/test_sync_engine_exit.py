@@ -29,9 +29,8 @@ def raise_folder_error(*args, **kwargs):
 
 @pytest.fixture
 def sync_engine_stub(db, yahoo_account):
-    engine = FolderSyncEngine(yahoo_account.id, "Inbox", 0,
-                              TEST_YAHOO_EMAIL, "yahoo",
-                              None)
+    engine = FolderSyncEngine(yahoo_account.id, yahoo_account.namespace.id,
+                              "Inbox", 0, TEST_YAHOO_EMAIL, "yahoo", None)
 
     return engine
 

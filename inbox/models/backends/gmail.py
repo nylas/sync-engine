@@ -63,7 +63,7 @@ class GTokenManager(object):
             if object_session(account):
                 object_session(account).commit()
             else:
-                with session_scope() as db_session:
+                with session_scope(account.id) as db_session:
                     db_session.merge(account)
                     db_session.commit()
             raise

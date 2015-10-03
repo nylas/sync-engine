@@ -117,7 +117,7 @@ class BaseMailSyncMonitor(Greenlet):
         raise NotImplementedError
 
     def _cleanup(self):
-        with session_scope() as mailsync_db_session:
+        with session_scope(self.namespace_id) as mailsync_db_session:
             map(lambda x: x.set_stopped(mailsync_db_session),
                 self.folder_monitors)
         self.folder_monitors.kill()

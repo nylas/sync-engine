@@ -75,7 +75,7 @@ class BaseSyncMonitor(Greenlet):
                            account_id=self.account_id,
                            exc_info=True, logstash_tag='mark_invalid')
             self._cleanup()
-            with session_scope() as db_session:
+            with session_scope(self.namespace_id) as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid(scope=self.scope)
 

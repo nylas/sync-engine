@@ -53,7 +53,7 @@ class GoogleContactsProvider(object):
         """Return the Google API client."""
         # TODO(emfree) figure out a better strategy for refreshing OAuth
         # credentials as needed
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
                 access_token, auth_creds_id = \
@@ -185,7 +185,7 @@ class GoogleContactsProvider(object):
                 self.log.warning(
                             'Invalid access token; refreshing and retrying')
                 # Raises an OAuth error if no valid token exists
-                with session_scope() as db_session:
+                with session_scope(self.namespace_id) as db_session:
                     account = db_session.query(GmailAccount).get(
                         self.account_id)
                     g_token_manager.get_token_for_contacts(

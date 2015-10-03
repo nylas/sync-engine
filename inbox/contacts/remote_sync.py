@@ -66,7 +66,7 @@ class ContactSync(BaseSyncMonitor):
         # Grab timestamp so next sync gets deltas from now
         sync_timestamp = datetime.utcnow()
 
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
             last_sync_dt = account.last_synced_contacts
 
@@ -115,7 +115,7 @@ class ContactSync(BaseSyncMonitor):
                     db_session.commit()
 
         # Update last sync
-        with session_scope() as db_session:
+        with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
             account.last_synced_contacts = sync_timestamp
 
