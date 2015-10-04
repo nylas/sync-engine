@@ -31,9 +31,5 @@
 "ENCRYPT_SECRETS": false,
 "DEBUG_CONSOLE_ON": true,
 
-"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
-
-"CLOUDSEARCH_DOMAIN": "contact-search-dev",
-
 "FEATURE_FLAGS": "ical_autoimport"
 }
