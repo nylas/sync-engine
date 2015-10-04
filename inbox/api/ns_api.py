@@ -704,7 +704,9 @@ def contact_api():
 
     if args['filter']:
         results = results.filter(Contact.email_address == args['filter'])
-    results = results.order_by(asc(Contact.created_at))
+    results = results.with_hint(
+        Contact, 'USE INDEX (ix_contact_ns_uid_provider_name)')\
+        .order_by(asc(Contact.created_at))
 
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.scalar()})
