@@ -704,7 +704,7 @@ def contact_api():
 
     if args['filter']:
         results = results.filter(Contact.email_address == args['filter'])
-    results = results.order_by(asc(Contact.id))
+    results = results.order_by(asc(Contact.created_at))
 
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.scalar()})
