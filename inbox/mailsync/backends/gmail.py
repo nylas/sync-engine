@@ -22,7 +22,7 @@ user always gets the full thread when they look at mail.
 from __future__ import division
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from gevent import kill, spawn
+from gevent import kill, spawn, sleep
 from sqlalchemy.orm import joinedload, load_only
 
 from inbox.util.itert import chunk
@@ -35,6 +35,7 @@ from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
+from inbox.mailsync.backends.base import THROTTLE_WAIT
 log = get_logger()
 
 PROVIDER = 'gmail'
@@ -42,7 +43,8 @@ SYNC_MONITOR_CLS = 'GmailSyncMonitor'
 
 
 MAX_DOWNLOAD_BYTES = 2 ** 20
-MAX_DOWNLOAD_COUNT = 30
+# USE MAX_DOWNLOAD_COUNT = 1 instead of 30 until N1 launch herding dies.
+MAX_DOWNLOAD_COUNT = 1
 
 
 class GmailSyncMonitor(ImapSyncMonitor):
@@ -386,6 +388,18 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 return
             self.download_and_commit_uids(crispin_client, batch)
             self.heartbeat_status.publish()
+
+            if self.throttled:
+                # Throttled accounts sync at a rate of 1 message/ minute.
+                sleep(THROTTLE_WAIT)
+
+    @property
+    def throttled(self):
+        with session_scope() as db_session:
+            account = db_session.query(Account).get(self.account_id)
+            throttled = account.throttled
+
+        return throttled
 
 
 def g_msgids(namespace_id, session, in_):

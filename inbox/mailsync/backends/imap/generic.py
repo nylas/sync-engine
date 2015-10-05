@@ -85,7 +85,7 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.base import MailsyncDone
+from inbox.mailsync.backends.base import MailsyncDone, THROTTLE_WAIT
 from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
 
@@ -313,6 +313,8 @@ class FolderSyncEngine(Greenlet):
 
             new_uids = set(remote_uids).difference(local_uids)
             with session_scope() as db_session:
+                account = db_session.query(Account).get(self.account_id)
+                throttled = account.throttled
                 self.update_uid_counts(
                     db_session,
                     remote_uid_count=len(remote_uids),
@@ -328,7 +330,9 @@ class FolderSyncEngine(Greenlet):
                 # non-Gmail accounts, so for now just download one-at-a-time.
                 self.download_and_commit_uids(crispin_client, [uid])
                 self.heartbeat_status.publish()
-
+                if throttled:
+                    # Throttled accounts sync at a rate of 1 message/ minute.
+                    sleep(THROTTLE_WAIT)
         finally:
             if change_poller is not None:
                 # schedule change_poller to die
