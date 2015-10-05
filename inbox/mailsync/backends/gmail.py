@@ -35,7 +35,7 @@ from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.base import THROTTLE_WAIT
+from inbox.mailsync.backends.base import THROTTLE_COUNT, THROTTLE_WAIT
 log = get_logger()
 
 PROVIDER = 'gmail'
@@ -372,6 +372,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                             max_download_count=MAX_DOWNLOAD_COUNT):
         expanded_pending_uids = self.expand_uids_to_download(
             crispin_client, uids, metadata)
+        count = 0
         while True:
             dl_size = 0
             batch = []
@@ -388,9 +389,13 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 return
             self.download_and_commit_uids(crispin_client, batch)
             self.heartbeat_status.publish()
-
-            if self.throttled:
-                # Throttled accounts sync at a rate of 1 message/ minute.
+            count += len(batch)
+            if self.throttled and count >= THROTTLE_COUNT:
+                # Throttled accounts' folders sync at a rate of
+                # 1 message/ minute, after the first approx. THROTTLE_COUNT
+                # messages for this batch are synced.
+                # Note this is an approx. limit since we use the #(uids),
+                # not the #(messages).
                 sleep(THROTTLE_WAIT)
 
     @property

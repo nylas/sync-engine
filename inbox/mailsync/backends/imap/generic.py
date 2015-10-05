@@ -85,7 +85,8 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.base import MailsyncDone, THROTTLE_WAIT
+from inbox.mailsync.backends.base import (MailsyncDone, THROTTLE_COUNT,
+                                          THROTTLE_WAIT)
 from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
 
@@ -325,13 +326,19 @@ class FolderSyncEngine(Greenlet):
             bind_context(change_poller, 'changepoller', self.account_id,
                          self.folder_id)
             uids = sorted(new_uids, reverse=True)
+            count = 0
             for uid in uids:
                 # The speedup from batching appears to be less clear for
                 # non-Gmail accounts, so for now just download one-at-a-time.
                 self.download_and_commit_uids(crispin_client, [uid])
                 self.heartbeat_status.publish()
-                if throttled:
-                    # Throttled accounts sync at a rate of 1 message/ minute.
+                count += 1
+                if throttled and count >= THROTTLE_COUNT:
+                    # Throttled accounts' folders sync at a rate of
+                    # 1 message/ minute, after the first approx. THROTTLE_COUNT
+                    # messages per folder are synced.
+                    # Note this is an approx. limit since we use the #(uids),
+                    # not the #(messages).
                     sleep(THROTTLE_WAIT)
         finally:
             if change_poller is not None:

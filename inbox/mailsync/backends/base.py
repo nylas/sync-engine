@@ -9,6 +9,7 @@ from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.heartbeat.status import clear_heartbeat_status
 
+THROTTLE_COUNT = 200
 THROTTLE_WAIT = 60
 
 
