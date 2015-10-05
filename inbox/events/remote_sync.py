@@ -186,7 +186,7 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
             link_events(db_session, event)
 
         # Batch commits to avoid long transactions that may lock calendar rows.
-        if (added_count + updated_count) % 1000 == 0:
+        if (added_count + updated_count) % 10 == 0:
             db_session.commit()
 
     log.info('synced added and updated events',

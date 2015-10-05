@@ -111,9 +111,8 @@ class ContactSync(BaseSyncMonitor):
                     db_session.add(new_contact)
                     change_counter['added'] += 1
 
-                # Flush every 100 objects for perf
-                if sum(change_counter.values()) % 100:
-                    db_session.flush()
+                if sum(change_counter.values()) % 10:
+                    db_session.commit()
 
         # Update last sync
         with session_scope() as db_session:
