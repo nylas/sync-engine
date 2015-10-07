@@ -124,14 +124,5 @@ class BaseMailSyncMonitor(Greenlet):
         clear_heartbeat_status(self.account_id)
 
 
-def _check_thread_state(thread, is_state):
-    state = getattr(thread, 'state')
-    return state == is_state or (state and state.startswith(is_state))
-
-
-def thread_finished(thread):
-    return _check_thread_state(thread, 'finish')
-
-
 def thread_polling(thread):
-    return _check_thread_state(thread, 'poll')
+    return getattr(thread, 'state') == 'poll'

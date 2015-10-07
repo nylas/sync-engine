@@ -67,7 +67,7 @@ def test_folder_monitor_handles_mailsync_done(yahoo_account, monkeypatch):
     folders = [('missing_folder', 0)]
     monitor.prepare_sync = lambda: folders
     # Try to start a sync engine for this folder. It should exit.
-    monitor.start_new_folder_sync_engines(set())
+    monitor.start_new_folder_sync_engines()
     assert len(monitor.folder_monitors) == 0
 
     # Note: it currently looks like ImapFolderMonitor doesn't have a good
