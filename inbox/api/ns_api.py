@@ -54,6 +54,7 @@ log = get_logger()
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
 LONG_POLL_REQUEST_TIMEOUT = 120
+SEND_TIMEOUT = 45
 
 app = Blueprint(
     'namespace_api',
@@ -1330,34 +1331,39 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
-    account = g.namespace.account
+    try:
+        with gevent.Timeout(SEND_TIMEOUT):
+            account = g.namespace.account
+            if request.content_type == "message/rfc822":
+                msg = create_draft_from_mime(account, request.data,
+                                             g.db_session)
+                validate_draft_recipients(msg)
+                resp = send_raw_mime(account, g.db_session, msg)
+                return resp
 
-    if request.content_type == "message/rfc822":
-        msg = create_draft_from_mime(account, request.data, g.db_session)
-        validate_draft_recipients(msg)
-        resp = send_raw_mime(account, g.db_session, msg)
-        return resp
+            data = request.get_json(force=True)
+            draft_public_id = data.get('draft_id')
+            if draft_public_id is not None:
+                draft = get_draft(draft_public_id, data.get('version'),
+                                  g.namespace.id, g.db_session)
+                schedule_action('delete_draft', draft, draft.namespace.id,
+                                g.db_session, inbox_uid=draft.inbox_uid,
+                                message_id_header=draft.message_id_header)
+            else:
+                draft = create_message_from_json(data, g.namespace,
+                                                 g.db_session, is_draft=False)
 
-    data = request.get_json(force=True)
-    draft_public_id = data.get('draft_id')
-    if draft_public_id is not None:
-        draft = get_draft(draft_public_id, data.get('version'), g.namespace.id,
-                          g.db_session)
-        schedule_action('delete_draft', draft, draft.namespace.id,
-                        g.db_session, inbox_uid=draft.inbox_uid,
-                        message_id_header=draft.message_id_header)
-    else:
-        draft = create_message_from_json(data, g.namespace, g.db_session,
-                                         is_draft=False)
+            validate_draft_recipients(draft)
+            resp = send_draft(account, draft, g.db_session)
 
-    validate_draft_recipients(draft)
-    resp = send_draft(account, draft, g.db_session)
+            if isinstance(account, GenericAccount):
+                schedule_action('save_sent_email', draft, draft.namespace.id,
+                                g.db_session)
 
-    if isinstance(account, GenericAccount):
-        schedule_action('save_sent_email', draft, draft.namespace.id,
-                        g.db_session)
-
-    return resp
+            return resp
+    except gevent.Timeout:
+        log.error('Timeout invoked in sending path', exc_info=True)
+        return err(504, 'Request timed out.')
 
 
 ##
