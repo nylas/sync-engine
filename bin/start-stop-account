@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import sys
 from inbox.models.session import session_scope
 from inbox.models.account import Account
@@ -10,21 +9,12 @@ def print_usage():
     print "         start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
     print "example: start-stop-account --stop --id 1000 --softdelete"
     print "         start-stop-account --start --email karim@nylas.com"
+    print "batch usage: start-stop-account also accepts tab-separated input on stdin."
+    print "             echo 'karim@nylas.com	account_id' | start-stop-account --start --stdin"
+    print "             bin/list-accounts --host precise64 --paying | start-stop-account --start --stdin"
 
 
-def main():
-    parser = optparse.OptionParser()
-    parser.add_option('--start', action="store_true", default=False)
-    parser.add_option('--stop', action="store_true", default=False)
-    parser.add_option('--softdelete', action="store_true", default=False)
-    parser.add_option('--email', action="store", dest="email", default=None)
-    parser.add_option('--id', action="store", dest="account_id", default=None)
-    parser.add_option('--server', action="store", dest="server", default=None)
-    options, remainder = parser.parse_args(sys.argv[1:])
-    if options.start == options.stop:
-        print_usage()
-        sys.exit(-1)
-
+def start_stop(options):
     with session_scope() as db_session:
         if options.email:
             account = db_session.query(Account).filter(
@@ -51,6 +41,35 @@ def main():
                 account.disable_sync()
 
         db_session.commit()
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option('--start', action="store_true", default=False)
+    parser.add_option('--stop', action="store_true", default=False)
+    parser.add_option('--softdelete', action="store_true", default=False)
+    parser.add_option('--email', action="store", dest="email", default=None)
+    parser.add_option('--id', action="store", dest="account_id", default=None)
+    parser.add_option('--server', action="store", dest="server", default=None)
+    parser.add_option('--stdin', action="store_true", default=False)
+    options, remainder = parser.parse_args(sys.argv[1:])
+    if options.start == options.stop:
+        print_usage()
+        sys.exit(-1)
+
+    # If we were not given the --stdin param, only start/stop the account
+    # specified on the command-line.
+    if not options.stdin:
+        start_stop(options)
+    # Otherwise read from stdin.
+    else:
+        for line in sys.stdin:
+            splat = line.split()
+            if len(splat) < 2:
+                continue
+
+            email, id = splat[:2]
+            options.account_id = id
+            start_stop(options)
 
 if __name__ == '__main__':
     main()
