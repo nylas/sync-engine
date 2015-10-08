@@ -147,8 +147,6 @@ def remove_deleted_uids(account_id, folder_id, uids, session):
                     message.mark_for_deletion()
             session.commit()
 
-            session.commit()
-
         log.info('Deleted expunged UIDs', count=len(deletes))
 
 
