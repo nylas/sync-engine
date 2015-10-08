@@ -125,7 +125,7 @@ class MockIMAPClient(object):
             thrid = int(criteria[0].split()[1])
             return [u for u, v in uid_dict.items() if v['X-GM-THRID'] == thrid]
 
-    def select_folder(self, folder_name, readonly):
+    def select_folder(self, folder_name, readonly=False):
         self.selected_folder = folder_name
         return self.folder_status(folder_name)
 
