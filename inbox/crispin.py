@@ -632,7 +632,7 @@ class CrispinClient(object):
         """
         log.info('Trying to delete draft', message_id_header=message_id_header)
         drafts_folder_name = self.folder_names()['drafts'][0]
-        assert self.selected_folder_name == drafts_folder_name
+        self.conn.select_folder(drafts_folder_name)
         draft_deleted = self._delete_message(message_id_header)
         if draft_deleted:
             trash_folder_name = self.folder_names()['trash'][0]
