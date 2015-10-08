@@ -248,6 +248,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
         operation is not super common unless you're regularly moving lots
         of messages to trash or spam, and even then the overhead of just
         downloading the body is generally not that high.
+
         """
         new_g_msgids = {msg.g_msgid for msg in raw_messages}
         existing_g_msgids = g_msgids(self.namespace_id, db_session,
@@ -288,7 +289,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 uid.update_labels(raw_message.g_labels)
                 common.update_message_metadata(
                     db_session, account, message_obj, uid.is_draft)
-            db_session.commit()
+                db_session.commit()
 
         return brand_new_messages
 
