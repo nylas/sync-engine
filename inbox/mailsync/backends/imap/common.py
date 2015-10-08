@@ -104,6 +104,7 @@ def update_metadata(account_id, folder_id, new_flags, session):
             change_count += 1
             update_message_metadata(session, account, item.message,
                                     item.is_draft)
+            session.commit()
     log.info('Updated UID metadata', changed=change_count,
              out_of=len(new_flags))
 
@@ -125,7 +126,7 @@ def remove_deleted_uids(account_id, folder_id, uids, session):
 
         for uid in deletes:
             session.delete(uid)
-        session.commit()
+            session.commit()
 
         for message in affected_messages:
             if not message.imapuids and message.is_draft:
@@ -144,6 +145,7 @@ def remove_deleted_uids(account_id, folder_id, uids, session):
                     # 'deleted' and wait for the asynchronous
                     # dangling-message-collector to delete them.
                     message.mark_for_deletion()
+            session.commit()
 
             session.commit()
 
