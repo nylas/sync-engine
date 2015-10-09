@@ -3,7 +3,7 @@
     generic IMAP providers.
 """
 from collections import defaultdict
-from inbox.crispin import writable_connection_pool, retry_crispin
+from inbox.crispin import writable_connection_pool
 from nylas.logging import get_logger
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.models.backends.imap import ImapUid
@@ -55,7 +55,6 @@ def _create_email(account, message):
     return msg
 
 
-@retry_crispin
 def _set_flag(account, message_id, flag_name, db_session, is_add):
     uids_for_message = uids_by_folder(message_id, db_session)
     if not uids_for_message:
@@ -79,7 +78,6 @@ def set_remote_unread(account, message_id, db_session, unread):
     _set_flag(account, message_id, '\\Seen', db_session, not unread)
 
 
-@retry_crispin
 def remote_move(account, message_id, db_session, destination):
     uids_for_message = uids_by_folder(message_id, db_session)
     if not uids_for_message:
@@ -93,21 +91,18 @@ def remote_move(account, message_id, db_session, destination):
             crispin_client.delete_uids(uids)
 
 
-@retry_crispin
 def remote_create_folder(account, category_id, db_session):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
         crispin_client.conn.create_folder(category.display_name)
 
 
-@retry_crispin
 def remote_update_folder(account, category_id, db_session, old_name):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
         crispin_client.conn.rename_folder(old_name, category.display_name)
 
 
-@retry_crispin
 def remote_delete_folder(account, category_id, db_session):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
@@ -121,7 +116,6 @@ def remote_delete_folder(account, category_id, db_session):
     db_session.commit()
 
 
-@retry_crispin
 def remote_save_draft(account, message, db_session):
     mimemsg = _create_email(account, message)
     with writable_connection_pool(account.id).get() as crispin_client:
@@ -134,7 +128,6 @@ def remote_save_draft(account, message, db_session):
         crispin_client.save_draft(mimemsg)
 
 
-@retry_crispin
 def remote_update_draft(account, message, db_session):
     with writable_connection_pool(account.id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
@@ -163,7 +156,6 @@ def remote_update_draft(account, message, db_session):
                 break
 
 
-@retry_crispin
 def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
     with writable_connection_pool(account.id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
@@ -174,7 +166,6 @@ def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
         crispin_client.delete_draft(message_id_header)
 
 
-@retry_crispin
 def remote_save_sent(account, message):
     mimemsg = _create_email(account, message)
     with writable_connection_pool(account.id).get() as crispin_client:
