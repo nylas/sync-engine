@@ -54,18 +54,23 @@ class ContactSearchIndexService(Greenlet):
                 transactions = db_session.query(Transaction). \
                     filter(Transaction.id > self.transaction_pointer,
                            Transaction.object_type == 'contact'). \
+                    with_hint(Transaction,
+                              "USE INDEX (ix_transaction_table_name)"). \
                     order_by(asc(Transaction.id)). \
                     limit(self.chunk_size). \
                     options(joinedload(Transaction.namespace)).all()
 
                 # index up to chunk_size transactions
+                should_sleep = False
                 if transactions:
                     self.index(transactions, db_session)
                     new_pointer = transactions[-1].id
                     self.update_pointer(new_pointer, db_session)
+                    db_session.commit()
                 else:
-                    sleep(self.poll_interval)
-                db_session.commit()
+                    should_sleep = True
+            if should_sleep:
+                sleep(self.poll_interval)
 
     def index(self, transactions, db_session):
         """
@@ -82,7 +87,8 @@ class ContactSearchIndexService(Greenlet):
                 doc = {'type': 'delete', 'id': trx.record_id}
             else:
                 adds += 1
-                obj = db_session.query(Contact).get(trx.record_id)
+                obj = db_session.query(Contact).options(
+                    joinedload("phone_numbers")).get(trx.record_id)
                 if obj is None:
                     continue
                 doc = {'type': 'add', 'id': trx.record_id,

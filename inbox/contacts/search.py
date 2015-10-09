@@ -10,6 +10,8 @@ from inbox.models import Contact
 from inbox.models.session import session_scope
 from inbox.sqlalchemy_ext.util import safer_yield_per
 
+from sqlalchemy.orm import joinedload
+
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -161,7 +163,8 @@ class ContactSearchClient(object):
             if result_ids:
                 return db_session.query(Contact).filter(
                     Contact.namespace_id == self.namespace_id,
-                    Contact.id.in_(result_ids)).all()
+                    Contact.id.in_(result_ids)).options(
+                        joinedload("phone_numbers")).all()
             else:
                 return []
         else:
@@ -188,7 +191,8 @@ def index_namespace(namespace_id):
         current_records = set()
         docs = []
         with session_scope() as db_session:
-            query = db_session.query(Contact).filter_by(
+            query = db_session.query(Contact).options(
+                joinedload("phone_numbers")).filter_by(
                     namespace_id=namespace_id)
             for contact in safer_yield_per(query, Contact.id, 0, 1000):
                 log.info("indexing", contact_id=contact.id)

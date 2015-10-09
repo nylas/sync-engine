@@ -15,11 +15,12 @@ class Transaction(MailSyncBase, HasPublicID):
                           nullable=False)
     namespace = relationship(Namespace)
 
-    object_type = Column(String(20), nullable=False, index=True)
+    object_type = Column(String(20), nullable=False)
     record_id = Column(Integer, nullable=False, index=True)
     object_public_id = Column(String(191), nullable=False, index=True)
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
 
+Index('ix_transaction_table_name', Transaction.object_type)
 Index('namespace_id_deleted_at', Transaction.namespace_id,
       Transaction.deleted_at)
 Index('object_type_record_id', Transaction.object_type, Transaction.record_id)
