@@ -6,7 +6,6 @@ from setproctitle import setproctitle
 import click
 from gevent import monkey
 
-from inbox.transactions.search import ContactSearchIndexService
 from inbox.config import config as inbox_config
 from inbox.util.startup import preflight
 
@@ -30,6 +29,9 @@ def main(prod, config):
         from inbox.util.startup import load_overrides
         config_path = os.path.abspath(config)
         load_overrides(config_path)
+
+    # import here to make sure config overrides are loaded
+    from inbox.transactions.search import ContactSearchIndexService
 
     if not prod:
         preflight()
