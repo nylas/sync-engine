@@ -35,6 +35,9 @@ def main(prod):
             base_engine.execute(
                 "GRANT ALL PRIVILEGES ON test.* TO "
                 "inboxtest@localhost IDENTIFIED BY 'inboxtest'")
+            base_engine.execute(
+                "GRANT ALL PRIVILEGES ON test_1.* TO "
+                "inboxtest@localhost IDENTIFIED BY 'inboxtest'")
 
         database_name = params['DATABASE_NAME']
         print 'Creating database: {}'.format(database_name)

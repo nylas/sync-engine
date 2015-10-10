@@ -9,7 +9,7 @@ from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync, GoogleEventSync
 from nylas.logging import get_logger
 from inbox.ignition import engine_manager
-from inbox.models.session import session_scope
+from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.rdb import break_to_interpreter
@@ -82,8 +82,7 @@ class SyncService(object):
     def accounts_to_start(self):
         accounts = []
         for key in engine_manager.engines:
-            id_for_key = key << 48
-            with session_scope(id_for_key) as db_session:
+            with session_scope_by_shard_id(key) as db_session:
                 start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
                                                             self.total_cpus)
                 if config.get('SYNC_STEAL_ACCOUNTS', True):

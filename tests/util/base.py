@@ -1,10 +1,9 @@
 import json
 import os
-import subprocess
 import uuid
 from datetime import datetime, timedelta
 from flanker import mime
-
+from inbox.util.testutils import setup_test_db
 from pytest import fixture, yield_fixture
 
 
@@ -33,34 +32,36 @@ def config():
 
 @fixture(scope='session')
 def dbloader(config):
-    return TestDB()
+    setup_test_db()
 
 
 @yield_fixture(scope='function')
 def db(dbloader):
+    from inbox.ignition import engine_manager
     from inbox.models.session import new_session
-    dbloader.session = new_session(dbloader.engine)
-    yield dbloader
-    dbloader.session.close()
+    engine = engine_manager.get_for_id(0)
+    # TODO(emfree): tests should really either instantiate their own sessions,
+    # or take a fixture that is itself a session.
+    engine.session = new_session(engine)
+    yield engine
+    engine.session.close()
 
 
 @yield_fixture(scope='function')
-def empty_db(request, config):
+def empty_db(config):
+    from inbox.ignition import engine_manager
     from inbox.models.session import new_session
-    testdb = TestDB()
-    testdb.session = new_session(testdb.engine)
-    yield testdb
-    testdb.session.close()
-
-
-def mock_redis_client(*args, **kwargs):
-    return None
+    setup_test_db()
+    engine = engine_manager.get_for_id(0)
+    engine.session = new_session(engine)
+    yield engine
+    engine.session.close()
 
 
 @fixture(autouse=True)
 def mock_redis(monkeypatch):
     monkeypatch.setattr("inbox.heartbeat.store.HeartbeatStore.__init__",
-                        mock_redis_client)
+                        lambda *args, **kwargs: None)
 
 
 @yield_fixture
@@ -86,28 +87,6 @@ class TestWebhooksClient(object):
     def post_data(self, path, data, headers=''):
         path = '/w' + path
         return self.client.post(path, data=json.dumps(data), headers=headers)
-
-
-class TestDB(object):
-    """
-    Creates a new, empty test database with table structure generated
-    from declarative model classes.
-
-    """
-    # STOPSHIP(emfree) hoist into module shareable with redwood.
-    def __init__(self):
-        from inbox.ignition import engine_manager
-        from inbox.ignition import init_db
-        # Set up test database
-        self.engine = engine_manager.get_for_id(0)
-        db_invocation = 'DROP DATABASE IF EXISTS test; ' \
-                        'CREATE DATABASE IF NOT EXISTS test ' \
-                        'DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE ' \
-                        'utf8mb4_general_ci'
-
-        subprocess.check_call('mysql -uinboxtest -pinboxtest '
-                              '-e "{}"'.format(db_invocation), shell=True)
-        init_db(self.engine)
 
 
 @fixture
