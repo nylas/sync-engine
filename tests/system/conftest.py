@@ -82,7 +82,7 @@ def create_account(db_session, email, password):
     else:
         response = {"email": email, "password": password}
 
-    account = auth_handler.create_account(db_session, email, response)
+    account = auth_handler.create_account(email, response)
     auth_handler.verify_account(account)
     account.throttled = False
     account.sync_host = platform.node()

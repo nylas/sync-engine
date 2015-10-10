@@ -72,7 +72,7 @@ def test_token(db, config, encrypt):
             'hd': ''}
     g = GmailAuthHandler('gmail')
     g.verify_config = lambda x: True
-    account = g.create_account(db.session, email, resp)
+    account = g.get_account(email, resp)
 
     db.session.add(account)
     db.session.commit()

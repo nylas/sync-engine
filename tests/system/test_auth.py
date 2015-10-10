@@ -31,11 +31,8 @@ def wait_for_auth(client):
 
 @pytest.mark.parametrize("account_credentials", credentials)
 def test_account_auth(account_credentials):
-
     email, password = account_credentials
-    with session_scope() as db_session:
-        create_account(db_session, email, password)
-
+    create_account(email, password)
     client = InboxTestClient(email, API_BASE)
     wait_for_auth(client)
 

@@ -2,7 +2,6 @@ import pytest
 from imapclient import IMAPClient
 from mock import Mock
 
-from inbox.models.session import global_session_scope
 from inbox.auth.generic import GenericAuthHandler
 from inbox.basicauth import UserRecoverableConfigError
 
@@ -40,14 +39,12 @@ def test_imap_not_fully_enabled(monkeypatch):
         'smtp_server_port': 23
     }
 
-    with global_session_scope() as db_session:
-        handler = GenericAuthHandler('custom')
-        acct = handler.create_account(
-            db_session,
-            'test@test.com',
-            response)
-        handler.connect_account = fake_connect
-        handler._supports_condstore = lambda x: True
-        with pytest.raises(UserRecoverableConfigError):
-            verified = handler.verify_account(acct)
-            assert verified is not True
+    handler = GenericAuthHandler('custom')
+    acct = handler.create_account(
+        'test@test.com',
+        response)
+    handler.connect_account = fake_connect
+    handler._supports_condstore = lambda x: True
+    with pytest.raises(UserRecoverableConfigError):
+        verified = handler.verify_account(acct)
+        assert verified is not True

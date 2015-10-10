@@ -18,7 +18,7 @@ def folder_sync_engine(db):
     # methods.
     email = "inboxapptest1@fastmail.fm"
     account = GenericAuthHandler('fastmail').create_account(
-        db.session, email, {"email": email, "password": "BLAH"})
+        email, {"email": email, "password": "BLAH"})
     db.session.add(account)
     db.session.commit()
 

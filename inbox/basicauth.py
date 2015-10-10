@@ -42,3 +42,7 @@ class ImapSupportDisabledError(ValidationError):
 
 class AccessNotEnabledError(Exception):
     pass
+
+
+class AccountExistsError(Exception):
+    pass

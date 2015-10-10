@@ -16,7 +16,7 @@ TEST_YAHOO_EMAIL = "inboxapptest1@yahoo.com"
 @pytest.fixture
 def yahoo_account(db):
     account = GenericAuthHandler('yahoo').create_account(
-        db.session, TEST_YAHOO_EMAIL,
+        TEST_YAHOO_EMAIL,
         {"email": TEST_YAHOO_EMAIL, "password": "BLAH"})
     db.session.add(account)
     db.session.commit()

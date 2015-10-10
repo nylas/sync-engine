@@ -346,7 +346,10 @@ class GmailAuthCredentials(MailSyncBase):
 
     gmailaccount = relationship(
         GmailAccount,
-        backref=backref('auth_credentials', cascade='all, delete-orphan')
+        backref=backref('auth_credentials', cascade='all, delete-orphan',
+                        lazy='joined'),
+        lazy='joined',
+        join_depth=2
     )
 
     refresh_token_secret = relationship(

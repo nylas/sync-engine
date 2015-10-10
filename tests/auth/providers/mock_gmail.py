@@ -1,14 +1,15 @@
-""" Mock provider which triggers failure at a specific step of the
-    authentication process depending on email entered.
-    Note that this uses live Gmail authentication, so auth should be called
-    using real email addresses with + parameters, eg.
-    foobar+no_all_mail@gmail.com.
-
-    * Gmail All Mail folder missing
-    * Gmail Trash folder missing
-    * OAuth error during scope acceptance
 """
+Mock provider which triggers failure at a specific step of the
+authentication process depending on email entered.
+Note that this uses live Gmail authentication, so auth should be called
+using real email addresses with + parameters, eg.
+foobar+no_all_mail@gmail.com.
 
+* Gmail All Mail folder missing
+* Gmail Trash folder missing
+* OAuth error during scope acceptance
+
+"""
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 
@@ -44,8 +45,7 @@ fake_responses = {
 
 
 class MockGmailAuthHandler(GmailAuthHandler):
-
-    def create_account(self, db_session, email_address, response):
+    def create_account(self, email_address, response):
         # Override create_account to persist the 'login hint' email_address
         # rather than the canonical email that is contained in response.
         # This allows us to trigger errors by authing with addresses of the

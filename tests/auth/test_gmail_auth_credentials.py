@@ -8,7 +8,7 @@ from inbox.models.backends.gmail import (GOOGLE_CALENDAR_SCOPE,
                                          GOOGLE_EMAIL_SCOPE,
                                          GmailAccount)
 from inbox.auth.gmail import g_token_manager
-from inbox.basicauth import OAuthError, ConnectionError
+from inbox.basicauth import OAuthError, ConnectionError, AccountExistsError
 
 ACCESS_TOKEN = 'this_is_an_access_token'
 
@@ -56,12 +56,12 @@ def account_with_multiple_auth_creds(db):
     g.verify_config = lambda x: True
 
     resp.update(first_auth_args)
-    account = g.create_account(db.session, email, resp)
+    account = g.get_account(email, resp)
     db.session.add(account)
     db.session.commit()
 
     resp.update(second_auth_args)
-    account = g.create_account(db.session, email, resp)
+    account = g.get_account(email, resp)
     db.session.add(account)
     db.session.commit()
 
@@ -96,7 +96,7 @@ def account_with_single_auth_creds(db):
     g = GmailAuthHandler('gmail')
     g.verify_config = lambda x: True
 
-    account = g.create_account(db.session, email, resp)
+    account = g.get_account(email, resp)
     db.session.add(account)
     db.session.commit()
 
@@ -250,12 +250,62 @@ def test_create_account(db):
     }
     resp.update(first_auth_args)
 
-    account = g.create_account(db.session, email, resp)
+    account = g.create_account(email, resp)
     db.session.add(account)
     db.session.commit()
 
+    db.session.refresh(account)
     assert len(account.auth_credentials) == 1
+    auth_creds = account.auth_credentials[0]
+    assert auth_creds.client_id == client_id_1
+    assert auth_creds.client_secret == client_secret_1
+    assert auth_creds.scopes == scopes_1_list
+    assert auth_creds.refresh_token == token_1
 
+    with pytest.raises(AccountExistsError):
+        g.create_account(email, resp)
+
+
+def test_get_account(db):
+    email = 'vault.test@localhost.com'
+    resp = {'access_token': '',
+            'expires_in': 3600,
+            'email': email,
+            'family_name': '',
+            'given_name': '',
+            'name': '',
+            'gender': '',
+            'id': 0,
+            'user_id': '',
+            'id_token': '',
+            'link': 'http://example.com',
+            'locale': '',
+            'picture': '',
+            'hd': ''}
+
+    g = GmailAuthHandler('gmail')
+    g.verify_config = lambda x: True
+
+    # Auth me once...
+    token_1 = 'the_first_token'
+    client_id_1 = 'first client id'
+    client_secret_1 = 'first client secret'
+    scopes_1 = 'scope scop sco sc s'
+    scopes_1_list = scopes_1.split(' ')
+    first_auth_args = {
+        'refresh_token': token_1,
+        'scope': scopes_1,
+        'client_id': client_id_1,
+        'client_secret': client_secret_1
+    }
+    resp.update(first_auth_args)
+
+    account = g.get_account(email, resp)
+    db.session.add(account)
+    db.session.commit()
+
+    db.session.refresh(account)
+    assert len(account.auth_credentials) == 1
     auth_creds = account.auth_credentials[0]
     assert auth_creds.client_id == client_id_1
     assert auth_creds.client_secret == client_secret_1
@@ -263,9 +313,9 @@ def test_create_account(db):
     assert auth_creds.refresh_token == token_1
 
     # Auth me twice...
-    token_2 = 'second_token_!!'
+    token_2 = 'second_token_!'
     client_id_2 = 'second client id'
-    client_secret_2 = 'secodn client secret'
+    client_secret_2 = 'second client secret'
     scopes_2 = 'scope scop sco sc s'
     scopes_2_list = scopes_2.split(' ')
     second_auth_args = {
@@ -276,12 +326,11 @@ def test_create_account(db):
     }
     resp.update(second_auth_args)
 
-    account = g.create_account(db.session, email, resp)
-    db.session.add(account)
+    account = g.get_account(email, resp)
+    db.session.merge(account)
     db.session.commit()
 
     assert len(account.auth_credentials) == 2
-
     auth_creds = next((creds for creds in account.auth_credentials
                       if creds.refresh_token == token_2), False)
     assert auth_creds
@@ -293,15 +342,16 @@ def test_create_account(db):
     # client_id/client_secret pair.
     resp.update(first_auth_args)
     resp['refresh_token'] = 'a new refresh token'
-    account = g.create_account(db.session, email, resp)
-    db.session.add(account)
+    account = g.get_account(email, resp)
+    db.session.merge(account)
     db.session.commit()
+
     assert len(account.auth_credentials) == 2
 
     # Should still work okay if we don't get a refresh token back
     del resp['refresh_token']
-    account = g.create_account(db.session, email, resp)
-    db.session.add(account)
+    account = g.get_account(email, resp)
+    db.session.merge(account)
     db.session.commit()
 
     assert len(account.auth_credentials) == 2

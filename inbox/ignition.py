@@ -86,6 +86,9 @@ class EngineManager(object):
     def get_for_id(self, id_):
         return self.engines[self.shard_key_for_id(id_)]
 
+    def get_for_shard_id(self, shard_id):
+        return self.engines[shard_id]
+
 
 engine_manager = EngineManager(config.get_required('DATABASES'),
                                config.get_required('DATABASE_USERS'))

@@ -28,7 +28,8 @@ class Configuration(dict):
 
 
 def _update_config_from_env(config):
-    """Update a config dictionary from configuration files specified in the
+    """
+    Update a config dictionary from configuration files specified in the
     environment.
 
     The environment variable `INBOX_CFG_PATH` contains a list of .json or .yml
@@ -49,8 +50,8 @@ def _update_config_from_env(config):
       {srcdir}/etc/secrets-dev.yml:{srcdir}/etc/config-dev.yml
 
     Missing files in the path will be ignored.
-    """
 
+    """
     srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 
     if 'INBOX_ENV' in os.environ:
