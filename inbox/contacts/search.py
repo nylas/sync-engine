@@ -72,16 +72,26 @@ def _strip_non_numeric(phone_number):
     digits = [ch for ch in phone_number if re.match('[0-9]', ch)]
     return ''.join(digits)
 
-# CloudSearch doesn't like these characters, and Exchange sends them to us.
+
+# CloudSearch doesn't like these characters (reasonably so!)
 non_printable_chars_regex = re.compile(
-    '[\x01\x02\x03\x04\x05\x06\x07\x08\x1b\x1f\x1e\x0e\x1c\x1d\x11\x10]')
+    '[\x01\x02\x03\x04\x05\x06\x07\x08\x1b\x1f\x1e\x0e\x1c\x1d\x11\x10\x0b\x1a\x15\x17\x19]')
 
 
 def cloudsearch_contact_repr(contact):
     # strip display name out of email address
     parsed = address.parse(contact.email_address)
+    name = contact.name or ''
     email_address = parsed.address if parsed else ''
-    name = non_printable_chars_regex.sub('', contact.name or '')
+    name_contains_bad_codepoints = re.match(
+        non_printable_chars_regex, contact.name or '')
+    email_contains_bad_codepoints = re.match(
+        non_printable_chars_regex, email_address)
+    if name_contains_bad_codepoints or email_contains_bad_codepoints:
+        log.warning("bad codepoint in contact", contact_id=contact.id,
+                    name=contact.name, email_address=email_address)
+        name = non_printable_chars_regex.sub('', name)
+        email_address = non_printable_chars_regex.sub('', email_address)
     return {
         'id': contact.id,
         'namespace_id': contact.namespace_id,
