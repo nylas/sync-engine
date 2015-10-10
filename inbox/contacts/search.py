@@ -74,7 +74,7 @@ def _strip_non_numeric(phone_number):
 
 # CloudSearch doesn't like these characters, and Exchange sends them to us.
 non_printable_chars_regex = re.compile(
-    '[\x01\x02\x03\x04\x05\x06\x07\x08\x1b\x1f]')
+    '[\x01\x02\x03\x04\x05\x06\x07\x08\x1b\x1f\x1e\x0e\x1c\x1d\x11\x10]')
 
 
 def cloudsearch_contact_repr(contact):
