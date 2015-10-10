@@ -18,7 +18,7 @@ from inbox.util.concurrency import retry_with_logging
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 logger = get_logger()
-from inbox.models.session import session_scope
+from inbox.models.session import session_scope, global_session_scope
 from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
 from inbox.util.stats import statsd_client
@@ -79,7 +79,7 @@ class SyncbackService(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _process_log(self):
-        with session_scope() as db_session:
+        with global_session_scope() as db_session:
             # Only actions on accounts associated with this sync-engine
             query = db_session.query(ActionLog).join(Namespace).join(Account).\
                 filter(ActionLog.discriminator == 'actionlog',

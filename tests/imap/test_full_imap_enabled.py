@@ -2,7 +2,7 @@ import pytest
 from imapclient import IMAPClient
 from mock import Mock
 
-from inbox.models.session import session_scope
+from inbox.models.session import global_session_scope
 from inbox.auth.generic import GenericAuthHandler
 from inbox.basicauth import UserRecoverableConfigError
 
@@ -40,7 +40,7 @@ def test_imap_not_fully_enabled(monkeypatch):
         'smtp_server_port': 23
     }
 
-    with session_scope() as db_session:
+    with global_session_scope() as db_session:
         handler = GenericAuthHandler('custom')
         acct = handler.create_account(
             db_session,

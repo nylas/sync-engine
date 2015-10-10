@@ -138,6 +138,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                          folder_id=folder_id,
                          folder_name=folder_name)
                 thread = self.sync_engine_class(self.account_id,
+                                                self.namespace_id,
                                                 folder_name,
                                                 folder_id,
                                                 self.email_address,

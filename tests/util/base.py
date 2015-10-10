@@ -89,23 +89,17 @@ class TestWebhooksClient(object):
 
 
 class TestDB(object):
+    """
+    Creates a new, empty test database with table structure generated
+    from declarative model classes.
+
+    """
+    # STOPSHIP(emfree) hoist into module shareable with redwood.
     def __init__(self):
-        from inbox.ignition import main_engine
-        engine = main_engine()
-
-        # Set up test database
-        self.engine = engine
-
-        # Populate with test data
-        self.setup()
-
-    def setup(self):
+        from inbox.ignition import engine_manager
         from inbox.ignition import init_db
-        """
-        Creates a new, empty test database with table structure generated
-        from declarative model classes.
-
-        """
+        # Set up test database
+        self.engine = engine_manager.get_for_id(0)
         db_invocation = 'DROP DATABASE IF EXISTS test; ' \
                         'CREATE DATABASE IF NOT EXISTS test ' \
                         'DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE ' \
@@ -202,13 +196,12 @@ def generic_account(db):
 
 @fixture(scope='function')
 def gmail_account(db):
-    import platform
-    from inbox.models import Namespace
     from inbox.models.backends.gmail import GmailAccount
 
     account = db.session.query(GmailAccount).first()
     if account is None:
-        return add_fake_gmail_account(db.session, email_address='almondsunshine',
+        return add_fake_gmail_account(db.session,
+                                      email_address='almondsunshine',
                                       refresh_token='tearsofgold',
                                       password='COyPtHmj9E9bvGdN')
     return account
@@ -271,7 +264,7 @@ def add_fake_account(db_session, email_address='test@nilas.com'):
 def add_fake_gmail_account(db_session, email_address='test@nilas.com',
                            refresh_token='tearsofgold',
                            password='COyPtHmj9E9bvGdN'):
-    from inbox.models import Account, Namespace
+    from inbox.models import Namespace
     from inbox.models.backends.gmail import GmailAccount
     import platform
 

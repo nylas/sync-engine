@@ -18,7 +18,7 @@ except ImportError:
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.models.session import session_scope
+from inbox.models.session import global_session_scope
 from inbox.models import Account
 
 
@@ -36,7 +36,7 @@ def main(cmd, email_address, all):
     if cmd not in ('start', 'stop'):
         sys.exit('No such command.')
 
-    with session_scope() as db_session:
+    with global_session_scope() as db_session:
         accounts = []
 
         if all:

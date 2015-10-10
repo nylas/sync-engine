@@ -20,11 +20,15 @@ configure_logging(config.get('LOGLEVEL'))
 @click.argument('email_address')
 @click.option('--reauth', is_flag=True,
               help='Re-authenticate an account even if it already exists')
-def main(email_address, reauth):
+@click.option('--target', type=int, default=0,
+              help='Database shard id to target for the account')
+def main(email_address, reauth, target):
     """ Auth an email account. """
     preflight()
 
-    with session_scope() as db_session:
+    shard_id = target << 48
+
+    with session_scope(shard_id) as db_session:
         account = db_session.query(Account).filter_by(
             email_address=email_address).first()
         if account is not None and not reauth:

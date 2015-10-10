@@ -23,7 +23,7 @@ def folder_sync_engine(db):
     db.session.commit()
 
     engine = None
-    engine = FolderSyncEngine(account.id, "Inbox", 0,
+    engine = FolderSyncEngine(account.id, account.namespace.id, "Inbox", 0,
                               email, "fastmail",
                               None)
     return engine

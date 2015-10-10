@@ -8,6 +8,7 @@ from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync, GoogleEventSync
 from nylas.logging import get_logger
+from inbox.ignition import engine_manager
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
@@ -79,26 +80,32 @@ class SyncService(object):
         return (Account.id % total_cpus == cpu_id)
 
     def accounts_to_start(self):
-        with session_scope() as db_session:
-            start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
-                                                        self.total_cpus)
-            if config.get('SYNC_STEAL_ACCOUNTS', True):
-                q = db_session.query(Account).filter(
-                    Account.sync_host.is_(None),
-                    Account.sync_should_run,
-                    start_on_this_cpu)
-                unscheduled_accounts_exist = db_session.query(
-                    q.exists()).scalar()
-                if unscheduled_accounts_exist:
-                    # Atomically claim unscheduled syncs by setting sync_host.
-                    q.update({'sync_host': self.host},
-                             synchronize_session=False)
-                    db_session.commit()
+        accounts = []
+        for key in engine_manager.engines:
+            id_for_key = key << 48
+            with session_scope(id_for_key) as db_session:
+                start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
+                                                            self.total_cpus)
+                if config.get('SYNC_STEAL_ACCOUNTS', True):
+                    q = db_session.query(Account).filter(
+                        Account.sync_host.is_(None),
+                        Account.sync_should_run,
+                        start_on_this_cpu)
+                    unscheduled_accounts_exist = db_session.query(
+                        q.exists()).scalar()
+                    if unscheduled_accounts_exist:
+                        # Atomically claim unscheduled syncs by setting
+                        # sync_host.
+                        q.update({'sync_host': self.host},
+                                 synchronize_session=False)
+                        db_session.commit()
 
-            return [id_ for id_, in db_session.query(Account.id).filter(
-                Account.sync_should_run,
-                Account.sync_host == self.host,
-                start_on_this_cpu)]
+                accounts.extend([id_ for id_, in
+                                 db_session.query(Account.id).filter(
+                                     Account.sync_should_run,
+                                     Account.sync_host == self.host,
+                                     start_on_this_cpu)])
+        return accounts
 
     def _run_impl(self):
         """

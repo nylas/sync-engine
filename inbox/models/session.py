@@ -159,5 +159,9 @@ def global_session_scope():
         id_chooser=id_chooser,
         query_chooser=query_chooser,
         shards=shards)
-    yield session
-    session.commit()
+    # STOPSHIP(emfree): need instrumentation and proper exception handling
+    # here.
+    try:
+        yield session
+    finally:
+        session.close()

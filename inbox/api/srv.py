@@ -6,14 +6,11 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.api.kellogs import APIEncoder
 from nylas.logging import get_logger
 from inbox.models import Namespace, Account
-from inbox.models.session import session_scope
+from inbox.models.session import global_session_scope
 from inbox.api.validation import (bounded_str, ValidatableArgument,
                                   strict_parse_args, limit)
 from inbox.api.validation import valid_public_id
 from inbox.api.err import err
-
-from inbox.ignition import main_engine
-engine = main_engine()
 
 from ns_api import app as ns_api
 from ns_api import DEFAULT_LIMIT
@@ -50,15 +47,15 @@ def auth():
 
     if request.path.startswith('/n/'):
         ns_parts = filter(None, request.path.split('/'))
-        namespace_public_id = ns_parts[1]
-        valid_public_id(namespace_public_id)
+        g.namespace_public_id = ns_parts[1]
+        valid_public_id(g.namespace_public_id)
 
         # STOPSHIP(emfree): fix
-        with session_scope() as db_session:
+        with global_session_scope() as db_session:
             try:
                 namespace = db_session.query(Namespace) \
-                    .filter(Namespace.public_id == namespace_public_id).one()
-                g.namespace_public_id = namespace.public_id
+                    .filter(Namespace.public_id == g.namespace_public_id).one()
+                g.namespace_id = namespace.id
             except NoResultFound:
                 return err(404, "Unknown namespace ID")
 
@@ -71,12 +68,12 @@ def auth():
 
         g.namespace_public_id = request.authorization.username
 
-        # STOPSHIP(emfree): fix
-        with session_scope() as db_session:
+        with global_session_scope() as db_session:
             try:
                 valid_public_id(g.namespace_public_id)
                 namespace = db_session.query(Namespace) \
                     .filter(Namespace.public_id == g.namespace_public_id).one()
+                g.namespace_id = namespace.id
             except NoResultFound:
                 return make_response((
                     "Could not verify access credential.", 401,
@@ -103,8 +100,7 @@ def ns_all():
     # We do this outside the blueprint to support the case of an empty
     # public_id.  However, this means the before_request isn't run, so we need
     # to make our own session
-    # STOPSHIP(emfree): fix
-    with session_scope() as db_session:
+    with global_session_scope() as db_session:
         parser = reqparse.RequestParser(argument_class=ValidatableArgument)
         parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                             location='args')

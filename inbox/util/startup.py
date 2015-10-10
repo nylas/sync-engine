@@ -1,14 +1,9 @@
 # XXX(dlitz): Most of this is deployment-related stuff that belongs outside the
 # main Python invocation.
-import gc
 import os
 import sys
 import json
 import time
-
-import sqlalchemy
-from alembic.script import ScriptDirectory
-from alembic.config import Config as alembic_config
 
 from inbox.config import config
 
@@ -19,55 +14,6 @@ log = get_logger()
 def _absolute_path(relative_path):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         relative_path)
-
-
-def check_db():
-    """ Checks the database revision against the known alembic migrations. """
-    from inbox.ignition import main_engine
-    inbox_db_engine = main_engine(pool_size=1, max_overflow=0)
-
-    # top-level, with setup.sh
-    alembic_ini_path = os.environ.get("ALEMBIC_INI_PATH",
-                                      _absolute_path('../../alembic.ini'))
-    alembic_cfg = alembic_config(alembic_ini_path)
-
-    alembic_basedir = os.path.dirname(alembic_ini_path)
-    alembic_script_dir = os.path.join(
-        alembic_basedir,
-        alembic_cfg.get_main_option("script_location")
-    )
-
-    assert os.path.isdir(alembic_script_dir), \
-        'Must have migrations directory at {}'.format(alembic_script_dir)
-
-    try:
-        inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
-    except sqlalchemy.exc.OperationalError:
-        sys.exit("Databases don't exist! Run bin/create-db")
-
-    if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
-        res = inbox_db_engine.execute(
-            'SELECT version_num from alembic_version')
-        current_revision = [r for r in res][0][0]
-        assert current_revision, \
-            'Need current revision in alembic_version table...'
-
-        script = ScriptDirectory(alembic_script_dir)
-        head_revision = script.get_current_head()
-        log.info('Head database revision: {0}'.format(head_revision))
-        log.info('Current database revision: {0}'.format(current_revision))
-        # clean up a ton (8) of idle database connections
-        del script
-        gc.collect()
-
-        if current_revision != head_revision:
-            raise Exception(
-                'Outdated database! Migrate using `alembic upgrade head`')
-        else:
-            log.info('[OK] Database scheme matches latest')
-    else:
-        raise Exception(
-            'Un-stamped database! Run `bin/create-db`. bailing.')
 
 
 def check_sudo():
@@ -111,7 +57,6 @@ def load_overrides(file_path):
 
 def preflight():
     check_sudo()
-    check_db()
     check_tz()
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,

@@ -71,7 +71,8 @@ def _get_connection_pool(account_id, pool_size, pool_map, readonly):
     with _lock_map[account_id]:
         if account_id not in pool_map:
             pool_map[account_id] = CrispinConnectionPool(
-                account_id, num_connections=pool_size, readonly=readonly)
+                account_id, num_connections=pool_size,
+                readonly=readonly)
         return pool_map[account_id]
 
 

@@ -45,6 +45,7 @@ def test_initial_sync(db, generic_account, inbox_folder, mock_imapclient):
     mock_imapclient.add_folder_data(inbox_folder.name, uid_dict)
 
     folder_sync_engine = FolderSyncEngine(generic_account.id,
+                                          generic_account.namespace.id,
                                           inbox_folder.name,
                                           inbox_folder.id,
                                           generic_account.email_address,
@@ -70,6 +71,7 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
                                                  uidnext=1)
     db.session.commit()
     folder_sync_engine = FolderSyncEngine(generic_account.id,
+                                          generic_account.namespace.id,
                                           inbox_folder.name,
                                           inbox_folder.id,
                                           generic_account.email_address,
@@ -91,6 +93,7 @@ def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
                                                  uidnext=1)
     db.session.commit()
     folder_sync_engine = FolderSyncEngine(generic_account.id,
+                                          generic_account.namespace.id,
                                           inbox_folder.name,
                                           inbox_folder.id,
                                           generic_account.email_address,
@@ -117,6 +120,7 @@ def test_gmail_initial_sync(db, default_account, all_mail_folder,
     mock_imapclient.idle = lambda: None
 
     folder_sync_engine = GmailFolderSyncEngine(default_account.id,
+                                               default_account.namespace.id,
                                                all_mail_folder.name,
                                                all_mail_folder.id,
                                                default_account.email_address,
@@ -143,13 +147,15 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
     mock_imapclient.add_folder_data(trash_folder.name, {uid: uid_values})
 
     all_folder_sync_engine = GmailFolderSyncEngine(
-        default_account.id, all_mail_folder.name, all_mail_folder.id,
-        default_account.email_address, 'gmail', BoundedSemaphore(1))
+        default_account.id, default_account.namespace.id, all_mail_folder.name,
+        all_mail_folder.id, default_account.email_address, 'gmail',
+        BoundedSemaphore(1))
     all_folder_sync_engine.initial_sync()
 
     trash_folder_sync_engine = GmailFolderSyncEngine(
-        default_account.id, trash_folder.name, trash_folder.id,
-        default_account.email_address, 'gmail', BoundedSemaphore(1))
+        default_account.id, default_account.namespace.id, trash_folder.name,
+        trash_folder.id, default_account.email_address, 'gmail',
+        BoundedSemaphore(1))
     trash_folder_sync_engine.initial_sync()
 
     # Check that we have two uids, but just one message.

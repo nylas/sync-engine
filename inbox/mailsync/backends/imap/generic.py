@@ -106,10 +106,11 @@ FAST_REFRESH_INTERVAL = timedelta(seconds=30)
 
 class FolderSyncEngine(Greenlet):
     """Base class for a per-folder IMAP sync engine."""
-    def __init__(self, account_id, folder_name, folder_id, email_address,
-                 provider_name, syncmanager_lock):
+    def __init__(self, account_id, namespace_id, folder_name, folder_id,
+                 email_address, provider_name, syncmanager_lock):
         bind_context(self, 'foldersyncengine', account_id, folder_id)
         self.account_id = account_id
+        self.namespace_id = namespace_id
         self.folder_name = folder_name
         self.folder_id = folder_id
         if self.folder_name.lower() == 'inbox':
@@ -128,10 +129,6 @@ class FolderSyncEngine(Greenlet):
         self.is_first_message = False
 
         with session_scope(self.namespace_id) as db_session:
-            account = Account.get(self.account_id, db_session)
-            self.namespace_id = account.namespace.id
-            assert self.namespace_id is not None, "namespace_id is None"
-
             folder = Folder.get(self.folder_id, db_session)
             if folder:
                 self.is_initial_sync = folder.initial_sync_end is None
@@ -768,8 +765,7 @@ class FolderSyncEngine(Greenlet):
 def uidvalidity_cb(account_id, folder_name, select_info):
     assert folder_name is not None and select_info is not None, \
         "must start IMAP session before verifying UIDVALIDITY"
-    # STOPSHIP(emfree)
-    with session_scope() as db_session:
+    with session_scope(account_id) as db_session:
         saved_folder_info = common.get_folder_info(account_id, db_session,
                                                    folder_name)
         saved_uidvalidity = or_none(saved_folder_info, lambda i:

@@ -38,6 +38,7 @@ from inbox.sendmail.base import (create_message_from_json, update_draft,
                                  delete_draft, create_draft_from_mime,
                                  SendMailException)
 from nylas.logging import get_logger
+from inbox.ignition import engine_manager
 from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
 from inbox.search.base import get_search_client, SearchBackendException
@@ -47,8 +48,6 @@ from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 
 
-from inbox.ignition import main_engine
-engine = main_engine()
 log = get_logger()
 
 DEFAULT_LIMIT = 100
@@ -94,12 +93,11 @@ def pull_lang_code(endpoint, values):
 
 @app.before_request
 def start():
+    engine = engine_manager.get_for_id(g.namespace_id)
     g.db_session = new_session(engine)
     try:
         valid_public_id(g.namespace_public_id)
-        g.namespace = Namespace.from_public_id(g.namespace_public_id,
-                                               g.db_session)
-
+        g.namespace = g.db_session.query(Namespace).get(g.namespace_id)
         g.encoder = APIEncoder(g.namespace.public_id,
                                legacy_nsid=g.legacy_nsid)
     except NoResultFound:
