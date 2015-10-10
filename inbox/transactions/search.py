@@ -4,6 +4,7 @@ from sqlalchemy import asc, desc
 from sqlalchemy.orm import joinedload
 from gevent import Greenlet, sleep
 
+from inbox.util.itert import partition
 from inbox.models import Transaction, Contact
 from inbox.models.session import session_scope
 from inbox.models.search import ContactSearchIndexCursor
@@ -79,34 +80,27 @@ class ContactSearchIndexService(Greenlet):
 
         """
         docs = []
-        adds, deletes = 0, 0
         doc_service = get_doc_service()
-        for trx in transactions:
-            if trx.command == 'delete':
-                deletes += 1
-                doc = {'type': 'delete', 'id': trx.record_id}
-            else:
-                adds += 1
-                obj = db_session.query(Contact).options(
-                    joinedload("phone_numbers")).get(trx.record_id)
-                if obj is None:
-                    continue
-                doc = {'type': 'add', 'id': trx.record_id,
-                       'fields': cloudsearch_contact_repr(obj)}
-            docs.append(doc)
-
-            if len(docs) > self.chunk_size:
-                doc_service.upload_documents(
-                    documents=json.dumps(docs),
-                    contentType='application/json')
-                docs = []
+        add_txns, delete_txns = partition(
+            lambda trx: trx.command == 'delete', transactions)
+        delete_docs = [{'type': 'delete', 'id': txn.record_id}
+                       for txn in delete_txns]
+        add_record_ids = [txn.record_id for txn in add_txns]
+        add_records = db_session.query(Contact).options(
+            joinedload("phone_numbers")).filter(
+                Contact.id.in_(add_record_ids))
+        add_docs = [{'type': 'add', 'id': obj.id,
+                    'fields': cloudsearch_contact_repr(obj)}
+                    for obj in add_records]
+        docs = delete_docs + add_docs
 
         if docs:
             doc_service.upload_documents(
                 documents=json.dumps(docs),
                 contentType='application/json')
 
-        self.log.info('docs indexed', adds=adds, deletes=deletes)
+        self.log.info('docs indexed', adds=len(add_docs),
+                      deletes=len(delete_docs))
 
     def update_pointer(self, new_pointer, db_session):
         """
