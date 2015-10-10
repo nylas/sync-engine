@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Enum
+from sqlalchemy import Column, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -18,8 +18,7 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
         return self.type_
 
     # Need `use_alter` here to avoid circular dependencies
-    namespace_id = Column(Integer,
-                          ForeignKey('namespace.id', use_alter=True,
+    namespace_id = Column(ForeignKey('namespace.id', use_alter=True,
                                      name='category_fk1',
                                      ondelete='CASCADE'), nullable=False)
     namespace = relationship('Namespace', load_on_pending=True)

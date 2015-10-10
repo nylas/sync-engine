@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, ForeignKey
 
 from inbox.models.base import MailSyncBase
 from inbox.models.transaction import Transaction
@@ -10,5 +10,5 @@ class ContactSearchIndexCursor(MailSyncBase):
     Is namespace-agnostic.
 
     """
-    transaction_id = Column(Integer, ForeignKey(Transaction.id),
-                            nullable=True, index=True)
+    transaction_id = Column(ForeignKey(Transaction.id), nullable=True,
+                            index=True)

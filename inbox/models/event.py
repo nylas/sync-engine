@@ -334,7 +334,7 @@ class RecurringEvent(Event):
     __mapper_args__ = {'polymorphic_identity': 'recurringevent'}
     __table_args__ = None
 
-    id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'),
+    id = Column(ForeignKey('event.id', ondelete='CASCADE'),
                 primary_key=True)
     rrule = Column(String(RECURRENCE_MAX_LEN))
     exdate = Column(Text)  # There can be a lot of exception dates
@@ -424,7 +424,7 @@ class RecurringEventOverride(Event):
     """ Represents an individual one-off instance of a recurring event,
         including cancelled events.
     """
-    id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'),
+    id = Column(ForeignKey('event.id', ondelete='CASCADE'),
                 primary_key=True)
     __mapper_args__ = {'polymorphic_identity': 'recurringeventoverride',
                        'inherit_condition': (id == Event.id)}

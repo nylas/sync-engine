@@ -2,7 +2,7 @@ from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from random import shuffle
 
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, BigInteger, String, ForeignKey
 from sqlalchemy import DateTime
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.session import object_session
@@ -132,7 +132,7 @@ g_token_manager = GTokenManager()
 
 
 class GmailAccount(OAuthAccount, ImapAccount):
-    id = Column(Integer, ForeignKey(ImapAccount.id, ondelete='CASCADE'),
+    id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                 primary_key=True)
 
     __mapper_args__ = {'polymorphic_identity': 'gmailaccount'}
@@ -331,10 +331,10 @@ class GmailAuthCredentials(MailSyncBase):
     [auth_creds.refresh_token for auth_creds in g.auth_credentials]
 
     """
-    gmailaccount_id = Column(Integer,
+    gmailaccount_id = Column(BigInteger,
                              ForeignKey(GmailAccount.id, ondelete='CASCADE'),
                              nullable=False)
-    refresh_token_id = Column(Integer,
+    refresh_token_id = Column(BigInteger,
                               ForeignKey(Secret.id, ondelete='CASCADE'),
                               nullable=False)
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Column, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
 from inbox.models.backends.imap import ImapAccount
@@ -8,14 +8,14 @@ PROVIDER = 'generic'
 
 
 class GenericAccount(ImapAccount):
-    id = Column(Integer, ForeignKey(ImapAccount.id, ondelete='CASCADE'),
+    id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                 primary_key=True)
 
     provider = Column(String(64))
     supports_condstore = Column(Boolean)
 
     # Secret
-    password_id = Column(Integer, ForeignKey(Secret.id, ondelete='CASCADE'),
+    password_id = Column(ForeignKey(Secret.id, ondelete='CASCADE'),
                          nullable=False)
     secret = relationship('Secret', cascade='all, delete-orphan',
                           single_parent=True, uselist=False)

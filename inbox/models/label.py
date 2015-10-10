@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 
@@ -14,8 +14,7 @@ class Label(MailSyncBase):
     # TOFIX this causes an import error due to circular dependencies
     # from inbox.models.account import Account
     # `use_alter` required here to avoid circular dependency w/Account
-    account_id = Column(Integer,
-                        ForeignKey('account.id', use_alter=True,
+    account_id = Column(ForeignKey('account.id', use_alter=True,
                                    name='label_fk1',
                                    ondelete='CASCADE'), nullable=False)
     account = relationship(
@@ -31,7 +30,7 @@ class Label(MailSyncBase):
                   nullable=False)
     canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=True)
 
-    category_id = Column(Integer, ForeignKey(Category.id, ondelete='CASCADE'))
+    category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
         Category,
         backref=backref('labels',

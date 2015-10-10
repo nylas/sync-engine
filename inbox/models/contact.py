@@ -60,8 +60,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 class PhoneNumber(MailSyncBase):
     STRING_LENGTH = 64
 
-    contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
-                        index=True)
+    contact_id = Column(ForeignKey(Contact.id, ondelete='CASCADE'), index=True)
     contact = relationship(Contact,
                            backref=backref('phone_numbers',
                                            cascade='all, delete-orphan'))
@@ -82,9 +81,9 @@ class MessageContactAssociation(MailSyncBase):
     [assoc.message for assoc in c.message_associations if assoc.field ==
     ...  'to_addr']
     """
-    contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
+    contact_id = Column(ForeignKey(Contact.id, ondelete='CASCADE'),
                         primary_key=True)
-    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
+    message_id = Column(ForeignKey(Message.id, ondelete='CASCADE'),
                         primary_key=True)
     field = Column(Enum('from_addr', 'to_addr', 'cc_addr', 'bcc_addr', 'reply_to'))
     # Note: The `cascade` properties need to be a parameter of the backref

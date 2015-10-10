@@ -5,18 +5,16 @@ from contextlib import contextmanager
 from sqlalchemy import event
 from sqlalchemy.orm.session import Session
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.horizontal_shard import ShardedSession
 
 from inbox.config import config
-from inbox.ignition import main_engine
+from inbox.ignition import engine_manager
 from inbox.util.stats import statsd_client
 from nylas.logging import get_logger, find_first_app_frame_and_name
 log = get_logger()
 
 
 MAX_SANE_TRX_TIME_MS = 30000
-
-
-cached_engine = None
 
 
 def new_session(engine, versioned=True):
@@ -80,7 +78,7 @@ def new_session(engine, versioned=True):
 
 
 @contextmanager
-def session_scope(namespace_id=None, versioned=True, debug=False):
+def session_scope(id_, versioned=True):
     """
     Provide a transactional scope around a series of operations.
 
@@ -106,16 +104,8 @@ def session_scope(namespace_id=None, versioned=True, debug=False):
         The created session.
 
     """
-    global cached_engine
-    if cached_engine is None and not debug:
-        cached_engine = main_engine()
-        log.info("Don't yet have engine... creating default from ignition",
-                 engine=id(cached_engine))
-
-    if debug:
-        session = new_session(main_engine(echo=True), versioned)
-    else:
-        session = new_session(cached_engine, versioned)
+    engine = engine_manager.get_for_id(id_)
+    session = new_session(engine, versioned)
 
     try:
         if config.get('LOG_DB_SESSIONS'):
@@ -123,10 +113,10 @@ def session_scope(namespace_id=None, versioned=True, debug=False):
             calling_frame = sys._getframe().f_back.f_back
             call_loc = '{}:{}'.format(calling_frame.f_globals.get('__name__'),
                                       calling_frame.f_lineno)
-            logger = log.bind(engine_id=id(cached_engine),
+            logger = log.bind(engine_id=id(engine),
                               session_id=id(session), call_loc=call_loc)
             logger.info('creating db_session',
-                        sessions_used=cached_engine.pool.checkedout())
+                        sessions_used=engine.pool.checkedout())
         yield session
         session.commit()
     except BaseException as exc:
@@ -141,5 +131,33 @@ def session_scope(namespace_id=None, versioned=True, debug=False):
         if config.get('LOG_DB_SESSIONS'):
             lifetime = time.time() - start_time
             logger.info('closing db_session', lifetime=lifetime,
-                        sessions_used=cached_engine.pool.checkedout())
+                        sessions_used=engine.pool.checkedout())
         session.close()
+
+
+# GLOBAL (cross-shard) queries. USE WITH CAUTION.
+
+
+def shard_chooser(mapper, instance, clause=None):
+    return str(engine_manager.shard_key_for_id(instance.id))
+
+
+def id_chooser(query, ident):
+    # STOPSHIP(emfree): is ident a tuple here???
+    return [str(engine_manager.shard_key_for_id(ident))]
+
+
+def query_chooser(query):
+    return [str(k) for k in engine_manager.engines]
+
+
+@contextmanager
+def global_session_scope():
+    shards = {str(k): v for k, v in engine_manager.engines.items()}
+    session = ShardedSession(
+        shard_chooser=shard_chooser,
+        id_chooser=id_chooser,
+        query_chooser=query_chooser,
+        shards=shards)
+    yield session
+    session.commit()

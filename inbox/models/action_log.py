@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, Enum, Index, String
+from sqlalchemy import (Column, BigInteger, Integer, Text, ForeignKey, Enum,
+                        Index, String)
 from sqlalchemy.orm import relationship
 
 from inbox.api.err import ActionError
@@ -33,7 +34,7 @@ class ActionLog(MailSyncBase):
     namespace = relationship('Namespace')
 
     action = Column(Text(40), nullable=False)
-    record_id = Column(Integer, nullable=False)
+    record_id = Column(BigInteger, nullable=False)
     table_name = Column(Text(40), nullable=False)
     status = Column(Enum('pending', 'successful', 'failed'),
                     server_default='pending')

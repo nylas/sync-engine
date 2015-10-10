@@ -24,7 +24,7 @@ PROVIDER = 'imap'
 
 
 class ImapAccount(Account):
-    id = Column(Integer, ForeignKey(Account.id, ondelete='CASCADE'),
+    id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
                 primary_key=True)
 
     _imap_server_host = Column(String(255), nullable=True)
@@ -76,13 +76,13 @@ class ImapUid(MailSyncBase):
                         nullable=False)
     account = relationship(ImapAccount)
 
-    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
+    message_id = Column(ForeignKey(Message.id, ondelete='CASCADE'),
                         nullable=False)
     message = relationship(Message, backref=backref('imapuids',
                                                     passive_deletes=True))
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
-    folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),
+    folder_id = Column(ForeignKey(Folder.id, ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship(Folder, lazy='joined',
@@ -212,7 +212,7 @@ class ImapFolderInfo(MailSyncBase):
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
     account = relationship(ImapAccount)
-    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+    folder_id = Column(ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
     folder = relationship('Folder', backref=backref('imapfolderinfo',
                                                     uselist=False,
@@ -268,8 +268,7 @@ def _choose_existing_thread_for_gmail(message, db_session):
 
 class ImapThread(Thread):
     """ TODO: split into provider-specific classes. """
-    id = Column(Integer, ForeignKey(Thread.id, ondelete='CASCADE'),
-                primary_key=True)
+    id = Column(ForeignKey(Thread.id, ondelete='CASCADE'), primary_key=True)
 
     # Only on messages from Gmail
     #
@@ -327,7 +326,7 @@ class ImapFolderSyncStatus(MailSyncBase, HasRunState):
                            backref=backref('foldersyncstatuses',
                                            passive_deletes=True))
 
-    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+    folder_id = Column(ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined', backref=backref(
@@ -394,7 +393,7 @@ class ImapFolderSyncStatus(MailSyncBase, HasRunState):
 
 class LabelItem(MailSyncBase):
     """ Mapping between imapuids and labels. """
-    imapuid_id = Column(Integer, ForeignKey(ImapUid.id, ondelete='CASCADE'),
+    imapuid_id = Column(ForeignKey(ImapUid.id, ondelete='CASCADE'),
                         nullable=False)
     imapuid = relationship(
         'ImapUid',
@@ -402,8 +401,7 @@ class LabelItem(MailSyncBase):
                         collection_class=set,
                         cascade='all, delete-orphan'))
 
-    label_id = Column(Integer, ForeignKey(Label.id, ondelete='CASCADE'),
-                      nullable=False)
+    label_id = Column(ForeignKey(Label.id, ondelete='CASCADE'), nullable=False)
     label = relationship(
         Label,
         backref=backref('labelitems',

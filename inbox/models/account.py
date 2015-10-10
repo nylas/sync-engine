@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
-                        Enum, inspect, bindparam)
+from sqlalchemy import (Column, BigInteger, String, DateTime, Boolean,
+                        ForeignKey, Enum, inspect, bindparam)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import false
 
@@ -69,7 +69,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
     # DEPRECATED
     last_synced_events = Column(DateTime, nullable=True)
 
-    emailed_events_calendar_id = Column(Integer,
+    emailed_events_calendar_id = Column(BigInteger,
                                         ForeignKey('calendar.id',
                                                    ondelete='SET NULL',
                                                    use_alter=True,

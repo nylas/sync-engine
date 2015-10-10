@@ -4,7 +4,7 @@ refresh tokens.
 """
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -40,7 +40,7 @@ class OAuthAccount(object):
     # Secret
     @declared_attr
     def refresh_token_id(cls):
-        return Column(Integer, ForeignKey(Secret.id), nullable=False)
+        return Column(ForeignKey(Secret.id), nullable=False)
 
     @declared_attr
     def secret(cls):

@@ -83,12 +83,12 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
     """
     from inbox.models.session import session_scope
     from inbox.models import Account
-    from inbox.ignition import main_engine
+    from inbox.ignition import engine_manager
 
     # Bypass the ORM for performant bulk deletion;
     # we do /not/ want Transaction records created for these deletions,
     # so this is okay.
-    engine = main_engine()
+    engine = engine_manager.get_for_id(namespace_id)
 
     # Chunk delete for tables that might have a large concurrent write volume
     # to prevent those transactions from blocking.
