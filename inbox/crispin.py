@@ -29,13 +29,16 @@ import gevent
 from gevent import socket
 from gevent.lock import BoundedSemaphore
 from gevent.queue import Queue
+from sqlalchemy.orm import joinedload
 
 from inbox.util.concurrency import retry
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.basicauth import GmailSettingError
 from inbox.models.session import session_scope
-from inbox.models.account import Account
+from inbox.models.backends.imap import ImapAccount
+from inbox.models.backends.generic import GenericAccount
+from inbox.models.backends.gmail import GmailAccount
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -166,8 +169,9 @@ class CrispinConnectionPool(object):
 
     def _set_account_info(self):
         with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
+            account = db_session.query(ImapAccount).get(self.account_id)
             self.sync_state = account.sync_state
+            self.provider = account.provider
             self.provider_info = account.provider_info
             self.email_address = account.email_address
             self.auth_handler = account.auth_handler
@@ -179,8 +183,16 @@ class CrispinConnectionPool(object):
     def _new_raw_connection(self):
         """Returns a new, authenticated IMAPClient instance for the account."""
         with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
-            return self.auth_handler.connect_account(account)
+            if self.provider == 'gmail':
+                account = db_session.query(GmailAccount).options(
+                    joinedload(GmailAccount.auth_credentials)).get(
+                    self.account_id)
+            else:
+                account = db_session.query(GenericAccount).options(
+                    joinedload(GenericAccount.secret)).get(self.account_id)
+            db_session.expunge(account)
+
+        return self.auth_handler.connect_account(account)
 
     def _new_connection(self):
         conn = self._new_raw_connection()

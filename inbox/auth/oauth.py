@@ -1,18 +1,21 @@
 import urllib
-import requests
-from imapclient import IMAPClient
 import socket
 from simplejson import JSONDecodeError
+
+import requests
+from imapclient import IMAPClient
+
+from nylas.logging import get_logger
+log = get_logger()
 from inbox.auth.base import AuthHandler
 from inbox.basicauth import ConnectionError, OAuthError
 from inbox.models.backends.oauth import token_manager
-from nylas.logging import get_logger
-log = get_logger()
 
 
 class OAuthAuthHandler(AuthHandler):
     def connect_account(self, account):
-        """Returns an authenticated IMAP connection for the given account.
+        """
+        Returns an authenticated IMAP connection for the given account.
 
         Raises
         ------
@@ -23,6 +26,7 @@ class OAuthAuthHandler(AuthHandler):
             If another error occurred when fetching an access token.
         imapclient.IMAPClient.Error, socket.error
             If errors occurred establishing the connection or logging in.
+
         """
         conn = self._get_IMAP_connection(account)
         self._authenticate_IMAP_connection(account, conn)

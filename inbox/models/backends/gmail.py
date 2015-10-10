@@ -9,6 +9,7 @@ from sqlalchemy.orm.session import object_session
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from inbox.basicauth import ConnectionError, OAuthError
+from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import OAuthAccount
 from inbox.models.base import MailSyncBase
@@ -38,6 +39,7 @@ class GTokenManager(object):
     Necessary because google access tokens are only valid for certain
     scopes.
     Based off of TokenManager in inbox/backends/oauth.py
+
     """
     def __init__(self):
         self._tokens = defaultdict(dict)
@@ -58,7 +60,12 @@ class GTokenManager(object):
         try:
             gtoken = account.new_token(scope)
         except (ConnectionError, OAuthError):
-            object_session(account).commit()
+            if object_session(account):
+                object_session(account).commit()
+            else:
+                with session_scope() as db_session:
+                    db_session.merge(account)
+                    db_session.commit()
             raise
 
         self.cache_token(account, gtoken)
@@ -82,8 +89,8 @@ class GTokenManager(object):
         gtoken = self._get_token(account, scope, force_refresh=force_refresh)
         return gtoken.value, gtoken.auth_creds_id
 
-    def get_token_and_auth_creds_id_for_contacts(
-            self, account, force_refresh=False):
+    def get_token_and_auth_creds_id_for_contacts(self, account,
+                                                 force_refresh=False):
         return self.get_token_and_auth_creds_id(
                 account, GOOGLE_CONTACTS_SCOPE, force_refresh)
 
@@ -96,10 +103,11 @@ class GTokenManager(object):
 
     def get_token_for_calendars_restrict_ids(self, account, client_ids,
                                              force_refresh=False):
-        '''
+        """
         For the given account, returns an access token that's associated
         with a client id from the given list of client_ids.
-        '''
+
+        """
         scope = GOOGLE_CALENDAR_SCOPE
         if not force_refresh:
             try:
@@ -111,8 +119,7 @@ class GTokenManager(object):
 
         # Need to get access token for specific client_id/client_secret pair
         try:
-            gtoken = account.new_token(
-                    scope, client_ids=client_ids)
+            gtoken = account.new_token(scope, client_ids=client_ids)
         except (ConnectionError, OAuthError):
             object_session(account).commit()
             raise
@@ -180,10 +187,10 @@ class GmailAccount(OAuthAccount, ImapAccount):
 
         If no valid auth tokens are available, throws an OAuthError.
 
-        if client_ids is given, only looks at auth credentials with a client
+        If client_ids is given, only looks at auth credentials with a client
         id in client_ids.
-        """
 
+        """
         non_oauth_error = None
 
         possible_credentials = [
@@ -285,6 +292,7 @@ class GmailAccount(OAuthAccount, ImapAccount):
         max_time_between_syncs: a timedelta object. The maximum amount of
         time we should wait until we sync, even if we haven't received
         any push notifications
+
         """
         return (
             # Never synced
@@ -321,8 +329,8 @@ class GmailAuthCredentials(MailSyncBase):
 
     If g is a gmail account, you can get all of its refresh tokens w/
     [auth_creds.refresh_token for auth_creds in g.auth_credentials]
-    """
 
+    """
     gmailaccount_id = Column(Integer,
                              ForeignKey(GmailAccount.id, ondelete='CASCADE'),
                              nullable=False)
@@ -345,6 +353,7 @@ class GmailAuthCredentials(MailSyncBase):
         Secret,
         cascade='all, delete-orphan',
         single_parent=True,
+        lazy='joined',
         backref=backref('gmail_auth_credentials')
     )
 

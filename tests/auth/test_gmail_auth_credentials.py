@@ -1,12 +1,14 @@
 # -*- coding: UTF-8 -*-
+import pytest
+from sqlalchemy.orm import joinedload, object_session
+
 from inbox.auth.gmail import GmailAuthHandler
-from inbox.models.backends.gmail import GOOGLE_CALENDAR_SCOPE
-from inbox.models.backends.gmail import GOOGLE_CONTACTS_SCOPE
-from inbox.models.backends.gmail import GOOGLE_EMAIL_SCOPE
+from inbox.models.backends.gmail import (GOOGLE_CALENDAR_SCOPE,
+                                         GOOGLE_CONTACTS_SCOPE,
+                                         GOOGLE_EMAIL_SCOPE,
+                                         GmailAccount)
 from inbox.auth.gmail import g_token_manager
 from inbox.basicauth import OAuthError, ConnectionError
-import pytest
-
 
 ACCESS_TOKEN = 'this_is_an_access_token'
 
@@ -103,9 +105,7 @@ def account_with_single_auth_creds(db):
 
 @pytest.fixture
 def patch_access_token_getter(monkeypatch):
-
     class TokenGenerator:
-
         def __init__(self):
             self.revoked_refresh_tokens = []
             self.connection_error_tokens = []
@@ -217,8 +217,6 @@ def test_auth_revoke_different_order(
 
 
 def test_create_account(db):
-
-    # setup
     email = 'vault.test@localhost.com'
     resp = {'access_token': '',
             'expires_in': 3600,
@@ -318,7 +316,7 @@ def test_g_token_manager(
     refresh_token2 = account.auth_credentials[1].refresh_token
     g_token_manager.clear_cache(account)
 
-    # existing account w/ multiple crdentials, all valid
+    # existing account w/ multiple credentials, all valid
     assert (g_token_manager.get_token(account, GOOGLE_EMAIL_SCOPE) ==
             ACCESS_TOKEN)
     assert (g_token_manager.get_token(account, GOOGLE_CONTACTS_SCOPE) ==
@@ -341,7 +339,7 @@ def test_g_token_manager(
     with pytest.raises(OAuthError):
         g_token_manager.get_token(account, GOOGLE_CALENDAR_SCOPE)
 
-    # existing account w/ mutliple credentials: all invalid
+    # existing account w/ multiple credentials: all invalid
     patch_access_token_getter.revoke_refresh_token(refresh_token2)
     g_token_manager.clear_cache(account)
 
@@ -383,3 +381,35 @@ def test_new_token_with_non_oauth_error(
         g_token_manager.get_token(account, GOOGLE_EMAIL_SCOPE)
     db.session.refresh(account)
     assert len(account.valid_auth_credentials) == 1
+
+
+def test_invalid_token_during_connect(db, patch_access_token_getter,
+                                      account_with_single_auth_creds):
+    account_id = account_with_single_auth_creds.id
+
+    patch_access_token_getter.revoke_refresh_token(
+        account_with_single_auth_creds.auth_credentials[0].refresh_token)
+    account_with_single_auth_creds.verify_all_credentials()
+    assert len(account_with_single_auth_creds.valid_auth_credentials) == 0
+    g_token_manager.clear_cache(account_with_single_auth_creds)
+
+    # connect_account() takes an /expunged/ account object
+    # that has the necessary relationships eager-loaded
+    object_session(account_with_single_auth_creds).expunge(
+        account_with_single_auth_creds)
+    assert not object_session(account_with_single_auth_creds)
+
+    account = db.session.query(GmailAccount).options(
+        joinedload(GmailAccount.auth_credentials)).get(
+        account_id)
+    db.session.expunge(account)
+    assert not object_session(account)
+
+    g = GmailAuthHandler('gmail')
+
+    with pytest.raises(OAuthError):
+        g.connect_account(account)
+
+    invalid_account = db.session.query(GmailAccount).get(account_id)
+    for auth_creds in invalid_account.auth_credentials:
+        assert not auth_creds.is_valid
