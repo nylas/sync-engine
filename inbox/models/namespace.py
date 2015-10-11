@@ -30,6 +30,12 @@ class Namespace(MailSyncBase, HasPublicID):
             return self.account.email_address
 
     @classmethod
+    def get(cls, id_, session):
+        q = bakery(lambda session: session.query(cls))
+        q += lambda q: q.filter(cls.id == bindparam('id_'))
+        return q(session).params(id_=id_).first()
+
+    @classmethod
     def from_public_id(cls, public_id, db_session):
         q = bakery(lambda session: session.query(Namespace))
         q += lambda q: q.filter(

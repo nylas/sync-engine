@@ -85,7 +85,7 @@ if config.get('DEBUG_PROFILING_ON'):
 @app.url_value_preprocessor
 def pull_lang_code(endpoint, values):
     if 'namespace_public_id' in values:
-        g.namespace_public_id = values.pop('namespace_public_id')
+        values.pop('namespace_public_id')
         g.legacy_nsid = True
     else:
         g.legacy_nsid = False
@@ -95,26 +95,15 @@ def pull_lang_code(endpoint, values):
 def start():
     engine = engine_manager.get_for_id(g.namespace_id)
     g.db_session = new_session(engine)
-    try:
-        valid_public_id(g.namespace_public_id)
-        g.namespace = g.db_session.query(Namespace).get(g.namespace_id)
-        g.encoder = APIEncoder(g.namespace.public_id,
-                               legacy_nsid=g.legacy_nsid)
-    except NoResultFound:
-        raise NotFoundError("Couldn't find namespace  `{0}` ".format(
-            g.namespace_public_id))
-
+    g.namespace = Namespace.get(g.namespace_id, g.db_session)
+    g.encoder = APIEncoder(g.namespace.public_id,
+                           legacy_nsid=g.legacy_nsid)
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
-
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
     g.parser.add_argument('offset', default=0, type=offset, location='args')
-
-    if hasattr(g, 'namespace_public_id') and \
-            not g.namespace_public_id == g.namespace.public_id:
-        return err(404, "Unknown namespace ID")
 
 
 @app.after_request

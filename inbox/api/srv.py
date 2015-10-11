@@ -47,14 +47,13 @@ def auth():
 
     if request.path.startswith('/n/'):
         ns_parts = filter(None, request.path.split('/'))
-        g.namespace_public_id = ns_parts[1]
-        valid_public_id(g.namespace_public_id)
+        namespace_public_id = ns_parts[1]
+        valid_public_id(namespace_public_id)
 
-        # STOPSHIP(emfree): fix
         with global_session_scope() as db_session:
             try:
                 namespace = db_session.query(Namespace) \
-                    .filter(Namespace.public_id == g.namespace_public_id).one()
+                    .filter(Namespace.public_id == namespace_public_id).one()
                 g.namespace_id = namespace.id
             except NoResultFound:
                 return err(404, "Unknown namespace ID")
@@ -66,14 +65,15 @@ def auth():
                 {'WWW-Authenticate': 'Basic realm="API '
                  'Access Token Required"'}))
 
-        g.namespace_public_id = request.authorization.username
+        namespace_public_id = request.authorization.username
 
         with global_session_scope() as db_session:
             try:
-                valid_public_id(g.namespace_public_id)
+                valid_public_id(namespace_public_id)
                 namespace = db_session.query(Namespace) \
-                    .filter(Namespace.public_id == g.namespace_public_id).one()
+                    .filter(Namespace.public_id == namespace_public_id).one()
                 g.namespace_id = namespace.id
+                g.account_id = namespace.account.id
             except NoResultFound:
                 return make_response((
                     "Could not verify access credential.", 401,
