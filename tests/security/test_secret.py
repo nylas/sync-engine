@@ -4,6 +4,7 @@ import pytest
 from inbox.auth.gmail import GmailAuthHandler
 from inbox.models.secret import Secret
 
+SHARD_ID = 0
 ACCOUNT_ID = 1
 
 
@@ -72,7 +73,7 @@ def test_token(db, config, encrypt):
             'hd': ''}
     g = GmailAuthHandler('gmail')
     g.verify_config = lambda x: True
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
 
     db.session.add(account)
     db.session.commit()

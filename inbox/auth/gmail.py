@@ -9,8 +9,7 @@ from inbox.models.backends.gmail import g_token_manager
 from inbox.config import config
 from inbox.auth.base import account_or_none
 from inbox.auth.oauth import OAuthAuthHandler
-from inbox.basicauth import (OAuthError, ImapSupportDisabledError,
-                             AccountExistsError)
+from inbox.basicauth import OAuthError, ImapSupportDisabledError
 from inbox.util.url import url_concat
 from inbox.providers import provider_info
 from inbox.crispin import GmailCrispinClient
@@ -91,8 +90,8 @@ class GmailAuthHandler(OAuthAuthHandler):
                     # Instead of authentication_failed, report imap disabled
                     raise ImapSupportDisabledError('imap_disabled_for_account')
 
-    def get_account(self, email_address, response):
-        account = account_or_none(GmailAccount, email_address)
+    def get_account(self, target, email_address, response):
+        account = account_or_none(target, GmailAccount, email_address)
         if not account:
             account = self.create_account(email_address, response)
         account = self.update_account(account, response)
@@ -103,9 +102,6 @@ class GmailAuthHandler(OAuthAuthHandler):
         # provider and email_address has been checked by the caller;
         # callers may have different methods of performing the check
         # (redwood auth versus bin/inbox-auth)
-        # Therefore, here we only verify this is the case.
-        if account_or_none(GmailAccount, email_address) is not None:
-            raise AccountExistsError()
         namespace = Namespace()
         account = GmailAccount(namespace=namespace)
         return self.update_account(account, response)

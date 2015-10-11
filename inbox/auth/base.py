@@ -1,11 +1,8 @@
-import random
 from abc import ABCMeta, abstractmethod
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.config import config
-from inbox.models.session import (global_session_scope,
-                                  session_scope_by_shard_id)
+from inbox.models.session import session_scope
 from inbox.providers import providers
 from inbox.basicauth import NotSupportedError
 
@@ -46,11 +43,9 @@ def handler_from_provider(provider_name):
     return auth_handler
 
 
-# TODO[k]: Change this to accept a `target` shard_id and query ONLY that shard!
-# Do /not/ use global_session_scope().
-def account_or_none(cls, email_address):
+def account_or_none(target, cls, email_address):
     """
-    Query all shards to determine if an account with the given provider
+    Query the target shard to determine if an account with the given provider
     (as determined by the model cls to query) and email_address exists.
 
     Parameters
@@ -66,7 +61,8 @@ def account_or_none(cls, email_address):
         The Account if such an account exists, else None.
 
     """
-    with global_session_scope() as db_session:
+    shard_id = target << 48
+    with session_scope(shard_id) as db_session:
         try:
             account = db_session.query(cls).filter(
                 cls.email_address == email_address).one()
@@ -74,20 +70,6 @@ def account_or_none(cls, email_address):
             return
         db_session.expunge(account)
     return account
-
-
-def commit_account(account):
-    shards = config.get_required('DATABASES')
-    open_shards = [int(id_) for id_, params in shards.iteritems()
-                   if params['OPEN']]
-
-    # TODO[k]: Always pick min()instead?
-    shard_id = random.choice(open_shards)
-
-    with session_scope_by_shard_id(shard_id) as db_session:
-        db_session.add(account)
-        db_session.commit()
-        return account.id
 
 
 class AuthHandler(object):
@@ -108,7 +90,7 @@ class AuthHandler(object):
         raise NotImplementedError
 
     @abstractmethod
-    def get_account(self, email_address, response):
+    def get_account(self, target, email_address, response):
         """
         Return an account for the provider and email_address.
         This method is a wrapper around create_account() and update_account();

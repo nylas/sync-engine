@@ -13,7 +13,8 @@
     "1": {
         "DATABASE_NAME": "test_1",
         "HOSTNAME": "localhost",
-        "PORT": 3306
+        "PORT": 3306,
+        "OPEN": true
     }
 },
 

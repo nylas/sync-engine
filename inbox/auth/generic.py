@@ -8,8 +8,7 @@ log = get_logger()
 
 from inbox.auth.base import AuthHandler, account_or_none
 import inbox.auth.starttls  # noqa
-from inbox.basicauth import (ValidationError, UserRecoverableConfigError,
-                             AccountExistsError)
+from inbox.basicauth import ValidationError, UserRecoverableConfigError
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
@@ -20,8 +19,8 @@ AUTH_HANDLER_CLS = 'GenericAuthHandler'
 
 
 class GenericAuthHandler(AuthHandler):
-    def get_account(self, email_address, response):
-        account = account_or_none(GenericAccount, email_address)
+    def get_account(self, target, email_address, response):
+        account = account_or_none(target, GenericAccount, email_address)
         if not account:
             account = self.create_account(email_address, response)
         account = self.update_account(account, response)
@@ -32,9 +31,6 @@ class GenericAuthHandler(AuthHandler):
         # provider and email_address has been checked by the caller;
         # callers may have different methods of performing the check
         # (redwood auth versus get_account())
-        # Therefore, here we only verify this is the case.
-        if account_or_none(GenericAccount, email_address) is not None:
-            raise AccountExistsError()
         namespace = Namespace()
         account = GenericAccount(namespace=namespace)
         return self.update_account(account, response)

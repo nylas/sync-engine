@@ -3,13 +3,16 @@ import pytest
 from sqlalchemy.orm import joinedload, object_session
 
 from inbox.auth.gmail import GmailAuthHandler
+from inbox.models.session import session_scope
+from inbox.models.account import Account
 from inbox.models.backends.gmail import (GOOGLE_CALENDAR_SCOPE,
                                          GOOGLE_CONTACTS_SCOPE,
                                          GOOGLE_EMAIL_SCOPE,
                                          GmailAccount)
 from inbox.auth.gmail import g_token_manager
-from inbox.basicauth import OAuthError, ConnectionError, AccountExistsError
+from inbox.basicauth import OAuthError, ConnectionError
 
+SHARD_ID = 0
 ACCESS_TOKEN = 'this_is_an_access_token'
 
 
@@ -56,12 +59,12 @@ def account_with_multiple_auth_creds(db):
     g.verify_config = lambda x: True
 
     resp.update(first_auth_args)
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.add(account)
     db.session.commit()
 
     resp.update(second_auth_args)
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.add(account)
     db.session.commit()
 
@@ -96,7 +99,7 @@ def account_with_single_auth_creds(db):
     g = GmailAuthHandler('gmail')
     g.verify_config = lambda x: True
 
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.add(account)
     db.session.commit()
 
@@ -253,17 +256,21 @@ def test_create_account(db):
     account = g.create_account(email, resp)
     db.session.add(account)
     db.session.commit()
+    account_id = account.id
 
-    db.session.refresh(account)
-    assert len(account.auth_credentials) == 1
-    auth_creds = account.auth_credentials[0]
-    assert auth_creds.client_id == client_id_1
-    assert auth_creds.client_secret == client_secret_1
-    assert auth_creds.scopes == scopes_1_list
-    assert auth_creds.refresh_token == token_1
+    with session_scope(account_id) as db_session:
+        account = db_session.query(Account).filter(
+            Account.email_address == email).one()
 
-    with pytest.raises(AccountExistsError):
-        g.create_account(email, resp)
+        assert account.id == account_id
+        assert isinstance(account, GmailAccount)
+
+        assert len(account.auth_credentials) == 1
+        auth_creds = account.auth_credentials[0]
+        assert auth_creds.client_id == client_id_1
+        assert auth_creds.client_secret == client_secret_1
+        assert auth_creds.scopes == scopes_1_list
+        assert auth_creds.refresh_token == token_1
 
 
 def test_get_account(db):
@@ -300,7 +307,7 @@ def test_get_account(db):
     }
     resp.update(first_auth_args)
 
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.add(account)
     db.session.commit()
 
@@ -326,7 +333,7 @@ def test_get_account(db):
     }
     resp.update(second_auth_args)
 
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.merge(account)
     db.session.commit()
 
@@ -342,7 +349,7 @@ def test_get_account(db):
     # client_id/client_secret pair.
     resp.update(first_auth_args)
     resp['refresh_token'] = 'a new refresh token'
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.merge(account)
     db.session.commit()
 
@@ -350,7 +357,7 @@ def test_get_account(db):
 
     # Should still work okay if we don't get a refresh token back
     del resp['refresh_token']
-    account = g.get_account(email, resp)
+    account = g.get_account(SHARD_ID, email, resp)
     db.session.merge(account)
     db.session.commit()
 

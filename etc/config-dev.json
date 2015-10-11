@@ -3,22 +3,26 @@
     "0": {
         "DATABASE_NAME": "inbox",
         "HOSTNAME": "localhost",
-        "PORT": 3306
+        "PORT": 3306,
+        "OPEN": true
     },
     "1": {
         "DATABASE_NAME": "inbox_1",
         "HOSTNAME": "localhost",
-        "PORT": 3306
+        "PORT": 3306,
+        "OPEN": false
     },
     "2": {
         "DATABASE_NAME": "inbox_2",
         "HOSTNAME": "localhost",
-        "PORT": 3306
+        "PORT": 3306,
+        "OPEN": false
     },
     "3": {
         "DATABASE_NAME": "inbox_3",
         "HOSTNAME": "localhost",
-        "PORT": 3306
+        "PORT": 3306,
+        "OPEN": false
     }
 },
 

@@ -17,27 +17,31 @@ log = get_logger()
 MAX_SANE_TRX_TIME_MS = 30000
 
 
+def two_phase_session(engine_map, versioned=True):
+    """
+    Returns a session that implements two-phase-commit.
+    Parameters
+    ----------
+    engine_map: dict
+    Mapping of Table cls instance: database engine
+
+    versioned: bool
+
+    """
+    session = Session(binds=engine_map, twophase=True, autoflush=True,
+                      autocommit=False)
+    if versioned:
+        session = configure_versioning(session)
+        # TODO[k]: Metrics for transaction latencies!
+    return session
+
+
 def new_session(engine, versioned=True):
     """Returns a session bound to the given engine."""
     session = Session(bind=engine, autoflush=True, autocommit=False)
+
     if versioned:
-        from inbox.models.transaction import (create_revisions,
-                                              propagate_changes,
-                                              increment_versions)
-
-        @event.listens_for(session, 'before_flush')
-        def before_flush(session, flush_context, instances):
-            propagate_changes(session)
-            increment_versions(session)
-
-        @event.listens_for(session, 'after_flush')
-        def after_flush(session, flush_context):
-            """
-            Hook to log revision snapshots. Must be post-flush in order to
-            grab object IDs on new objects.
-
-            """
-            create_revisions(session)
+        configure_versioning(session)
 
         # Make statsd calls for transaction times
         transaction_start_map = {}
@@ -73,6 +77,27 @@ def new_session(engine, versioned=True):
             if latency > MAX_SANE_TRX_TIME_MS:
                 log.warning('Long transaction', latency=latency,
                             modname=modname, funcname=funcname)
+
+    return session
+
+
+def configure_versioning(session):
+    from inbox.models.transaction import (create_revisions, propagate_changes,
+                                          increment_versions)
+
+    @event.listens_for(session, 'before_flush')
+    def before_flush(session, flush_context, instances):
+        propagate_changes(session)
+        increment_versions(session)
+
+    @event.listens_for(session, 'after_flush')
+    def after_flush(session, flush_context):
+        """
+        Hook to log revision snapshots. Must be post-flush in order to
+        grab object IDs on new objects.
+
+        """
+        create_revisions(session)
 
     return session
 
@@ -138,7 +163,7 @@ def session_scope(id_, versioned=True):
 @contextmanager
 def session_scope_by_shard_id(shard_id, versioned=True):
     key = shard_id << 48
-    with session_scope(key) as db_session:
+    with session_scope(key, versioned) as db_session:
         yield db_session
 
 # GLOBAL (cross-shard) queries. USE WITH CAUTION.
@@ -150,6 +175,9 @@ def shard_chooser(mapper, instance, clause=None):
 
 def id_chooser(query, ident):
     # STOPSHIP(emfree): is ident a tuple here???
+    # TODO[k]: What if len(list) > 1?
+    if isinstance(ident, list) and len(ident) == 1:
+        ident = ident[0]
     return [str(engine_manager.shard_key_for_id(ident))]
 
 
