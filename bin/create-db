@@ -16,10 +16,17 @@ from inbox.sqlalchemy_ext.util import ForceStrictMode
 @click.option('--prod/--no-prod', default=False,
               help='Disable creating the test database for production '
                    'deployments')
-def main(prod):
+@click.option('--shards', default=None,
+              help='Limit database initialization to only these shards '
+                   '(comma-separated IDs)')
+def main(prod, shards):
+    if shards is not None:
+        shards = shards.split(',')
     database_params = config.get_required('DATABASES')
     database_users = config.get_required('DATABASE_USERS')
     for key, params in sorted(database_params.items()):
+        if shards and key not in shards:
+            continue
         mysql_user = database_users[key]['USER']
         mysql_password = database_users[key]['PASSWORD']
         base_uri = build_uri(username=mysql_user,
