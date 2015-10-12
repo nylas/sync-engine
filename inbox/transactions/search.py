@@ -4,9 +4,10 @@ from sqlalchemy import asc, desc
 from sqlalchemy.orm import joinedload
 from gevent import Greenlet, sleep
 
+from inbox.ignition import engine_manager
 from inbox.util.itert import partition
 from inbox.models import Transaction, Contact
-from inbox.models.session import session_scope
+from inbox.models.session import session_scope_by_shard_id
 from inbox.models.search import ContactSearchIndexCursor
 from inbox.contacts.search import (get_doc_service, DOC_UPLOAD_CHUNK_SIZE,
                                    cloudsearch_contact_repr)
@@ -25,7 +26,7 @@ class ContactSearchIndexService(Greenlet):
     def __init__(self, poll_interval=30, chunk_size=DOC_UPLOAD_CHUNK_SIZE):
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
-        self.transaction_pointer = None
+        self.transaction_pointers = {}
 
         self.log = log.new(component='contact-search-index')
         Greenlet.__init__(self)
@@ -35,43 +36,49 @@ class ContactSearchIndexService(Greenlet):
         Index into CloudSearch the contacts of all namespaces.
 
         """
-        with session_scope() as db_session:
-            pointer = db_session.query(ContactSearchIndexCursor).first()
-            if pointer:
-                self.transaction_pointer = pointer.transaction_id
-            else:
-                # Never start from 0; if the service hasn't run before start
-                # from the latest transaction, with the expectation that a
-                # backfill will be run separately.
-                latest_transaction = db_session.query(Transaction).order_by(
-                    desc(Transaction.created_at)).first()
-                self.transaction_pointer = latest_transaction.id
+        for key in engine_manager.engines:
+            with session_scope_by_shard_id(key) as db_session:
+                pointer = db_session.query(ContactSearchIndexCursor).first()
+                if pointer:
+                    self.transaction_pointers[key] = pointer.transaction_id
+                else:
+                    # Never start from 0; if the service hasn't run before
+                    # start from the latest transaction, with the expectation
+                    # that a backfill will be run separately.
+                    latest_transaction = db_session.query(Transaction). \
+                        order_by(desc(Transaction.created_at)).first()
+                    if latest_transaction:
+                        self.transaction_pointers[key] = latest_transaction.id
+                    else:
+                        self.transaction_pointers[key] = 0
 
         self.log.info('Starting contact-search-index service',
-                      transaction_pointer=self.transaction_pointer)
+                      transaction_pointers=self.transaction_pointers)
 
         while True:
-            with session_scope() as db_session:
-                transactions = db_session.query(Transaction). \
-                    filter(Transaction.id > self.transaction_pointer,
-                           Transaction.object_type == 'contact'). \
-                    with_hint(Transaction,
-                              "USE INDEX (ix_transaction_table_name)"). \
-                    order_by(asc(Transaction.id)). \
-                    limit(self.chunk_size). \
-                    options(joinedload(Transaction.namespace)).all()
+            for key in engine_manager.engines:
+                with session_scope_by_shard_id(key) as db_session:
+                    transactions = db_session.query(Transaction). \
+                        filter(Transaction.id > self.transaction_pointers[key],
+                               Transaction.object_type == 'contact'). \
+                        with_hint(Transaction,
+                                  "USE INDEX (ix_transaction_table_name)"). \
+                        order_by(asc(Transaction.id)). \
+                        limit(self.chunk_size). \
+                        options(joinedload(Transaction.namespace)).all()
 
-                # index up to chunk_size transactions
-                should_sleep = False
-                if transactions:
-                    self.index(transactions, db_session)
-                    new_pointer = transactions[-1].id
-                    self.update_pointer(new_pointer, db_session)
-                    db_session.commit()
-                else:
-                    should_sleep = True
-            if should_sleep:
-                sleep(self.poll_interval)
+                    # index up to chunk_size transactions
+                    should_sleep = False
+                    if transactions:
+                        self.index(transactions, db_session)
+                        new_pointer = transactions[-1].id
+                        self.update_pointer(new_pointer, key, db_session)
+                        db_session.commit()
+                    else:
+                        should_sleep = True
+                if should_sleep:
+                    log.info('sleeping')
+                    sleep(self.poll_interval)
 
     def index(self, transactions, db_session):
         """
@@ -102,7 +109,7 @@ class ContactSearchIndexService(Greenlet):
         self.log.info('docs indexed', adds=len(add_docs),
                       deletes=len(delete_docs))
 
-    def update_pointer(self, new_pointer, db_session):
+    def update_pointer(self, new_pointer, shard_key, db_session):
         """
         Persist transaction pointer to support restarts, update
         self.transaction_pointer.
@@ -113,4 +120,4 @@ class ContactSearchIndexService(Greenlet):
             pointer = ContactSearchIndexCursor()
             db_session.add(pointer)
         pointer.transaction_id = new_pointer
-        self.transaction_pointer = new_pointer
+        self.transaction_pointers[shard_key] = new_pointer
