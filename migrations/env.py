@@ -1,28 +1,11 @@
 from __future__ import with_statement
-import json
-import sys
-import os
 from alembic import context
 
 from logging.config import fileConfig
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-alembic_config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(alembic_config.config_file_name)
-
-# If alembic was invoked with --tag=test, override these main config values
-if context.get_tag_argument() == 'test':
-    from inbox.config import config
-    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-    config_path = os.path.join(root_path, 'etc', "config-%s.json" % 'test')
-    with open(config_path) as f:
-        config.update(json.load(f))
-        if not config.get('MYSQL_HOSTNAME') == "localhost":
-            sys.exit("Tests should only be run on localhost DB!")
-
+fileConfig(context.config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -32,10 +15,26 @@ target_metadata = MailSyncBase.metadata
 
 from inbox.ignition import engine_manager
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+
+# Alembic configuration is confusing. Here we look for a shard id both as a
+# "main option" (where it's programmatically set by bin/create-db), and in the
+# "x" argument, which is the primary facility for passing additional
+# command-line args to alembic. So you would do e.g.
+#
+# alembic -x shard_id=1 upgrade +1
+#
+# to target shard 1 for the migration.
+config_shard_id = context.config.get_main_option('shard_id')
+x_shard_id = context.get_x_argument(as_dictionary=True).get(
+    'shard_id')
+
+if config_shard_id is not None:
+    shard_id = int(config_shard_id)
+elif x_shard_id is not None:
+    shard_id = int(x_shard_id)
+else:
+    raise ValueError('No shard_id is configured for migration; '
+                     'run `alembic -x shard_id=<target shard id> upgrade +1`')
 
 
 def run_migrations_offline():
@@ -50,8 +49,7 @@ def run_migrations_offline():
     script output.
 
     """
-    # STOPSHIP(emfree): fix.
-    context.configure(engine=engine_manager.engines[0])
+    context.configure(engine=engine_manager.engines[shard_id])
 
     with context.begin_transaction():
         context.run_migrations()
@@ -64,7 +62,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    engine = engine_manager.engines[0]
+    engine = engine_manager.engines[shard_id]
 
     connection = engine.connect()
     context.configure(

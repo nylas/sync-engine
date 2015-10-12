@@ -21,7 +21,7 @@ gdata==2.0.18
 git+https://github.com/nylas/dateutil.git#egg=python-dateutil
 git+https://github.com/khamidou/flanker.git#egg=flanker
 hg+https://bitbucket.org/mjs0/imapclient@2290a2ab355484#egg=imapclient
-alembic==0.6.4
+alembic==0.6.5
 iconv==1.0
 pep8==1.4.6
 flake8==2.1.0
