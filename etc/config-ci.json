@@ -1,6 +1,6 @@
 {
 "MYSQL_DATABASE": "inbox",
-"MYSQL_HOSTNAME": "localhost",
+"MYSQL_HOSTNAME": "127.0.0.1",
 "MYSQL_PORT": 3306,
 
 "SYNC_STEAL_ACCOUNTS": true,
