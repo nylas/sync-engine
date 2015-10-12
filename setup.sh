@@ -86,6 +86,7 @@ apt-get -y install git \
                    libmysqlclient-dev \
                    gcc \
                    g++ \
+                   libzmq-dev \
                    libxml2-dev \
                    libxslt-dev \
                    lib32z1-dev \
@@ -298,17 +299,8 @@ mkdir -p /var/log/inboxapp
 chown $SUDO_UID:$SUDO_GID /var/log/inboxapp
 
 mkdir -p /etc/inboxapp
-
-echo 'copying config files'
-if [ -n $CI ]
-then
-    cp etc/config-ci.json /etc/inboxapp/config.json
-    cp etc/secrets-ci.yml /etc/inboxapp/secrets.yml
-else
-    cp etc/config-dev.json /etc/inboxapp/config.json
-    cp etc/secrets-dev.yml /etc/inboxapp/secrets.yml
-fi
-
+cp etc/config-dev.json /etc/inboxapp/config.json
+cp etc/secrets-dev.yml /etc/inboxapp/secrets.yml
 chown $SUDO_UID:$SUDO_GID /etc/inboxapp
 
 git config branch.master.rebase true
