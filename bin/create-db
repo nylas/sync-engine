@@ -32,8 +32,7 @@ def main(target_hostname):
             base_uri = build_uri(username=mysql_user,
                                  password=mysql_password,
                                  hostname=host['HOSTNAME'],
-                                 port=host['PORT'],
-                                 database_name='')
+                                 port=host['PORT'])
             base_engine = sqlalchemy.create_engine(
                 base_uri, listeners=[ForceStrictMode()])
 

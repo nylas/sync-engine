@@ -1,6 +1,8 @@
 import gevent
 from socket import gethostname
 from urllib import quote_plus as urlquote
+import MySQLdb
+import sqlalchemy.pool
 from sqlalchemy import create_engine, event
 
 from inbox.sqlalchemy_ext.util import ForceStrictMode
@@ -24,44 +26,52 @@ def gevent_waiter(fd, hub=gevent.hub.get_hub()):
     hub.wait(hub.loop.io(fd, 1))
 
 
-def build_uri(username, password, hostname, port, database_name):
+def build_uri(username, password, hostname, port):
     uri_template = 'mysql+mysqldb://{username}:{password}@{hostname}' \
-                   ':{port}/{database_name}?charset=utf8mb4'
+                   ':{port}/?charset=utf8mb4'
     return uri_template.format(username=urlquote(username),
                                password=urlquote(password),
                                hostname=urlquote(hostname),
-                               port=port,
-                               database_name=urlquote(database_name))
+                               port=port)
 
 
-def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
-           max_overflow=DB_POOL_MAX_OVERFLOW, pool_timeout=DB_POOL_TIMEOUT,
-           echo=False):
-    engine = create_engine(database_uri,
-                           listeners=[ForceStrictMode()],
+def engine(schema_name, host_uri, pool):
+    engine = create_engine(host_uri, pool=pool,
                            isolation_level='READ COMMITTED',
-                           echo=False,
-                           pool_size=pool_size,
-                           pool_timeout=pool_timeout,
-                           pool_recycle=3600,
-                           max_overflow=max_overflow,
                            connect_args={'charset': 'utf8mb4',
                                          'waiter': gevent_waiter})
+
+    @event.listens_for(engine, 'engine_connect')
+    def choose_schema(conn, branch):
+        # Issue a `USE <schema_name>` statement for the right shard if it's not
+        # already selected. Note that this must be registered as an
+        # `engine_connect` listener, because `checkout` listeners are attached
+        # directly to engine.pool, and hence cannot maintain engine-specific
+        # state if multiple engines share an underlying pool.
+        if conn.info.get('selected_db') != schema_name:
+            conn.connection.select_db(schema_name)
+            conn.info['selected_db'] = schema_name
+
+    @event.listens_for(engine, 'before_execute')
+    def check(*args, **kwargs):
+        # TODO(emfree): implement or discard.
+        pass
+
 
     @event.listens_for(engine, 'checkout')
     def receive_checkout(dbapi_connection, connection_record,
                          connection_proxy):
-        '''Log checkedout and overflow when a connection is checked out'''
         hostname = gethostname().replace(".", "-")
         process_name = str(config.get("PROCESS_NAME", "unknown"))
 
+        # Log pool checkedout and overflow metrics
         statsd_client.gauge(".".join(
-            ["dbconn", database_name, hostname, process_name,
+            ["dbconn", schema_name, hostname, process_name,
              "checkedout"]),
             connection_proxy._pool.checkedout())
 
         statsd_client.gauge(".".join(
-            ["dbconn", database_name, hostname, process_name,
+            ["dbconn", schema_name, hostname, process_name,
              "overflow"]),
             connection_proxy._pool.overflow())
 
@@ -69,7 +79,22 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
 
 
 class EngineManager(object):
+    """ The EngineManager is responsible for, well, managing a collection of
+    SQLAlchemy engines, one for each configured shard. In general, only one of
+    these should be instantiated per process."""
     def __init__(self, databases, users, include_disabled=False):
+        # Multiple shards can live on one MySQL instance. The engines for
+        # different shards on one instance share an underlying connection pool;
+        # we dynamically select the right shard on checkout.  To this end,
+        # self._pool_proxy here is an instance of sqlalchemy.pool._DBProxy:
+        # when passed to an engine constructor, it resolves to a single
+        # QueuePool instance for each distinct set of connection arguments,
+        # giving the desired pool-sharing behavior.
+        self._pool_proxy = sqlalchemy.pool.manage(
+            MySQLdb, pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW,
+            timeout=DB_POOL_TIMEOUT,
+            listeners=[ForceStrictMode()]
+        )
         self.engines = {}
         keys = set()
         schema_names = set()
@@ -97,12 +122,12 @@ class EngineManager(object):
                              key=key)
                     continue
 
-                uri = build_uri(username=username,
-                                password=password,
-                                database_name=schema_name,
-                                hostname=hostname,
-                                port=port)
-                self.engines[key] = engine(schema_name, uri)
+                host_uri = build_uri(username=username,
+                                     password=password,
+                                     hostname=hostname,
+                                     port=port)
+                self.engines[key] = engine(schema_name, host_uri,
+                                           pool=self._pool_proxy)
 
     def shard_key_for_id(self, id_):
         return id_ >> 48

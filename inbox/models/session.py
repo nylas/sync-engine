@@ -119,9 +119,6 @@ def session_scope(id_, versioned=True):
     ----------
     versioned : bool
         Do you want to enable the transaction log?
-    debug : bool
-        Do you want to turn on SQL echoing? Use with caution. Engine is not
-        cached in this case!
 
     Yields
     ------
