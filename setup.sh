@@ -274,14 +274,8 @@ if ! $prod; then
     mysqld_safe &
     sleep 10
 
-    db_name=`cat /etc/inboxapp/config.json  | grep "MYSQL_DATABASE" | awk '{ print $2 }' | sed "s/\"\(.*\)\",/\1/"`
-    if ! have_dbs=$(mysql -e "show databases like '$db_name'" | grep -q $db_name); then
-        color '35;1' 'Creating databases...'
-        python bin/create-db
-    else
-        color '35;1' 'Upgrading databases...'
-        alembic upgrade head
-    fi
+    python bin/create-db
+    python bin/create-test-db
 fi
 
 if [[ $(mysql --version) != *"5.6"* ]]

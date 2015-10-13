@@ -6,6 +6,8 @@ from sqlalchemy import create_engine, event
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 from inbox.config import config
 from inbox.util.stats import statsd_client
+from nylas.logging import get_logger
+log = get_logger()
 
 
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
@@ -65,20 +67,40 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
 
 
 class EngineManager(object):
-    def __init__(self, shard_params, users):
+    def __init__(self, databases, users, include_disabled=False):
         self.engines = {}
-        for key, params in shard_params.items():
-            database_name = params['DATABASE_NAME']
-            hostname = params['HOSTNAME']
-            port = params['PORT']
-            username = users[key]['USER']
-            password = users[key]['PASSWORD']
-            uri = build_uri(username=username,
-                            password=password,
-                            database_name=database_name,
-                            hostname=hostname,
-                            port=port)
-            self.engines[int(key)] = engine(database_name, uri)
+        keys = set()
+        schema_names = set()
+        for database in databases:
+            hostname = database['HOSTNAME']
+            port = database['PORT']
+            username = users[hostname]['USER']
+            password = users[hostname]['PASSWORD']
+            for shard in database['SHARDS']:
+                schema_name = shard['SCHEMA_NAME']
+                key = shard['ID']
+
+                # Perform some sanity checks on the configuration.
+                assert isinstance(key, int)
+                assert key not in keys, \
+                    'Shard key collision: key {} is repeated'.format(key)
+                assert schema_name not in schema_names, \
+                    'Shard name collision: {} is repeated'.format(schema_name)
+                keys.add(key)
+                schema_names.add(schema_name)
+
+                if shard.get('DISABLED') and not include_disabled:
+                    log.info('Not creating engine for disabled shard',
+                             schema_name=schema_name, hostname=hostname,
+                             key=key)
+                    continue
+
+                uri = build_uri(username=username,
+                                password=password,
+                                database_name=schema_name,
+                                hostname=hostname,
+                                port=port)
+                self.engines[key] = engine(schema_name, uri)
 
     def shard_key_for_id(self, id_):
         return id_ >> 48
@@ -86,7 +108,7 @@ class EngineManager(object):
     def get_for_id(self, id_):
         return self.engines[self.shard_key_for_id(id_)]
 
-engine_manager = EngineManager(config.get_required('DATABASES'),
+engine_manager = EngineManager(config.get_required('DATABASE_HOSTS'),
                                config.get_required('DATABASE_USERS'))
 
 

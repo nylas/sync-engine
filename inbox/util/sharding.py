@@ -8,9 +8,11 @@ def generate_open_shard_key():
     picked at random.
 
     """
-    shards = config.get_required('DATABASES')
-    open_shards = [int(id_) for id_, params in shards.iteritems()
-                   if params['OPEN']]
+    database_hosts = config.get_required('DATABASE_HOSTS')
+    open_shards = []
+    for host in database_hosts:
+        open_shards.extend(shard['ID'] for shard in host['SHARDS'] if
+                           shard['OPEN'] and not shard.get('DISABLED'))
 
     # TODO[k]: Always pick min()instead?
     shard_id = random.choice(open_shards)

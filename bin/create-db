@@ -8,80 +8,77 @@ import alembic.command
 
 from inbox.config import config
 
-from inbox.ignition import init_db, build_uri, engine_manager
+from inbox.ignition import init_db, build_uri, EngineManager
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 
 
 @click.command()
-@click.option('--prod/--no-prod', default=False,
-              help='Disable creating the test database for production '
-                   'deployments')
 @click.option('--shards', default=None,
               help='Limit database initialization to only these shards '
                    '(comma-separated IDs)')
-def main(prod, shards):
+def main(shards):
     if shards is not None:
-        shards = shards.split(',')
-    database_params = config.get_required('DATABASES')
+        target_shards = shards.split(',')
+    else:
+        target_shards = None
+    database_hosts = config.get_required('DATABASE_HOSTS')
     database_users = config.get_required('DATABASE_USERS')
-    for key, params in sorted(database_params.items()):
-        if shards and key not in shards:
-            continue
-        mysql_user = database_users[key]['USER']
-        mysql_password = database_users[key]['PASSWORD']
-        base_uri = build_uri(username=mysql_user,
-                             password=mysql_password,
-                             hostname=params['HOSTNAME'],
-                             port=params['PORT'],
-                             database_name='')
-        base_engine = sqlalchemy.create_engine(base_uri,
-                                               listeners=[ForceStrictMode()])
+    engine_manager = EngineManager(database_hosts, database_users,
+                                   include_disabled=True)
+    for host in database_hosts:
+        for shard in host['SHARDS']:
+            key = shard['ID']
+            assert isinstance(key, int)
+            if target_shards and str(key) not in target_shards:
+                continue
 
-        if not prod:
-            # Grant privileges for test user.
+            hostname = host['HOSTNAME']
+            mysql_user = database_users[hostname]['USER']
+            mysql_password = database_users[hostname]['PASSWORD']
+            base_uri = build_uri(username=mysql_user,
+                                 password=mysql_password,
+                                 hostname=host['HOSTNAME'],
+                                 port=host['PORT'],
+                                 database_name='')
+            base_engine = sqlalchemy.create_engine(
+                base_uri, listeners=[ForceStrictMode()])
+
+            schema_name = shard['SCHEMA_NAME']
+            print 'Creating database: {}'.format(schema_name)
             base_engine.execute(
-                "GRANT ALL PRIVILEGES ON test.* TO "
-                "inboxtest@localhost IDENTIFIED BY 'inboxtest'")
+                "CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
+                "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
+                format(schema_name))
             base_engine.execute(
-                "GRANT ALL PRIVILEGES ON test_1.* TO "
-                "inboxtest@localhost IDENTIFIED BY 'inboxtest'")
+                "GRANT ALL PRIVILEGES ON {schema_name}.* TO "
+                "{mysql_user}@localhost IDENTIFIED BY '{mysql_user}'".
+                format(mysql_user=mysql_user, schema_name=schema_name))
 
-        database_name = params['DATABASE_NAME']
-        print 'Creating database: {}'.format(database_name)
-        base_engine.execute(
-            "CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
-            "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
-            format(database_name))
-        base_engine.execute(
-            "GRANT ALL PRIVILEGES ON {database_name}.* TO "
-            "{mysql_user}@localhost IDENTIFIED BY '{mysql_user}'".
-            format(mysql_user=mysql_user,
-                   database_name=database_name))
+            engine = engine_manager.engines[int(key)]
 
-        engine = engine_manager.engines[int(key)]
+            # Stamp initial alembic revision
+            if engine.has_table("alembic_version"):
+                current_revision, = engine.execute(
+                    "SELECT version_num from alembic_version").fetchone()
+                assert current_revision, \
+                    'Need current revision in alembic_version table.'
+                print 'Already revisioned by alembic {0}'.format(
+                    current_revision)
+            else:
+                init_db(engine, int(key))
+                alembic_ini_filename = os.environ.get('ALEMBIC_INI_PATH',
+                                                      'alembic.ini')
+                assert os.path.isfile(alembic_ini_filename), \
+                    'Must have alembic.ini file at {0}'.format(
+                        alembic_ini_filename)
+                alembic_cfg = alembic.config.Config(alembic_ini_filename)
+                # Alembic option values need to be strings.
+                alembic_cfg.set_main_option('shard_id', str(key))
 
-        init_db(engine, int(key))
-        # Stamp initial alembic revision
-        if engine.has_table("alembic_version"):
-            current_revision, = engine.execute(
-                "SELECT version_num from alembic_version").fetchone()
-            assert current_revision, \
-                'Need current revision in alembic_version table.'
-            print 'Already revisioned by alembic {0}'.format(current_revision)
-        else:
-            alembic_ini_filename = os.environ.get('ALEMBIC_INI_PATH',
-                                                  'alembic.ini')
-            assert os.path.isfile(alembic_ini_filename), \
-                'Must have alembic.ini file at {0}'.format(
-                    alembic_ini_filename)
-            alembic_cfg = alembic.config.Config(alembic_ini_filename)
-            # Alembic option values need to be strings.
-            alembic_cfg.set_main_option('shard_id', str(key))
+                print 'Stamping with alembic revision'
+                alembic.command.stamp(alembic_cfg, "head")
 
-            print 'Stamping with alembic revision'
-            alembic.command.stamp(alembic_cfg, "head")
-
-        print 'Finished setting up database'
+            print 'Finished setting up database'
 
 
 if __name__ == '__main__':

@@ -22,7 +22,9 @@ def setup_test_db():
         subprocess.check_call('mysql -uinboxtest -pinboxtest '
                               '-e "{}"'.format(cmd), shell=True)
 
-    database_params = config.get_required('DATABASES')
-    for key in sorted(database_params):
-        engine = engine_manager.engines[int(key)]
-        init_db(engine, int(key))
+    database_hosts = config.get_required('DATABASE_HOSTS')
+    for host in database_hosts:
+        for shard in host['SHARDS']:
+            key = shard['ID']
+            engine = engine_manager.engines[key]
+            init_db(engine, key)
