@@ -13,7 +13,8 @@ fileConfig(context.config.config_file_name)
 from inbox.models.base import MailSyncBase
 target_metadata = MailSyncBase.metadata
 
-from inbox.ignition import engine_manager
+from inbox.config import config
+from inbox.ignition import EngineManager
 
 
 # Alembic configuration is confusing. Here we look for a shard id both as a
@@ -49,6 +50,9 @@ def run_migrations_offline():
     script output.
 
     """
+    engine_manager = EngineManager(config.get_required('DATABASE_HOSTS'),
+                                   config.get_required('DATABASE_USERS'),
+                                   include_disabled=True)
     context.configure(engine=engine_manager.engines[shard_id])
 
     with context.begin_transaction():
@@ -62,8 +66,11 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    engine = engine_manager.engines[shard_id]
+    engine_manager = EngineManager(config.get_required('DATABASE_HOSTS'),
+                                   config.get_required('DATABASE_USERS'),
+                                   include_disabled=True)
 
+    engine = engine_manager.engines[shard_id]
     connection = engine.connect()
     context.configure(
         connection=connection,
