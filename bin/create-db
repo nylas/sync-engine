@@ -13,25 +13,20 @@ from inbox.sqlalchemy_ext.util import ForceStrictMode
 
 
 @click.command()
-@click.option('--shards', default=None,
-              help='Limit database initialization to only these shards '
-                   '(comma-separated IDs)')
-def main(shards):
-    if shards is not None:
-        target_shards = shards.split(',')
-    else:
-        target_shards = None
+@click.option('--target-hostname', default=None,
+              help='Limit database initialization to only one host / '
+                   'set of shards')
+def main(target_hostname):
     database_hosts = config.get_required('DATABASE_HOSTS')
     database_users = config.get_required('DATABASE_USERS')
     engine_manager = EngineManager(database_hosts, database_users,
                                    include_disabled=True)
     for host in database_hosts:
+        if target_hostname is not None and host['HOSTNAME'] != target_hostname:
+            continue
         for shard in host['SHARDS']:
             key = shard['ID']
             assert isinstance(key, int)
-            if target_shards and str(key) not in target_shards:
-                continue
-
             hostname = host['HOSTNAME']
             mysql_user = database_users[hostname]['USER']
             mysql_password = database_users[hostname]['PASSWORD']
