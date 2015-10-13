@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, BigInteger, String, DateTime, Boolean,
-                        ForeignKey, Enum, inspect, bindparam)
+                        ForeignKey, Enum, inspect, bindparam, Index)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import false
 
@@ -294,3 +294,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}
+
+
+Index('ix_account_sync_should_run_sync_host', Account.sync_should_run,
+      Account.sync_host, mysql_length={'sync_host': 191})

@@ -551,6 +551,10 @@ Index('ix_message_namespace_id_deleted_at', Message.namespace_id,
 Index('ix_message_namespace_id_is_created', Message.namespace_id,
       Message.is_created)
 
+Index('ix_message_namespace_id_message_id_header_subject',
+      Message.namespace_id, Message.subject, Message.message_id_header,
+      mysql_length={'subject': 191, 'message_id_header': 191})
+
 
 class MessageCategory(MailSyncBase):
     """ Mapping between messages and categories. """

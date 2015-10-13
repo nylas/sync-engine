@@ -20,7 +20,7 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions):
         load_on_pending=True,
         backref=backref('calendars'))
 
-    name = Column(String(128), nullable=True)
+    name = Column(String(191), nullable=True)
     provider_name = Column(String(128), nullable=True, default='DEPRECATED')
     description = Column(Text, nullable=True)
 
