@@ -274,8 +274,8 @@ if ! $prod; then
     mysqld_safe &
     sleep 10
 
-    python bin/create-db
-    python bin/create-test-db
+    bin/create-db
+    bin/create-test-db
 fi
 
 if [[ $(mysql --version) != *"5.6"* ]]
