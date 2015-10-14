@@ -193,12 +193,6 @@ find . -name \*.pyc -delete
 color '35;1' 'Installing dependencies from pip...'
 SODIUM_INSTALL=system pip install -r requirements.txt
 
-pip install -e .
-if [ -d "../sync-engine-eas" ]; then
-    pip install -r ../sync-engine-eas/requirements.txt
-    pip install -e ../sync-engine-eas
-    python ../sync-engine-eas/bin/create-test-db
-fi
 color '35;1' 'Finished installing dependencies.'
 
 mkdir -p /etc/inboxapp
