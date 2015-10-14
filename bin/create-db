@@ -44,10 +44,6 @@ def main(target_hostname):
                 "CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
                 "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
                 format(schema_name))
-            base_engine.execute(
-                "GRANT ALL PRIVILEGES ON {schema_name}.* TO "
-                "{mysql_user}@localhost IDENTIFIED BY '{mysql_user}'".
-                format(mysql_user=mysql_user, schema_name=schema_name))
 
             engine = engine_manager.engines[int(key)]
 
