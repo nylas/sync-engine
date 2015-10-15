@@ -30,6 +30,10 @@ def main(prod, config):
         config_path = os.path.abspath(config)
         load_overrides(config_path)
 
+    if 'CONTACTS_SEARCH' in inbox_config and 'SENTRY_DSN' in \
+            inbox_config['CONTACTS_SEARCH']:
+        os.environ['SENTRY_DSN'] = inbox_config['CONTACTS_SEARCH']['SENTRY_DSN']
+
     # import here to make sure config overrides are loaded
     from inbox.transactions.search import ContactSearchIndexService
 
