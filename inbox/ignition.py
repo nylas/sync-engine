@@ -7,6 +7,8 @@ from inbox.sqlalchemy_ext.util import ForceStrictMode
 from inbox.config import config
 from inbox.util.stats import statsd_client
 from nylas.logging import get_logger
+from warnings import filterwarnings
+filterwarnings('ignore', message='Invalid utf8mb4 character string')
 log = get_logger()
 
 
