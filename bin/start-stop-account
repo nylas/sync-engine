@@ -15,11 +15,8 @@ def print_usage():
 
 
 def start_stop(options):
-    with session_scope() as db_session:
-        if options.email:
-            account = db_session.query(Account).filter(
-                Account.email_address == options.email).one()
-        elif options.account_id:
+    with session_scope(options.account_id) as db_session:
+        if options.account_id:
             account = db_session.query(Account).get(options.account_id)
         else:
             print_usage()
@@ -47,7 +44,6 @@ def main():
     parser.add_option('--start', action="store_true", default=False)
     parser.add_option('--stop', action="store_true", default=False)
     parser.add_option('--softdelete', action="store_true", default=False)
-    parser.add_option('--email', action="store", dest="email", default=None)
     parser.add_option('--id', action="store", dest="account_id", default=None)
     parser.add_option('--server', action="store", dest="server", default=None)
     parser.add_option('--stdin', action="store_true", default=False)
