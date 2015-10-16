@@ -5,19 +5,18 @@ from inbox.models.account import Account
 import optparse
 
 def print_usage():
-    print "usage:   start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
-    print "         start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
+    print "usage:   start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
     print "example: start-stop-account --stop --id 1000 --softdelete"
-    print "         start-stop-account --start --email karim@nylas.com"
     print "batch usage: start-stop-account also accepts tab-separated input on stdin."
     print "             echo 'karim@nylas.com	account_id' | start-stop-account --start --stdin"
     print "             bin/list-accounts --host precise64 --paying | start-stop-account --start --stdin"
 
 
 def start_stop(options):
-    with session_scope(options.account_id) as db_session:
+    account_id = int(options.account_id)
+    with session_scope(account_id) as db_session:
         if options.account_id:
-            account = db_session.query(Account).get(options.account_id)
+            account = db_session.query(Account).get(account_id)
         else:
             print_usage()
             sys.exit(-1)
