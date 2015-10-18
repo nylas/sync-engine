@@ -222,7 +222,7 @@ def thread_api(public_id):
 #
 # Update thread
 #
-@app.route('/threads/<public_id>', methods=['PUT'])
+@app.route('/threads/<public_id>', methods=['PUT', 'PATCH'])
 def thread_api_update(public_id):
     try:
         valid_public_id(public_id)

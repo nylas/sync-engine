@@ -74,7 +74,7 @@ def finish(response):
         response.headers['Access-Control-Allow-Headers'] = \
             'Authorization,Content-Type'
         response.headers['Access-Control-Allow-Methods'] = \
-            'GET,PUT,POST,DELETE,OPTIONS'
+            'GET,PUT,POST,DELETE,OPTIONS,PATCH'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
