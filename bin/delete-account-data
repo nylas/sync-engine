@@ -31,7 +31,7 @@ from inbox.heartbeat.status import clear_heartbeat_status
 @click.argument('account_id', type=int)
 @click.option('--dry-run', is_flag=True)
 def delete_account_data(account_id, dry_run):
-    with session_scope() as db_session:
+    with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
 
         if not account:
