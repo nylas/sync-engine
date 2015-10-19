@@ -86,7 +86,7 @@ def finish(response):
     origin = request.headers.get('origin')
     if origin:  # means it's just a regular request
         response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization'
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization,Content-Type'
         response.headers['Access-Control-Allow-Methods'] = \
             'GET,PUT,POST,DELETE,OPTIONS'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
