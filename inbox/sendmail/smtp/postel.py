@@ -267,8 +267,8 @@ class SMTPConnection(object):
             code, resp = self._try_xoauth2()
             # Propagate known temporary authentication issues as such.
             if code == SMTP_TEMP_AUTH_FAIL and resp.startswith('4.7.0'):
-                raise SendMailException('Temporary error authenticating with '
-                                        'the SMTP server', 503)
+                raise SendMailException('Temporary provider send '
+                                        'throttling', 429)
         if code != SMTP_AUTH_SUCCESS:
             raise SendMailException(
                 'Could not authenticate with the SMTP server.', 403)
