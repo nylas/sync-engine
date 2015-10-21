@@ -12,7 +12,7 @@ __all__ = ['api_client']
 
 
 FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg',
-             'andra-moi-ennepe.txt']
+             'andra-moi-ennepe.txt', 'long-non-ascii-filename.txt']
 
 
 @pytest.fixture
@@ -48,6 +48,8 @@ def uploaded_file_ids(api_client, files):
             filename = u'pièce-jointe.jpg'
         elif filename == 'andra-moi-ennepe.txt':
             filename = u'ἄνδρα μοι ἔννεπε'
+        elif filename == 'long-non-ascii-filename.txt':
+            filename = 100 * u'μ'
         data = {'file': (open(path, 'rb'), filename)}
         r = api_client.post_raw(upload_path, data=data)
         assert r.status_code == 200
@@ -166,6 +168,8 @@ def test_download(api_client, uploaded_file_ids, filename):
         filename = u'pièce-jointe.jpg'
     elif filename == 'andra-moi-ennepe.txt':
         filename = u'ἄνδρα μοι ἔννεπε'
+    elif filename == 'long-non-ascii-filename.txt':
+        filename = 100 * u'μ'
 
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data

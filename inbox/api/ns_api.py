@@ -1,8 +1,8 @@
+import base64
 import os
 import uuid
 import gevent
 import time
-from email.header import Header
 from datetime import datetime
 
 from flask import request, g, Blueprint, make_response, Response
@@ -1144,9 +1144,10 @@ def file_download_api(public_id):
     try:
         name = name.encode('latin-1')
     except UnicodeEncodeError:
-        name = Header(name, 'utf-8').encode()
+        name = '=?utf-8?b?' + base64.b64encode(name.encode('utf-8')) + '=?='
     response.headers['Content-Disposition'] = \
         'attachment; filename={0}'.format(name)
+
     g.log.info(response.headers)
     return response
 
