@@ -66,14 +66,14 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
     assert r.status_code == 200
 
     draft_resp = json.loads(r.data)
-    assert len(draft_resp['files']) == 4
+    assert len(draft_resp['files']) == len(uploaded_file_ids)
     d_id = draft_resp['id']
 
     results = api_client.get_data('/files?message_id={}'
                                   .format(d_id))
 
     assert all([d_id in f['message_ids'] for f in results])
-    assert len(results) == 4
+    assert len(results) == len(uploaded_file_ids)
 
     results = api_client.get_data('/files?message_id={}&limit=1'
                                   .format(d_id))
@@ -81,7 +81,7 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
 
     results = api_client.get_data('/files?message_id={}&offset=2'
                                   .format(d_id))
-    assert len(results) == 2
+    assert len(results) == 3
 
     results = api_client.get_data('/files?filename=LetMeSendYouEmail.wav')
     assert len(results) == 1
@@ -138,6 +138,8 @@ def test_get_with_id(api_client, uploaded_file_ids, filename):
         filename = u'pièce-jointe.jpg'
     elif filename == 'andra-moi-ennepe.txt':
         filename = u'ἄνδρα μοι ἔννεπε'
+    elif filename == 'long-non-ascii-filename.txt':
+        filename = 100 * u'μ'
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_data('/files/{}'.format(in_file['id']))
     assert data['filename'] == filename
