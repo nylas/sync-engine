@@ -1,9 +1,11 @@
 import os
+import time
 from hashlib import sha256
 
 from sqlalchemy import Column, Integer, String
 
 from inbox.config import config
+from inbox.util.stats import statsd_client
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -80,6 +82,8 @@ class Blob(object):
         assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
             'Need bucket name to store message data!'
 
+        start = time.time()
+
         # Boto pools connections at the class level
         conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
                             config.get('AWS_SECRET_ACCESS_KEY'))
@@ -94,6 +98,9 @@ class Blob(object):
         key = Key(bucket)
         key.key = self.data_sha256
         key.set_contents_from_string(data)
+        end = time.time()
+        latency_millis = (start - end) * 1000
+        statsd_client.timing('s3.save_latency', latency_millis)
 
     def _get_from_s3(self):
         if not self.data_sha256:
