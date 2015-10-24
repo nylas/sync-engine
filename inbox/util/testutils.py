@@ -1,16 +1,8 @@
 import subprocess
 
 
-def setup_test_db():
-    """
-    Creates a new, empty test database with table structure generated
-    from declarative model classes; returns an engine for that database.
-
-    """
-    from inbox.config import config
-    from inbox.ignition import engine_manager
-    from inbox.ignition import init_db
-
+def create_test_db():
+    """ Creates new, empty test databases. """
     # Hardcode this part instead of reading from config because the idea of a
     # general-purpose 'DROP DATABASE' function is unsettling
     for name in ('test', 'test_1'):
@@ -21,6 +13,19 @@ def setup_test_db():
 
         subprocess.check_call('mysql -uinboxtest -pinboxtest '
                               '-e "{}"'.format(cmd), shell=True)
+
+
+def setup_test_db():
+    """
+    Creates new, empty test databases with table structures generated
+    from declarative model classes.
+
+    """
+    from inbox.config import config
+    from inbox.ignition import engine_manager
+    from inbox.ignition import init_db
+
+    create_test_db()
 
     database_hosts = config.get_required('DATABASE_HOSTS')
     for host in database_hosts:

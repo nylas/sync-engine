@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import os
+
 import click
 import sqlalchemy
-
 import alembic.config
 import alembic.command
 
 from inbox.config import config
-
-from inbox.ignition import init_db, build_uri, EngineManager
+from inbox.ignition import init_db, build_uri, EngineManager, verify_db
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 
 
@@ -39,7 +38,9 @@ def main(target_hostname):
                 base_uri, listeners=[ForceStrictMode()])
 
             schema_name = shard['SCHEMA_NAME']
-            print 'Creating database: {}'.format(schema_name)
+            print 'Setting up database: {}'.format(schema_name)
+
+            # Create the database IF needed.
             base_engine.execute(
                 "CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
                 "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
@@ -47,29 +48,35 @@ def main(target_hostname):
 
             engine = engine_manager.engines[int(key)]
 
-            # Stamp initial alembic revision
-            if engine.has_table("alembic_version"):
+            if engine.has_table('alembic_version'):
+                # Verify alembic revision
                 current_revision, = engine.execute(
-                    "SELECT version_num from alembic_version").fetchone()
+                    'SELECT version_num from alembic_version').fetchone()
                 assert current_revision, \
                     'Need current revision in alembic_version table.'
-                print 'Already revisioned by alembic {0}'.format(
+                print 'Already revisioned by alembic version: {}'.format(
                     current_revision)
             else:
+                # Initialize shards, stamp alembic revision
+                print 'Initializing database.'
                 init_db(engine, int(key))
                 alembic_ini_filename = os.environ.get('ALEMBIC_INI_PATH',
                                                       'alembic.ini')
                 assert os.path.isfile(alembic_ini_filename), \
-                    'Must have alembic.ini file at {0}'.format(
+                    'Must have alembic.ini file at {}'.format(
                         alembic_ini_filename)
                 alembic_cfg = alembic.config.Config(alembic_ini_filename)
                 # Alembic option values need to be strings.
                 alembic_cfg.set_main_option('shard_id', str(key))
 
-                print 'Stamping with alembic revision'
+                print 'Stamping with alembic revision.'
                 alembic.command.stamp(alembic_cfg, "head")
 
-            print 'Finished setting up database'
+            # Verify the database has been set up with correct auto_increments.
+            print 'Verifying database.'
+            verify_db(engine, schema_name, int(key))
+
+            print 'Finished setting up database.\n'
 
 
 if __name__ == '__main__':

@@ -138,3 +138,28 @@ def init_db(engine, key=0):
                          format(tablename=table, increment=increment)))
 
     MailSyncBase.metadata.create_all(engine)
+
+
+def verify_db(engine, schema, key):
+    from inbox.models.base import MailSyncBase
+
+    query = """SELECT AUTO_INCREMENT from information_schema.TABLES where
+    table_schema='{}' AND table_name='{}';"""
+
+    verified = set()
+    for table in MailSyncBase.metadata.sorted_tables:
+        increment = engine.execute(query.format(schema, table)).scalar()
+        if increment is not None:
+            assert (increment >> 48) == key, \
+                'table: {}, increment: {}, key: {}'.format(table, increment, key)
+        else:
+            # We leverage the following invariants about the sync schema to make
+            # the assertion below: one, in the sync schema, a table's id column
+            # is assigned the auto_increment since we use this column as the
+            # primary_key. Two, the only tables that have a None auto_increment
+            # are inherited tables (like '*account', '*thread' '*actionlog',
+            # 'recurringevent*'), because their id column is instead a
+            # foreign_key on their parent's id column.
+            parent = list(table.columns['id'].foreign_keys)[0].column.table
+            assert parent in verified
+        verified.add(table)

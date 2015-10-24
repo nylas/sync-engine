@@ -71,6 +71,7 @@ setup(
              'bin/alive-dead-metrics',
              'bin/create-db',
              'bin/create-test-db',
+             'bin/verify-db',
              'bin/inbox-api',
              'bin/get-id',
              'bin/get-object',
