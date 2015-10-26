@@ -755,7 +755,8 @@ class GmailCrispinClient(CrispinClient):
         """
         data = self.conn.fetch(uids, ['FLAGS', 'X-GM-LABELS'])
         uid_set = set(uids)
-        return {uid: GmailFlags(ret['FLAGS'], ret['X-GM-LABELS'])
+        return {uid: GmailFlags(ret['FLAGS'],
+                                self._decode_labels(ret['X-GM-LABELS']))
                 for uid, ret in data.items() if uid in uid_set}
 
     def condstore_changed_flags(self, modseq):
@@ -773,7 +774,8 @@ class GmailCrispinClient(CrispinClient):
                 if not data_for_uid:
                     continue
                 ret = data_for_uid[uid]
-            results[uid] = GmailFlags(ret['FLAGS'], ret['X-GM-LABELS'])
+            results[uid] = GmailFlags(ret['FLAGS'],
+                                      self._decode_labels(ret['X-GM-LABELS']))
         return results
 
     def g_msgids(self, uids):
@@ -888,13 +890,14 @@ class GmailCrispinClient(CrispinClient):
             if uid not in uid_set:
                 continue
             msg = raw_messages[uid]
-            messages.append(RawMessage(uid=long(uid),
-                                       internaldate=msg['INTERNALDATE'],
-                                       flags=msg['FLAGS'],
-                                       body=msg['BODY[]'],
-                                       g_thrid=long(msg['X-GM-THRID']),
-                                       g_msgid=long(msg['X-GM-MSGID']),
-                                       g_labels=msg['X-GM-LABELS']))
+            messages.append(
+                RawMessage(uid=long(uid),
+                           internaldate=msg['INTERNALDATE'],
+                           flags=msg['FLAGS'],
+                           body=msg['BODY[]'],
+                           g_thrid=long(msg['X-GM-THRID']),
+                           g_msgid=long(msg['X-GM-MSGID']),
+                           g_labels=self._decode_labels(msg['X-GM-LABELS'])))
         return messages
 
     def g_metadata(self, uids):
@@ -938,3 +941,6 @@ class GmailCrispinClient(CrispinClient):
     def find_by_header(self, header_name, header_value):
         criteria = ['HEADER {} {}'.format(header_name, header_value)]
         return self.conn.search(criteria)
+
+    def _decode_labels(self, labels):
+        return map(imapclient.imap_utf7.decode, labels)

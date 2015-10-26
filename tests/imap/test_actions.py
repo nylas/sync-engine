@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
+import mock
 from flanker import mime
 from inbox.actions.backends.generic import (remote_update_draft,
                                             remote_save_draft)
+from inbox.actions.backends.gmail import remote_change_labels
 from tests.imap.data import mock_imapclient
+from tests.util.base import add_fake_imapuid
 from inbox.crispin import writable_connection_pool
 from inbox.sendmail.base import create_message_from_json, update_draft
 
@@ -49,3 +53,18 @@ def test_draft_updates(db, default_account, mock_imapclient):
         expected_message_id = '<{}-{}@mailer.nylas.com>'.format(
             draft.public_id, draft.version)
         assert parsed.headers.get('Message-Id') == expected_message_id
+
+
+def test_change_labels(db, default_account, message, folder, mock_imapclient):
+    mock_imapclient.add_folder_data(folder.name, {})
+    mock_imapclient.add_gmail_labels = mock.Mock()
+    mock_imapclient.remove_gmail_labels = mock.Mock()
+    add_fake_imapuid(db.session, default_account.id, message, folder, 22)
+
+    remote_change_labels(default_account, message.id,
+                         db.session,
+                         removed_labels=['\\Inbox'],
+                         added_labels=[u'motörhead', u'μετάνοια'])
+    mock_imapclient.add_gmail_labels.assert_called_with(
+        [22], ['mot&APY-rhead', '&A7wDtQPEA6wDvQO,A7kDsQ-'])
+    mock_imapclient.remove_gmail_labels.assert_called_with([22], ['\\Inbox'])

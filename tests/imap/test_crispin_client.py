@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Basic tests for GmailCrispinClient/CrispinClient methods. We replace
 imapclient.IMAPClient._imap by a mock in order to test these. In particular, we
@@ -42,12 +43,15 @@ def constants():
     modseq = 95020
     size = 16384
     flags = ()
-    g_labels = ()
+    raw_g_labels = '(mot&APY-rhead &A7wDtQPEA6wDvQO,A7kDsQ- \\Inbox)'
+    unicode_g_labels = [u'motörhead', u'μετάνοια', '\\Inbox']
+
     internaldate = '02-Mar-2015 23:36:20 +0000'
     body = 'Delivered-To: ...'
     body_size = len(body)
     return dict(g_msgid=g_msgid, g_thrid=g_thrid, seq=seq, uid=uid,
-                modseq=modseq, size=size, flags=flags, g_labels=g_labels,
+                modseq=modseq, size=size, flags=flags,
+                raw_g_labels=raw_g_labels, unicode_g_labels=unicode_g_labels,
                 body=body, body_size=body_size, internaldate=internaldate)
 
 
@@ -91,13 +95,13 @@ def test_g_metadata(gmail_client, constants):
 
 
 def test_gmail_flags(gmail_client, constants):
-    expected_resp = '{seq} (FLAGS {flags} X-GM-LABELS {g_labels} ' \
+    expected_resp = '{seq} (FLAGS {flags} X-GM-LABELS {raw_g_labels} ' \
                     'UID {uid} MODSEQ ({modseq}))'.format(**constants)
     unsolicited_resp = '1198 (UID 1731 MODSEQ (95244) FLAGS (\\Seen))'
     patch_imap4(gmail_client, [expected_resp, unsolicited_resp])
     uid = constants['uid']
     flags = constants['flags']
-    g_labels = constants['g_labels']
+    g_labels = constants['unicode_g_labels']
     assert gmail_client.flags([uid]) == {uid: GmailFlags(flags, g_labels)}
 
 
@@ -113,7 +117,7 @@ def test_g_msgids(gmail_client, constants):
 
 def test_gmail_body(gmail_client, constants):
     expected_resp = ('{seq} (X-GM-MSGID {g_msgid} X-GM-THRID {g_thrid} '
-                     'X-GM-LABELS {g_labels} UID {uid} MODSEQ ({modseq}) '
+                     'X-GM-LABELS {raw_g_labels} UID {uid} MODSEQ ({modseq}) '
                      'INTERNALDATE "{internaldate}" FLAGS {flags} '
                      'BODY[] {{{body_size}}}'.format(**constants),
                      constants['body'])
@@ -122,7 +126,7 @@ def test_gmail_body(gmail_client, constants):
 
     uid = constants['uid']
     flags = constants['flags']
-    g_labels = constants['g_labels']
+    g_labels = constants['unicode_g_labels']
     g_thrid = constants['g_thrid']
     g_msgid = constants['g_msgid']
     body = constants['body']
