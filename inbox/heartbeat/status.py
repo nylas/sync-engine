@@ -21,11 +21,11 @@ class DeviceHeartbeatStatus(object):
     def __init__(self, device_id, device_status, threshold=ALIVE_THRESHOLD):
         self.id = device_id
         try:
-            self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
-                                                  '%Y-%m-%d %H:%M:%S.%f')
+            self.heartbeat_at = datetime.strptime(
+                device_status['heartbeat_at'], '%Y-%m-%d %H:%M:%S.%f')
         except ValueError:
-            self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
-                                                  '%Y-%m-%d %H:%M:%S')
+            self.heartbeat_at = datetime.strptime(
+                device_status['heartbeat_at'], '%Y-%m-%d %H:%M:%S')
         self.state = device_status.get('state', None)
         time_since_heartbeat = (datetime.utcnow() - self.heartbeat_at)
         self.alive = time_since_heartbeat < threshold
@@ -153,8 +153,8 @@ def get_ping_status(host=None, port=6379, account_id=None,
     if account_id:
         # Get a single account's heartbeat
         folder_heartbeats = store.get_account_folders(account_id)
-        folders = [FolderPing(int(id), ts > expiry, ts)
-                   for (id, ts) in folder_heartbeats]
+        folders = [FolderPing(int(aid), ts > expiry, ts)
+                   for (aid, ts) in folder_heartbeats]
         account_ts = store.get_account_timestamp(account_id)
         account = AccountPing(account_id, account_ts > expiry, account_ts,
                               folders)
@@ -163,11 +163,14 @@ def get_ping_status(host=None, port=6379, account_id=None,
         # Start from the account index
         account_heartbeats = store.get_account_list()
         accounts = {}
-        for (account_id, account_ts) in account_heartbeats:
+        # grab the folders from all accounts in one batch
+        all_folder_heartbeats = store.get_accounts_folders(
+            [aid for aid, ts in account_heartbeats])
+        for i, (account_id, account_ts) in enumerate(account_heartbeats):
             account_id = int(account_id)
-            folder_heartbeats = store.get_account_folders(account_id)
-            folders = [FolderPing(int(id), ts > expiry, ts)
-                       for (id, ts) in folder_heartbeats]
+            folder_heartbeats = all_folder_heartbeats[i]
+            folders = [FolderPing(int(aid), ts > expiry, ts)
+                       for (aid, ts) in folder_heartbeats]
             account = AccountPing(account_id, account_ts > expiry, account_ts,
                                   folders)
             accounts[account_id] = account

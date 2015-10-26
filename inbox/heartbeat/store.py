@@ -222,6 +222,19 @@ class HeartbeatStore(object):
     def get_account_folders(self, account_id, timestamp_threshold=None):
         return self.get_index(account_id, timestamp_threshold)
 
+    def get_accounts_folders(self, account_ids, timestamp_threshold=None):
+        # Preferred method of querying for multiple accounts. Uses pipelining
+        # to reduce the number of requests to redis.
+        pipe = self.client.pipeline()
+        if not timestamp_threshold:
+            for index in account_ids:
+                pipe.zrange(index, 0, -1, withscores=True)
+        else:
+            for index in account_ids:
+                lower_bound = time.time() - timestamp_threshold
+                pipe.zrangebyscore(index, lower_bound, '+inf', withscores=True)
+        return pipe.execute()
+
     def get_single_folder(self, account_id):
         try:
             folder_id = self.client.zrange(account_id, 0, 0)[0]
