@@ -36,7 +36,7 @@ SMTP_OVER_SSL_TEST_PORT = 64465
 # https://support.google.com/a/answer/3726730?hl=en
 SMTP_AUTH_SUCCESS = 235
 SMTP_AUTH_CHALLENGE = 334
-SMTP_TEMP_AUTH_FAIL = 454
+SMTP_TEMP_AUTH_FAIL_CODES = (421, 454)
 
 
 class _TokenManagerWrapper:
@@ -266,9 +266,9 @@ class SMTPConnection(object):
             self._smtp_oauth2_try_refresh()
             code, resp = self._try_xoauth2()
             # Propagate known temporary authentication issues as such.
-            if code == SMTP_TEMP_AUTH_FAIL and resp.startswith('4.7.0'):
-                raise SendMailException('Temporary provider send '
-                                        'throttling', 429)
+            if code in SMTP_TEMP_AUTH_FAIL_CODES and resp.startswith('4.7.0'):
+                raise SendMailException('Temporary provider send throttling',
+                                        429)
         if code != SMTP_AUTH_SUCCESS:
             raise SendMailException(
                 'Could not authenticate with the SMTP server.', 403)
