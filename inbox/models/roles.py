@@ -99,7 +99,7 @@ class Blob(object):
         key.key = self.data_sha256
         key.set_contents_from_string(data)
         end = time.time()
-        latency_millis = (start - end) * 1000
+        latency_millis = (end - start) * 1000
         statsd_client.timing('s3.save_latency', latency_millis)
 
     def _get_from_s3(self):
