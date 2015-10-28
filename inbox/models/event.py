@@ -280,8 +280,9 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                 if isinstance(r, str):
                     r = [r]
                 return r
-            except ValueError:
-                log.warn('Invalid RRULE entry for event', event_id=self.id)
+            except (ValueError, SyntaxError):
+                log.warn('Invalid RRULE entry for event', event_id=self.id,
+                         raw_rrule=self.recurrence)
                 return []
         return []
 
