@@ -26,7 +26,7 @@ def main(account_id, host):
             print "Account {} not found".format(account_id)
             sys.exit(22)
 
-        account.disable_sync()
+        account.disable_sync(reason='Migrating')
         mailsync_session.commit()
 
         # wait until sync is stopped

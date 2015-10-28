@@ -42,7 +42,7 @@ def main(from_host, to_host, num_accounts, from_core):
             sys.exit(0)
 
         for account in accounts_to_move:
-            account.disable_sync()
+            account.disable_sync(reason='Migrating')
 
         mailsync_session.commit()
 

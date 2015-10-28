@@ -61,7 +61,7 @@ def test_dont_start_disabled_accounts(db, config, default_account):
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
     default_account.sync_host = None
-    default_account.disable_sync()
+    default_account.disable_sync(reason='testing')
     db.session.commit()
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss.accounts_to_start() == []
@@ -69,7 +69,7 @@ def test_dont_start_disabled_accounts(db, config, default_account):
     assert default_account.sync_should_run is False
 
     default_account.sync_host = platform.node()
-    default_account.disable_sync()
+    default_account.disable_sync('testing')
     db.session.commit()
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss.accounts_to_start() == []

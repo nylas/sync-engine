@@ -70,7 +70,7 @@ def test_imap_folder_sync_enabled(db, default_account):
     assert all([fs.sync_enabled for fs in default_account.foldersyncstatuses])
 
     # Disable sync. Folders should now not have sync_enabled.
-    default_account.disable_sync()
+    default_account.disable_sync('testing')
     db.session.commit()
 
     assert all([not fs.sync_enabled
