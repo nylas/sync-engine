@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from flanker import mime
 from inbox.util.testutils import setup_test_db
 from pytest import fixture, yield_fixture
+from random import getrandbits
 
 
 def absolute_path(path):
@@ -282,7 +283,8 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.body = body
     m.snippet = snippet
     m.subject = subject
-    m.g_msgid = g_msgid
+    m.g_msgid = g_msgid or getrandbits(32)
+    m.g_thrid = getrandbits(32)  # not perfect, but we're manually threading
 
     if thread:
         thread.messages.append(m)
@@ -481,6 +483,8 @@ def new_message_from_synced(db, default_account, mime_message):
     assert new_msg.received_date == received_date
     new_msg.is_read = True
     new_msg.is_starred = False
+    new_msg.g_msgid = getrandbits(32)
+    new_msg.g_thrid = getrandbits(32)
     return new_msg
 
 

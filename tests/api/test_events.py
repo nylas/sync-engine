@@ -42,6 +42,10 @@ def test_api_list(db, api_client, calendar):
 
     event_ids = [event['id'] for event in event_list]
 
+    # Test provider_id being in there
+    event_list = api_client.get_data('/events?view=expanded')
+    assert all(['provider_id' in event for event in event_list])
+
     for e_id in event_ids:
         ev = db.session.query(Event).filter_by(public_id=e_id).one()
         db.session.delete(ev)
@@ -70,6 +74,9 @@ def test_api_get(db, api_client, calendar):
 
         if event['title'] == 'subj2':
             c2found = True
+
+        event = api_client.get_data('/events/{}?view=expanded'.format(c_id))
+        assert 'provider_id' in event
 
     assert c1found
     assert c2found

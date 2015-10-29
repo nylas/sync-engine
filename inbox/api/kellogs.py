@@ -186,6 +186,8 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
                 'In-Reply-To': obj.in_reply_to,
                 'References': obj.references
             }
+            if obj.namespace.account.provider == 'gmail' and obj.g_msgid:
+                resp['provider_id'] = str(obj.g_msgid)
 
         return resp
 
@@ -223,6 +225,11 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         # Expand messages within threads
         all_expanded_messages = []
         all_expanded_drafts = []
+
+        if obj.namespace.account.provider == 'gmail' and \
+                obj.messages[0].g_thrid:
+            base['provider_id'] = str(obj.messages[0].g_thrid)
+
         for msg in obj.messages:
             resp = {
                 'id': msg.public_id,
@@ -246,6 +253,10 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
                 resp['folder'] = categories[0] if categories else None
             else:
                 resp['labels'] = categories
+
+            if obj.namespace.account.provider == 'gmail' and \
+                    msg.g_msgid:
+                resp['provider_id'] = msg.g_msgid
 
             if msg.is_draft:
                 resp['object'] = 'draft'
@@ -291,6 +302,12 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             'busy': obj.busy,
             'status': obj.status,
         }
+
+        # Don't return the "provider_id" for events that are just emailed
+        if expand and obj.calendar.id != \
+                      obj.namespace.account.emailed_events_calendar_id:
+            resp['provider_id'] = str(obj.uid) if obj.uid else ''
+
         if isinstance(obj, RecurringEvent):
             resp['recurrence'] = {
                 'rrule': obj.recurring,

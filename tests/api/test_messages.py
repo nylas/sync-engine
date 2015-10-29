@@ -1,5 +1,6 @@
 import pytest
 import json
+from random import getrandbits
 from tests.util.base import (add_fake_message, default_namespace,
                              new_message_from_synced, mime_message, thread,
                              add_fake_thread, generic_account, gmail_account)
@@ -43,6 +44,8 @@ cliche bitters aesthetic. Ugh.
 Bushwick meggings ethical keffiyeh. Chambray lumbersexual wayfarers,
 irony Banksy cred bicycle rights scenester artisan tote bag YOLO gastropub.
 """
+    message.g_msgid = getrandbits(32)
+    message.g_thrid = getrandbits(32)
 
     draft = add_fake_message(db.session, default_namespace.id, thread,
                              subject="Re:Golden Gate Park next Sat",
@@ -89,6 +92,7 @@ def test_expanded_threads(stub_message, api_client):
         assert 'message_ids' not in resp_dict
         assert 'messages' in resp_dict
         assert 'drafts' in resp_dict
+        assert 'provider_id' in resp_dict  # default account provider is gmail
         assert len(resp_dict['participants']) == 3
         assert len(resp_dict['messages']) == 2
         assert len(resp_dict['drafts']) == 1
@@ -137,6 +141,7 @@ def test_expanded_message(stub_message, api_client):
         assert 'In-Reply-To' in msg_dict['headers']
         assert 'References' in msg_dict['headers']
         assert 'Message-Id' in msg_dict['headers']
+        assert 'provider_id' in msg_dict  # default account provider is gmail
 
         valid_keys = ['account_id', 'to', 'from', 'files', 'unread',
                       'unread', 'date', 'snippet']
