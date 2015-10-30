@@ -15,14 +15,14 @@ from sqlalchemy.orm import joinedload
 from nylas.logging import get_logger
 log = get_logger()
 
-CLOUDSEARCH_DOMAIN = config.get('CLOUDSEARCH_DOMAIN')
-
 # CloudSearch charges per 1000 batched uploads. Batches must be
 # < 5 MB. This assumes that individual items are <= 1kb each.
 DOC_UPLOAD_CHUNK_SIZE = 5000
 
 # Be explicit about which fields we search by default.
 SEARCH_OPTIONS = '{"fields": ["name", "phone_numbers", "email_address"]}'
+search_service_url = config.get('SEARCH_SERVICE_ENDPOINT')
+doc_service_url = config.get('DOCUMENT_SERVICE_ENDPOINT')
 
 
 def get_domain_config(conn, domain_name):
@@ -32,24 +32,6 @@ def get_domain_config(conn, domain_name):
         if d['DomainName'] == domain_name:
             return d
     return None
-
-
-def get_service_urls():
-    conn = boto3.client(
-        'cloudsearch', region_name="us-west-2",
-        aws_access_key_id=config.get_required('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=config.get_required('AWS_SECRET_ACCESS_KEY'))
-    domain_config = get_domain_config(conn, CLOUDSEARCH_DOMAIN)
-    search_service_url = domain_config['SearchService']['Endpoint']
-    doc_service_url = domain_config['DocService']['Endpoint']
-    return (search_service_url, doc_service_url)
-
-
-# Discover service endpoints on module import
-if CLOUDSEARCH_DOMAIN:
-    # boto installs retry handlers that retry any requests on timeouts or
-    # other failures
-    search_service_url, doc_service_url = get_service_urls()
 
 
 def get_search_service():
@@ -165,7 +147,7 @@ class ContactSearchClient(object):
     # Note that our API constrains 'limit' to a max of 1000, which is safe to
     # pass through to cloudsearch.
     def search_contacts(self, db_session, search_query, offset=0, limit=40):
-        if CLOUDSEARCH_DOMAIN:
+        if search_service_url and doc_service_url:
             result_ids = self.fetch_matching_ids_page(
                 query=search_query, start=offset, size=limit)
             log.info('received result IDs', result_ids=result_ids)
@@ -183,7 +165,7 @@ class ContactSearchClient(object):
 
 
 def index_namespace(namespace_id):
-    if not CLOUDSEARCH_DOMAIN:
+    if not search_service_url or not doc_service_url:
         raise Exception('CloudSearch not configured; cannot index')
     else:
         search_client = ContactSearchClient(namespace_id)
@@ -236,7 +218,7 @@ def index_namespace(namespace_id):
 
 
 def delete_namespace_indexes(namespace_ids):
-    if not CLOUDSEARCH_DOMAIN:
+    if not search_service_url or not doc_service_url:
         raise Exception('CloudSearch not configured; cannot update index')
     else:
         doc_service = get_doc_service()
