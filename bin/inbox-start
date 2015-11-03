@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from gevent import monkey
 monkey.patch_all()
-import gevent
 
 import os
 import socket
@@ -21,7 +20,7 @@ except ImportError:
              "Try running sudo ./setup.sh")
 
 from inbox.util.startup import preflight
-from nylas.util.debug import Tracer
+from inbox.instrumentation import MetricsRunner
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
@@ -82,14 +81,10 @@ def main(prod, enable_tracer, config, process_num):
         print >>sys.stderr, "Feature flags enabled: {}\n".format(
             ' '.join(inbox_config['FEATURE_FLAGS']))
 
-    if enable_tracer:
-        tracer = Tracer(gather_stats=True)
-        tracer.start()
-
-    if inbox_config.get('DEBUG_PROFILING_ON'):
-        from inbox.util.profiling import run_profiler
-        port = 16384 + process_num
-        gevent.spawn(run_profiler, '0.0.0.0', port)
+    port = 16384 + process_num
+    enable_profiler = inbox_config.get('DEBUG_PROFILING_ON')
+    metrics_runner = MetricsRunner(port, enable_tracer, enable_profiler)
+    metrics_runner.start()
 
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
