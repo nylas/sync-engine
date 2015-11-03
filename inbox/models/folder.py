@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey, DateTime, bindparam
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
@@ -47,6 +47,15 @@ class Folder(MailSyncBase):
 
     initial_sync_start = Column(DateTime, nullable=True)
     initial_sync_end = Column(DateTime, nullable=True)
+
+    @validates('name')
+    def sanitize_name(self, key, name):
+        name = name.rstrip()
+        if len(name) > MAX_FOLDER_NAME_LENGTH:
+            log.warning("Truncating folder name for account {}; original name "
+                        "was '{}'".format(self.account_id, name))
+            name = name[:MAX_FOLDER_NAME_LENGTH]
+        return name
 
     @classmethod
     def find_or_create(cls, session, account, name, role=None):

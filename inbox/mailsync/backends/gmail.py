@@ -81,13 +81,13 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 continue
 
             Label.find_or_create(db_session, account,
-                                 raw_folder.display_name, raw_folder.role)
+                                 raw_folder.display_name,
+                                 raw_folder.role)
 
             if raw_folder.role in ('all', 'spam', 'trash'):
-                folder = db_session.query(Folder). \
-                        filter(Folder.account_id == account.id,
-                                Folder.canonical_name == raw_folder.role). \
-                        first()
+                folder = db_session.query(Folder).filter(
+                    Folder.account_id == account.id,
+                    Folder.canonical_name == raw_folder.role).first()
                 if folder:
                     if folder.name != raw_folder.display_name:
                         log.info('Folder name changed on remote',

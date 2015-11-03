@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.base import MailSyncBase
@@ -35,6 +35,16 @@ class Label(MailSyncBase):
         Category,
         backref=backref('labels',
                         cascade='all, delete-orphan'))
+
+    @validates('name')
+    def sanitize_name(self, key, name):
+        name = unicode(name)
+        name = name.rstrip()
+        if len(name) > MAX_LABEL_NAME_LENGTH:
+            log.warning("Truncating label name for account {}; original name "
+                        "was '{}'".format(self.account_id, name))
+            name = name[:MAX_LABEL_NAME_LENGTH]
+        return name
 
     @classmethod
     def find_or_create(cls, session, account, name, role=None):

@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -29,6 +29,18 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
                                  collation='utf8mb4_bin'), nullable=False)
 
     type_ = Column(Enum('folder', 'label'), nullable=False, default='folder')
+
+    @validates('display_name')
+    def sanitize_display_name(self, key, display_name):
+        if self.type_ == 'label':
+            display_name = unicode(display_name)
+        display_name = display_name.rstrip()
+        if len(display_name) > MAX_INDEXABLE_LENGTH:
+            log.warning("Truncating {} name for account {}; original name was "
+                        "'{}'".format(self.type_, self.namespace.account_id,
+                                      display_name))
+            display_name = display_name[:MAX_INDEXABLE_LENGTH]
+        return display_name
 
     @classmethod
     def find_or_create(cls, session, namespace_id, name, display_name, type_):
