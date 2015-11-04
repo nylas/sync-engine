@@ -35,6 +35,7 @@ def start_stop(options):
             if options.softdelete:
                 print "Marking account %s as deleted." % account.email_address
                 account.mark_deleted()
+                sys.exit(0)
 
             if options.reason is None:
                 print "Error: must specify a reason for stopping the sync (--reason)"
