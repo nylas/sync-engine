@@ -35,6 +35,7 @@ def start_stop(options):
             if options.softdelete:
                 print "Marking account %s as deleted." % account.email_address
                 account.mark_deleted()
+                db_session.commit()
                 sys.exit(0)
 
             if options.reason is None:
