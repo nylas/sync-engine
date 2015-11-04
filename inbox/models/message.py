@@ -276,7 +276,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         self.bcc_addr = parse_mimepart_address_header(parsed, 'Bcc')
 
         self.in_reply_to = parsed.headers.get('In-Reply-To')
+
+        # The RFC mandates that the Message-Id header must be at most 998
+        # characters. Sadly, not everybody follows specs.
         self.message_id_header = parsed.headers.get('Message-Id')
+        if self.message_id_header and len(self.message_id_header) > 998:
+            self.message_id_header = self.message_id_header[:998]
+            log.warning('Message-Id header too long. Truncating',
+                        parsed.headers.get('Message-Id'),
+                        logstash_tag='truncated_message_id')
 
         self.received_date = received_date if received_date else \
             get_internaldate(parsed.headers.get('Date'),

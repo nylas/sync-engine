@@ -102,6 +102,15 @@ def raw_message_with_outlook_emoji_inline():
         return f.read()
 
 
+@pytest.fixture
+def raw_message_with_long_message_id():
+    # Message with a very long message_id header
+    raw_msg_path = full_path(
+        '../data/raw_message_with_long_message_id')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
 def test_message_from_synced(db, new_message_from_synced, default_namespace):
     m = new_message_from_synced
     assert m.namespace_id == default_namespace.id
@@ -455,3 +464,15 @@ def test_attachments_emoji_filename_parsing(default_account,
     assert m.attachments[0].block.content_type == 'image/png'
     assert m.attachments[0].content_id == '<3f0ea351-779e-48b3-bfa9-7c2a9e373aeb>'
     assert m.attachments[0].content_disposition == 'inline'
+
+
+@pytest.mark.only
+def test_long_message_id(default_account, db, thread,
+                         raw_message_with_long_message_id):
+    m = create_from_synced(default_account,
+                           raw_message_with_long_message_id)
+    m.thread = thread
+    db.session.add(m)
+    # Check that no database error is raised.
+    db.session.commit()
+    assert len(m.message_id_header) <= 998

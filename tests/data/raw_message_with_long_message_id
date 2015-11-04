@@ -1,0 +1,20 @@
+From: from@example.com
+To: to@example.com
+Subject: test
+Message-ID: <2342SFSDT45T423FSDFSDF@pervenche-5523>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             !                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             !                                                               !                                                                                                                                                                                                                                                                         
+Content-Type: multipart/mixed;
+    boundary="Apple-Mail=_A5779F7D-F2DA-42C3-BE13-48D5C62A02BD"
+
+
+--Apple-Mail=_A5779F7D-F2DA-42C3-BE13-48D5C62A02BD
+Content-Disposition: attachment;
+    filename=attachment.txt
+Content-Type: text/plain;
+    name="attachment.txt"
+Content-Transfer-Encoding: 7bit
+Content-ID: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+hi
+
+--Apple-Mail=_A5779F7D-F2DA-42C3-BE13-48D5C62A02BD--
+
