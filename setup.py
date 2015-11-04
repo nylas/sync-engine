@@ -73,6 +73,7 @@ setup(
              'bin/create-db',
              'bin/create-test-db',
              'bin/verify-db',
+             'bin/migrate-db',
              'bin/inbox-api',
              'bin/get-id',
              'bin/get-object',
