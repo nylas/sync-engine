@@ -934,13 +934,12 @@ class GmailCrispinClient(CrispinClient):
         list
         """
         uids = [long(uid) for uid in
-                self.conn.search('X-GM-THRID {}'.format(g_thrid))]
+                self.conn.search(['X-GM-THRID', g_thrid])]
         # UIDs ascend over time; return in order most-recent first
         return sorted(uids, reverse=True)
 
     def find_by_header(self, header_name, header_value):
-        criteria = ['HEADER {} {}'.format(header_name, header_value)]
-        return self.conn.search(criteria)
+        return self.conn.search(['HEADER', header_name, header_value])
 
     def _decode_labels(self, labels):
         return map(imapclient.imap_utf7.decode, labels)

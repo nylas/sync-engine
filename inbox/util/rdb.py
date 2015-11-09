@@ -1,6 +1,7 @@
 import socket
 import sys
 from gevent import monkey; monkey.patch_all(aggressive=False)
+import gevent_openssl; gevent_openssl.monkey_patch()
 from code import InteractiveConsole
 from nylas.logging import get_logger
 

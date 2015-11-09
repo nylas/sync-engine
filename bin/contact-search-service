@@ -4,6 +4,7 @@ import os
 from setproctitle import setproctitle
 
 import click
+import gevent_openssl; gevent_openssl.monkey_patch()
 from gevent import monkey
 
 from inbox.config import config as inbox_config
@@ -13,6 +14,7 @@ from nylas.logging import configure_logging
 
 setproctitle('nylas-contact-search-index-service')
 monkey.patch_all()
+
 
 
 @click.command()

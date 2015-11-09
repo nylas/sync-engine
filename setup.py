@@ -30,7 +30,7 @@ setup(
         "simplejson>=3.6.0",
         "icalendar>=3.8.2",
         "simplejson>=3.6.0",
-        "imapclient>=0.13",
+        "imapclient==1.0a0",
         "Flask>=0.10.1",
         "Flask-RESTful==0.3.2",
         "pynacl>=0.2.3",
@@ -44,7 +44,10 @@ setup(
         "boto3>=1.1.4",
         "Pympler==0.4.2"
     ],
-    dependency_links=[],
+    dependency_links=[
+        # TODO: remove this when IMAPClient 1.0 is out
+        "hg+https://bitbucket.org/mjs0/imapclient@d8ea261f28ee29#egg=imapclient-1.0a0",
+    ],
 
     include_package_data=True,
     package_data={

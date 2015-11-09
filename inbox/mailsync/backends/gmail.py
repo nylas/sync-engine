@@ -165,15 +165,16 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 # Prioritize UIDs for messages in the inbox folder.
                 if len(remote_uids) < 1e6:
                     inbox_uids = set(
-                        crispin_client.search_uids(['X-GM-LABELS inbox']))
+                        crispin_client.search_uids(['X-GM-LABELS', 'inbox']))
                 else:
                     # The search above is really slow (times out) on really
                     # large mailboxes, so bound the search to messages within
                     # the past month in order to get anywhere.
-                    since = (datetime.utcnow() - timedelta(days=30)). \
-                        strftime('%d-%b-%Y')
-                    inbox_uids = set(crispin_client.search_uids(
-                        ['X-GM-LABELS inbox', 'SINCE {}'.format(since)]))
+                    since = datetime.utcnow() - timedelta(days=30)
+                    inbox_uids = set(crispin_client.search_uids([
+                        'X-GM-LABELS', 'inbox',
+                        'SINCE', since]))
+
                 uids_to_download = (sorted(unknown_uids - inbox_uids) +
                                     sorted(unknown_uids & inbox_uids))
             else:

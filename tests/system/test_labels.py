@@ -45,7 +45,7 @@ def test_gmail_labels(client):
             crispin_client.select_folder(folder_name, uidvalidity_cb)
 
             print "Subject : %s" % thread.subject
-            uids = crispin_client.search_uids(['SUBJECT "%s"' % thread.subject])
+            uids = crispin_client.search_uids(['SUBJECT', thread.subject])
             g_thrid = crispin_client.g_metadata(uids).items()[0][1].thrid
 
             crispin_client.add_label(g_thrid, labelname)

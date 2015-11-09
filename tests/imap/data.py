@@ -105,25 +105,24 @@ class MockIMAPClient(object):
 
     def search(self, criteria):
         assert self.selected_folder is not None
+        assert isinstance(criteria, list)
         uid_dict = self._data[self.selected_folder]
         if criteria == ['ALL']:
             return uid_dict.keys()
-        if criteria == ['X-GM-LABELS inbox']:
+        if criteria == ['X-GM-LABELS', 'inbox']:
             return [k for k, v in uid_dict.items()
                     if ('\\Inbox,') in v['X-GM-LABELS']]
-
-        m = re.match('HEADER (?P<name>[a-zA-Z-]+) (?P<value>.+)', criteria[0])
-        if m:
-            name = m.group('name').lower()
-            value = m.group('value').lower()
+        if criteria[0] == 'HEADER':
+            name, value = criteria[1:]
             headerstring = '{}: {}'.format(name, value)
             # Slow implementation, but whatever
             return [u for u, v in uid_dict.items() if headerstring in
                     v['BODY[]'].lower()]
-
-        if re.match('X-GM-THRID [0-9]*', criteria[0]):
-            thrid = int(criteria[0].split()[1])
+        if criteria[0] == 'X-GM-THRID':
+            assert len(criteria) == 2
+            thrid = criteria[1]
             return [u for u, v in uid_dict.items() if v['X-GM-THRID'] == thrid]
+        raise ValueError('unsupported test criteria: {!r}'.format(criteria))
 
     def select_folder(self, folder_name, readonly=False):
         self.selected_folder = folder_name
