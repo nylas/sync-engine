@@ -80,6 +80,7 @@ setup(
              'bin/inbox-api',
              'bin/get-id',
              'bin/get-object',
+             'bin/set-throttled',
              'bin/syncback-service',
              'bin/contact-search-service',
              'bin/contact-search-backfill',
