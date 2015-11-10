@@ -118,7 +118,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 continue
             for phrase, address in itertools.chain(m.from_addr, m.to_addr,
                                                    m.cc_addr, m.bcc_addr):
-                    deduped_participants[address].add(phrase.strip())
+                deduped_participants[address].add(phrase.strip())
         p = []
         for address, phrases in deduped_participants.iteritems():
             for phrase in phrases:

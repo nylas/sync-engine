@@ -61,6 +61,7 @@ class ProvidersDict(MutableMapping):
             })
 
     """
+
     def __init__(self):
         self._d = {}
         self._filters = defaultdict(list)

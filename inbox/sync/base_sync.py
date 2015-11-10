@@ -23,6 +23,7 @@ class BaseSyncMonitor(Greenlet):
         Exceptions to *not* retry on.
 
     """
+
     def __init__(self, account_id, namespace_id, email_address, folder_id,
                  folder_name, provider_name, poll_frequency=1,
                  scope=None):

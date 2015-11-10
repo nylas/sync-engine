@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function
 
 
 class ListPlugin(object):
+
     def argparse_addoption(self, parser):
         parser.add_argument(
             '--list', action='store_true', dest='do_list',

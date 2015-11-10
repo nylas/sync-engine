@@ -14,6 +14,7 @@ SEARCH_CLS = 'GmailSearchClient'
 
 
 class GmailSearchClient(object):
+
     def __init__(self, account):
         self.account = account
 
@@ -22,9 +23,9 @@ class GmailSearchClient(object):
         if not g_msgids:
             return []
         query = db_session.query(Message). \
-                filter(Message.namespace_id == self.account.namespace.id,
-                       Message.g_msgid.in_(g_msgids)). \
-                order_by(desc(Message.received_date))
+            filter(Message.namespace_id == self.account.namespace.id,
+                   Message.g_msgid.in_(g_msgids)). \
+            order_by(desc(Message.received_date))
 
         if offset:
             query = query.offset(offset)
@@ -39,11 +40,11 @@ class GmailSearchClient(object):
         if not g_msgids:
             return []
         query = db_session.query(Thread). \
-                join(Message). \
-                filter(Thread.namespace_id == self.account.namespace.id,
-                       Message.namespace_id == self.account.namespace.id,
-                       Message.g_msgid.in_(g_msgids)). \
-                order_by(desc(Message.received_date))
+            join(Message). \
+            filter(Thread.namespace_id == self.account.namespace.id,
+                   Message.namespace_id == self.account.namespace.id,
+                   Message.g_msgid.in_(g_msgids)). \
+            order_by(desc(Message.received_date))
 
         if offset:
             query = query.offset(offset)

@@ -15,7 +15,7 @@ def safe_filename(filename):
 # http://my.safaribooksonline.com/book/programming/python/0596001673/files/pythoncook-chp-4-sect-16
 def splitall(path):
     allparts = []
-    while 1:
+    while True:
         parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
@@ -56,7 +56,7 @@ def remove_file(filename):
     """
     try:
         os.remove(filename)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
 

@@ -41,6 +41,7 @@ class GTokenManager(object):
     Based off of TokenManager in inbox/backends/oauth.py
 
     """
+
     def __init__(self):
         self._tokens = defaultdict(dict)
 
@@ -92,7 +93,7 @@ class GTokenManager(object):
     def get_token_and_auth_creds_id_for_contacts(self, account,
                                                  force_refresh=False):
         return self.get_token_and_auth_creds_id(
-                account, GOOGLE_CONTACTS_SCOPE, force_refresh)
+            account, GOOGLE_CONTACTS_SCOPE, force_refresh)
 
     def cache_token(self, account, gtoken):
         for scope in gtoken.scopes:

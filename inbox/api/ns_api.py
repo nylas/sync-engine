@@ -431,7 +431,7 @@ def folders_labels_query_api():
         results = g.db_session.query(Category)
 
     results = results.filter(Category.namespace_id == g.namespace.id,
-                             Category.deleted_at == None)
+                             Category.deleted_at == None)  # noqa
     results = results.order_by(asc(Category.id))
 
     if args['view'] == 'count':
@@ -459,7 +459,7 @@ def folders_labels_api_impl(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()
+            Category.deleted_at == None).one()  # noqa
     except NoResultFound:
         raise NotFoundError('Object not found')
     return g.encoder.jsonify(category)
@@ -484,7 +484,7 @@ def folders_labels_create_api():
     # try to create a category with the same display_name).
     category = g.db_session.query(Category).filter(
         Category.namespace_id == g.namespace.id,
-        Category.name == None,
+        Category.name == None,  # noqa
         Category.display_name == display_name,
         Category.type_ == category_type).first()
 
@@ -519,7 +519,7 @@ def folder_label_update_api(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()
+            Category.deleted_at == None).one()  # noqa
     except NoResultFound:
         raise InputError("Couldn't find {} {}".format(
             category_type, public_id))
@@ -557,7 +557,7 @@ def folder_label_delete_api(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()
+            Category.deleted_at == None).one()  # noqa
     except NoResultFound:
         raise InputError("Couldn't find {} {}".format(
             category_type, public_id))

@@ -120,6 +120,7 @@ class CrispinConnectionPool(object):
     readonly : bool
         Is the connection to the IMAP server read-only?
     """
+
     def __init__(self, account_id, num_connections, readonly):
         log.info('Creating Crispin connection pool for account {} with {} '
                  'connections'.format(account_id, num_connections))
@@ -246,6 +247,7 @@ class CrispinClient(object):
         Whether or not to open IMAP connections as readonly.
 
     """
+
     def __init__(self, account_id, provider_info, email_address, conn,
                  readonly=True):
         self.account_id = account_id
@@ -306,7 +308,7 @@ class CrispinClient(object):
             # want to make sure we keep track of different providers'
             # "nonexistent" messages, so log this event.
             log.error("IMAPClient error selecting folder. May be deleted",
-                           error=str(e))
+                      error=str(e))
             raise
 
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
@@ -505,9 +507,9 @@ class CrispinClient(object):
 
         elapsed = time.time() - t
         log.debug('Requested all UIDs',
-                   selected_folder=self.selected_folder_name,
-                   search_time=elapsed,
-                   total_uids=len(fetch_result))
+                  selected_folder=self.selected_folder_name,
+                  search_time=elapsed,
+                  total_uids=len(fetch_result))
         return sorted([long(uid) for uid in fetch_result])
 
     def uids(self, uids):

@@ -14,6 +14,7 @@ from inbox.models.backends.oauth import token_manager
 
 
 class OAuthAuthHandler(AuthHandler):
+
     def connect_account(self, account):
         """
         Returns an authenticated IMAP connection for the given account.
@@ -171,6 +172,7 @@ class OAuthAuthHandler(AuthHandler):
 
 class OAuthRequestsWrapper(requests.auth.AuthBase):
     """Helper class for setting the Authorization header on HTTP requests."""
+
     def __init__(self, token):
         self.token = token
 

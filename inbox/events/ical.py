@@ -93,8 +93,8 @@ def events_from_ics(namespace, calendar, ics_str):
                 start = arrow.get(start)
                 end = arrow.get(end)
 
-            assert type(start) == type(end), "Start and end should be of "\
-                                             "the same type"
+            assert isinstance(start, type(end)), "Start and end should be of "\
+                "the same type"
 
             # Get the last modification date.
             # Exchange uses DtStamp, iCloud and Gmail LAST-MODIFIED.
@@ -429,9 +429,9 @@ def import_attached_events(db_session, account, message):
                       invite=part_data,
                       logstash_tag='icalendar_autoimport',
                       traceback=traceback.format_exception(
-                                    sys.exc_info()[0],
-                                    sys.exc_info()[1],
-                                    sys.exc_info()[2]))
+                          sys.exc_info()[0],
+                          sys.exc_info()[1],
+                          sys.exc_info()[2]))
             continue
 
         process_invites(db_session, message, account, new_events['invites'])
@@ -466,13 +466,14 @@ def generate_icalendar_invite(event, invite_type='request'):
 
     account = event.namespace.account
     organizer = icalendar.vCalAddress(u"MAILTO:{}".format(
-            account.email_address))
+        account.email_address))
     if account.name is not None:
         organizer.params['CN'] = account.name
 
     icalendar_event['organizer'] = organizer
     icalendar_event['sequence'] = str(event.sequence_number)
-    icalendar_event['X-MICROSOFT-CDO-APPT-SEQUENCE'] = icalendar_event['sequence']
+    icalendar_event['X-MICROSOFT-CDO-APPT-SEQUENCE'] = \
+        icalendar_event['sequence']
 
     if invite_type == 'cancel':
         icalendar_event['status'] = 'CANCELLED'
@@ -543,17 +544,17 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
         msg.append(body)
     elif invite_type == 'cancel':
         body.append(
-           mime.create.text('html', html_body),
-           mime.create.text('plain', text_body),
-           mime.create.text('calendar; method=CANCEL'.format(invite_type),
-                            ical_txt, charset='utf8'))
+            mime.create.text('html', html_body),
+            mime.create.text('plain', text_body),
+            mime.create.text('calendar; method=CANCEL'.format(invite_type),
+                             ical_txt, charset='utf8'))
         msg.append(body)
 
         attachment = mime.create.attachment(
-                         'application/ics',
-                         ical_txt,
-                         'invite.ics',
-                         disposition='attachment')
+            'application/ics',
+            ical_txt,
+            'invite.ics',
+            disposition='attachment')
         msg.append(attachment)
 
     msg.headers['From'] = account.email_address

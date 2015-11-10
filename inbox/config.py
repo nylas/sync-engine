@@ -6,6 +6,7 @@ __all__ = ['config']
 
 
 class ConfigError(Exception):
+
     def __init__(self, error=None, help=None):
         self.error = error or ''
         self.help = help or \
@@ -17,6 +18,7 @@ class ConfigError(Exception):
 
 
 class Configuration(dict):
+
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
 

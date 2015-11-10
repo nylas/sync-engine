@@ -27,6 +27,7 @@ from .sqlite3_db import connect_sqlite3_db, init_sqlite3_db
 
 
 class _ALL_ACCOUNTS(object):
+
     def __str__(self):
         return "all accounts"   # for --help
 
@@ -70,7 +71,7 @@ def main():
         Shows differences between metadata fetched from the specified
         account(s) and what's stored in the local Inbox database.
         """,
-        epilog = """
+        epilog="""
         Only Gmail accounts are currently supported.
         """)
     parser.add_argument(
@@ -228,7 +229,8 @@ def main():
 
         # Show differences between the text files in the cache directory.
         # Basically, this runs something like the following for each account:
-        #   vimdiff cache/${acct_pubid}.${ns_pubid).imap_gm.txt cache/${acct_pubid}.${ns_pubid).local_gm.txt
+        # vimdiff cache/${acct_pubid}.${ns_pubid).imap_gm.txt \
+        #     cache/${acct_pubid}.${ns_pubid).local_gm.txt
         if args.do_diff:
             if os.system("which vimdiff >/dev/null") == 0:
                 diff_cmd = ['vimdiff']

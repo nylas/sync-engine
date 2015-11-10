@@ -140,6 +140,7 @@ class SyncbackWorker(gevent.Greenlet):
     given object, not on the whole account.
 
     """
+
     def __init__(self, action_name, semaphore, action_log_id, record_id,
                  account_id, provider, retry_interval=30, extra_args=None):
         self.action_name = action_name

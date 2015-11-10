@@ -116,6 +116,7 @@ def get_internaldate(date, received):
 
 def timed(fn):
     """ A decorator for timing methods. """
+
     def timed_fn(self, *args, **kwargs):
         start_time = time.time()
         ret = fn(self, *args, **kwargs)

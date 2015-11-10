@@ -42,7 +42,7 @@ for code in default_exceptions.iterkeys():
 def auth():
     """ Check for account ID on all non-root URLS """
     if request.path in ('/accounts', '/accounts/', '/', '/n', '/n/') \
-                       or request.path.startswith('/w/'):
+            or request.path.startswith('/w/'):
         return
 
     if request.path.startswith('/n/'):
@@ -86,7 +86,8 @@ def finish(response):
     origin = request.headers.get('origin')
     if origin:  # means it's just a regular request
         response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization,Content-Type'
+        response.headers['Access-Control-Allow-Headers'] = \
+            'Authorization,Content-Type'
         response.headers['Access-Control-Allow-Methods'] = \
             'GET,PUT,POST,DELETE,OPTIONS'
         response.headers['Access-Control-Allow-Credentials'] = 'true'

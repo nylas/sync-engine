@@ -23,7 +23,7 @@ def reconcile_message(new_message, session):
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.inbox_uid == new_message.inbox_uid,
-            Message.is_created == True).first()
+            Message.is_created).first()
         version = None
     else:
         # new_message has the new X-Inbox-Id format <public_id>-<version>
@@ -35,7 +35,7 @@ def reconcile_message(new_message, session):
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.public_id == expected_public_id,
-            Message.is_created == True).first()
+            Message.is_created).first()
 
     if existing_message is None:
         return None
@@ -152,7 +152,8 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
             db_session.commit()
 
 
-def _batch_delete(engine, table, (column, id_), dry_run=False):
+def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
+    (column, id_) = xxx_todo_changeme
     count = engine.execute(
         'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
         scalar()

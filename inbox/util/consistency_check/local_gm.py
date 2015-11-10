@@ -23,6 +23,7 @@ from .dump_gm import DumpGmailMixin
 
 
 class LocalGmailPlugin(DumpGmailMixin):
+
     def argparse_args(self, args):
         self.args = args
 
@@ -51,7 +52,7 @@ def slurp_local_namespace_gmail(namespace, account, db):
               for f in account.folders))
 
     # Fetch threads
-    #threads = (db_session.query(ImapThread.id, ImapThread.g_thrid)
+    # threads = (db_session.query(ImapThread.id, ImapThread.g_thrid)
     #    .filter_by(namespace_id=namespace.id)
     #    .all())
     threads = namespace.threads
@@ -75,7 +76,7 @@ def slurp_local_namespace_gmail(namespace, account, db):
         .filter(Thread.namespace_id == namespace.id)
     )
     for i in itertools.count(0, batch_size):
-        rows = query.slice(i, i+batch_size).all()
+        rows = query.slice(i, i + batch_size).all()
         if not rows:    # no more rows
             break
 
@@ -112,7 +113,7 @@ def slurp_local_namespace_gmail(namespace, account, db):
         .filter(Thread.namespace_id == namespace.id)
     )
     for i in itertools.count(0, batch_size):
-        thr_rows = query.slice(i, i+batch_size).all()
+        thr_rows = query.slice(i, i + batch_size).all()
         if not thr_rows:    # no more rows
             break
 
@@ -133,7 +134,7 @@ def slurp_local_namespace_gmail(namespace, account, db):
             .filter(Thread.namespace_id == namespace.id)
         )
         for j in itertools.count(0, batch_size):
-            msg_rows = query.slice(j, j+batch_size).all()
+            msg_rows = query.slice(j, j + batch_size).all()
             if not msg_rows:    # no more rows
                 break
 

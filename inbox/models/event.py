@@ -175,15 +175,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     def _merge_participant_attributes(self, left, right):
         """Merge right into left. Right takes precedence unless it's null."""
         for attribute in right.keys():
-                # Special cases:
-                if right[attribute] is None:
-                    continue
-                elif right[attribute] == '':
-                    continue
-                elif right['status'] == 'noreply':
-                    continue
-                else:
-                    left[attribute] = right[attribute]
+            # Special cases:
+            if right[attribute] is None:
+                continue
+            elif right[attribute] == '':
+                continue
+            elif right['status'] == 'noreply':
+                continue
+            else:
+                left[attribute] = right[attribute]
 
         return left
 
@@ -226,15 +226,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             if email is not None:
                 if email in self_hash:
                     self_hash[email] =\
-                     self._merge_participant_attributes(self_hash[email],
-                                                        participant)
+                        self._merge_participant_attributes(self_hash[email],
+                                                           participant)
                 else:
                     self_hash[email] = participant
             elif name is not None:
                 if name in self_hash:
                     self_hash[name] =\
-                     self._merge_participant_attributes(self_hash[name],
-                                                        participant)
+                        self._merge_participant_attributes(self_hash[name],
+                                                           participant)
                 else:
                     self_hash[name] = participant
 
@@ -397,7 +397,7 @@ class RecurringEvent(Event):
         # may show up in a query for calendar A.
         # (https://phab.nylas.com/T3420)
         overrides = overrides.filter(
-                RecurringEventOverride.calendar_id == self.calendar_id)
+            RecurringEventOverride.calendar_id == self.calendar_id)
 
         events = list(overrides)
         overridden_starts = [e.original_start_time for e in events]

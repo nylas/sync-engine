@@ -293,7 +293,7 @@ class GoogleEventsProvider(object):
         """
         token = self._get_access_token_for_push_notifications(account)
         receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(
-                urllib.quote(account.public_id))
+            urllib.quote(account.public_id))
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
@@ -332,7 +332,7 @@ class GoogleEventsProvider(object):
         token = self._get_access_token_for_push_notifications(account)
         watch_url = WATCH_EVENTS_URL.format(urllib.quote(calendar.uid))
         receiving_url = EVENTS_LIST_WEHOOK_URL.format(
-                urllib.quote(calendar.public_id))
+            urllib.quote(calendar.public_id))
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
@@ -361,8 +361,8 @@ class GoogleEventsProvider(object):
 
     def handle_watch_errors(self, r):
         self.log.warning(
-                'Error subscribing to Google push notifications', url=r.url,
-                response=r.content, status=r.status_code)
+            'Error subscribing to Google push notifications', url=r.url,
+            response=r.content, status=r.status_code)
 
         if r.status_code == 401:
             self.log.warning(

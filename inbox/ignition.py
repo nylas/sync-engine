@@ -69,6 +69,7 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
 
 
 class EngineManager(object):
+
     def __init__(self, databases, users, include_disabled=False):
         self.engines = {}
         keys = set()
@@ -151,15 +152,18 @@ def verify_db(engine, schema, key):
         increment = engine.execute(query.format(schema, table)).scalar()
         if increment is not None:
             assert (increment >> 48) == key, \
-                'table: {}, increment: {}, key: {}'.format(table, increment, key)
+                'table: {}, increment: {}, key: {}'.format(
+                    table, increment, key)
         else:
-            # We leverage the following invariants about the sync schema to make
-            # the assertion below: one, in the sync schema, a table's id column
-            # is assigned the auto_increment since we use this column as the
-            # primary_key. Two, the only tables that have a None auto_increment
-            # are inherited tables (like '*account', '*thread' '*actionlog',
-            # 'recurringevent*'), because their id column is instead a
-            # foreign_key on their parent's id column.
+            # We leverage the following invariants about the sync
+            # schema to make the assertion below: one, in the sync
+            # schema, a table's id column is assigned the
+            # auto_increment since we use this column as the
+            # primary_key. Two, the only tables that have a None
+            # auto_increment are inherited tables (like '*account',
+            # '*thread' '*actionlog', 'recurringevent*'), because
+            # their id column is instead a foreign_key on their
+            # parent's id column.
             parent = list(table.columns['id'].foreign_keys)[0].column.table
             assert parent in verified
         verified.add(table)

@@ -55,7 +55,8 @@ class ImapGmailPlugin(DumpGmailMixin):
                 "auth mechanism {0!r} not implemented; provider: {1!r}".format(
                     info['auth'], account.provider))
 
-        slurp_imap_namespace_gmail(imap, namespace=namespace, account=account, db=db)
+        slurp_imap_namespace_gmail(
+            imap, namespace=namespace, account=account, db=db)
 
 
 def slurp_imap_namespace_gmail(imap, db, namespace=None, account=None):
@@ -146,15 +147,15 @@ def slurp_imap_namespace_gmail(imap, db, namespace=None, account=None):
                 VALUES (?, ?)
                 """, ((folder_name, imap_uid) for imap_uid in imap_uids))
 
-            ## Get the folder flags
-            #folder_flags = set(row[0] for row in db.execute(
+            # Get the folder flags
+            # folder_flags = set(row[0] for row in db.execute(
             #    "SELECT flag FROM folder_flags WHERE folder_name = ?",
             #    [folder_name]))
             #
-            ## This is Gmail, so only actually fetch messages from the 'All
-            ## Mail' and 'Trash' folders.  This *should* give us all of the
-            ## messages.
-            #if not folder_flags & {u'\\All', u'\\Trash', u'\\Sent'}:
+            # This is Gmail, so only actually fetch messages from the 'All
+            # Mail' and 'Trash' folders.  This *should* give us all of the
+            # messages.
+            # if not folder_flags & {u'\\All', u'\\Trash', u'\\Sent'}:
             #    continue
 
             # Get folder messages
@@ -163,7 +164,7 @@ def slurp_imap_namespace_gmail(imap, db, namespace=None, account=None):
                           'X-GM-MSGID', 'X-GM-THRID', 'X-GM-LABELS',
                           'INTERNALDATE', 'RFC822.HEADER']
             for i in range(0, len(imap_uids), batch_size):
-                imap_uids_batch = imap_uids[i:i+batch_size]
+                imap_uids_batch = imap_uids[i:i + batch_size]
 
                 # Fetch message info from the IMAP server
                 fetch_response = imap.fetch(imap_uids_batch, fetch_data)
@@ -171,7 +172,8 @@ def slurp_imap_namespace_gmail(imap, db, namespace=None, account=None):
                 # Fetch message info and insert it into the messages table.
                 # Don't bother deduplicating at this point.
                 for uid, data in fetch_response.items():
-                    headers = MimeHeaders.from_stream(StringIO(data['RFC822.HEADER']))
+                    headers = MimeHeaders.from_stream(
+                        StringIO(data['RFC822.HEADER']))
                     msg_data = dict(
                         date=data['INTERNALDATE'],
                         subject=data['ENVELOPE'].subject,
@@ -180,22 +182,30 @@ def slurp_imap_namespace_gmail(imap, db, namespace=None, account=None):
                         message_id_header=data['ENVELOPE'].message_id,
                         x_gm_thrid=unicode(data['X-GM-THRID']),
                         x_gm_msgid=unicode(data['X-GM-MSGID']),
-                        sender_addr=json.dumps(parse_email_address_list(headers.get('Sender'))),
-                        from_addr=json.dumps(parse_email_address_list(headers.get('From'))),
-                        reply_to_addr=json.dumps(parse_email_address_list(headers.get('Reply-To'))),
-                        to_addr=json.dumps(parse_email_address_list(headers.get('To'))),
-                        cc_addr=json.dumps(parse_email_address_list(headers.get('Cc'))),
-                        bcc_addr=json.dumps(parse_email_address_list(headers.get('Bcc'))),
+                        sender_addr=json.dumps(
+                            parse_email_address_list(headers.get('Sender'))),
+                        from_addr=json.dumps(
+                            parse_email_address_list(headers.get('From'))),
+                        reply_to_addr=json.dumps(
+                            parse_email_address_list(headers.get('Reply-To'))),
+                        to_addr=json.dumps(
+                            parse_email_address_list(headers.get('To'))),
+                        cc_addr=json.dumps(
+                            parse_email_address_list(headers.get('Cc'))),
+                        bcc_addr=json.dumps(
+                            parse_email_address_list(headers.get('Bcc'))),
                     )
                     msg_data['clean_subject'] = \
-                        cleanup_subject(parse_header_value('Subject', msg_data['subject']))
+                        cleanup_subject(parse_header_value(
+                            'Subject', msg_data['subject']))
 
                     # Check if we've already stored the message
                     cur = db.execute("""
                         SELECT id, x_gm_msgid FROM messages
                         WHERE x_gm_msgid = :x_gm_msgid
                         """, msg_data)
-                    row = next(iter(cur.fetchall()), None)    # returns 0 or 1 rows
+                    row = next(iter(cur.fetchall()),
+                               None)    # returns 0 or 1 rows
                     message_id = row['id'] if row is not None else None
 
                     # If we've never stored the message, store it now.

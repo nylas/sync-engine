@@ -60,7 +60,7 @@ class GoogleContactsProvider(object):
                     g_token_manager.get_token_and_auth_creds_id_for_contacts(
                         account)
                 auth_creds = db_session.query(GmailAuthCredentials) \
-                             .get(auth_creds_id)
+                    .get(auth_creds_id)
 
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
                     client_id=auth_creds.client_id,
@@ -118,15 +118,16 @@ class GoogleContactsProvider(object):
             # We only want the <uid> part.
             raw_google_id = google_contact.id.text
             _, g_id = posixpath.split(raw_google_id)
-            name = (google_contact.name.full_name.text if (google_contact.name
-                    and google_contact.name.full_name) else None)
+            name = (google_contact.name.full_name.text
+                    if (google_contact.name and google_contact.name.full_name)
+                    else None)
             email_address = (email_addresses[0].address if email_addresses else
                              None)
 
             # The entirety of the raw contact data in XML string
             # representation.
             raw_data = google_contact.to_string()
-        except AttributeError, e:
+        except AttributeError as e:
             self.log.error('Something is wrong with contact',
                            contact=google_contact)
             raise e
@@ -183,10 +184,10 @@ class GoogleContactsProvider(object):
                 gevent.sleep(30 + random.randrange(0, 60))
             except gdata.client.Unauthorized:
                 self.log.warning(
-                            'Invalid access token; refreshing and retrying')
+                    'Invalid access token; refreshing and retrying')
                 # Raises an OAuth error if no valid token exists
                 with session_scope(self.namespace_id) as db_session:
                     account = db_session.query(GmailAccount).get(
                         self.account_id)
                     g_token_manager.get_token_for_contacts(
-                            account, force_refresh=True)
+                        account, force_refresh=True)

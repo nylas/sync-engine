@@ -319,10 +319,10 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     # Message.api_loading_options() here because we already have a join to the
     # thread table. We should eventually try to simplify this.
     query += lambda q: q.options(
-                contains_eager(Message.thread),
-                subqueryload(Message.messagecategories).joinedload('category'),
-                subqueryload(Message.parts).joinedload(Part.block),
-                subqueryload(Message.events))
+        contains_eager(Message.thread),
+        subqueryload(Message.messagecategories).joinedload('category'),
+        subqueryload(Message.parts).joinedload(Part.block),
+        subqueryload(Message.events))
 
     prepared = query(db_session).params(**param_dict)
     return prepared.all()
@@ -344,7 +344,7 @@ def files(namespace_id, message_public_id, filename, content_type,
     # attachment)
     query = query.outerjoin(Part)
     query = query.filter(or_(Part.id.is_(None),
-                         Part.content_disposition.isnot(None)))
+                             Part.content_disposition.isnot(None)))
 
     if content_type is not None:
         query = query.filter(or_(Block._content_type_common == content_type,
@@ -425,10 +425,10 @@ def recurring_events(filters, starts_before, starts_after, ends_before,
     after_criteria = []
     if starts_after:
         after_criteria.append(or_(RecurringEvent.until > starts_after,
-                                  RecurringEvent.until == None))
+                                  RecurringEvent.until == None))  # noqa
     if ends_after:
         after_criteria.append(or_(RecurringEvent.until > ends_after,
-                                  RecurringEvent.until == None))
+                                  RecurringEvent.until == None))  # noqa
 
     recur_query = recur_query.filter(and_(*after_criteria))
 
@@ -528,13 +528,13 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
 
 def messages_for_contact_scores(db_session, namespace_id, starts_after=None):
     query = (db_session.query(
-                Message.to_addr, Message.cc_addr, Message.bcc_addr,
-                Message.id, Message.received_date.label('date'))
-             .join(MessageCategory)
-             .join(Category)
-             .filter(Message.namespace_id == namespace_id)
-             .filter(Category.name == 'sent')
-             .filter(~Message.is_draft))
+        Message.to_addr, Message.cc_addr, Message.bcc_addr,
+        Message.id, Message.received_date.label('date'))
+        .join(MessageCategory)
+        .join(Category)
+        .filter(Message.namespace_id == namespace_id)
+        .filter(Category.name == 'sent')
+        .filter(~Message.is_draft))
 
     if starts_after:
         query = query.filter(Message.received_date > starts_after)

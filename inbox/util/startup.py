@@ -21,15 +21,25 @@ def check_sudo():
         raise Exception("Don't run Inbox as root!")
 
 
+_TZ_ERROR_TEXT = """
+WARNING!
+
+System time is not set to UTC! This is a problem because
+imapclient will normalize INTERNALDATE responses to the 'local'
+timezone. \n\nYou can fix this by running
+
+$ echo 'UTC' | sudo tee /etc/timezone
+
+and then checking that it worked with
+
+$ sudo dpkg-reconfigure --frontend noninteractive tzdata
+
+"""
+
+
 def check_tz():
     if time.tzname[time.daylight] != 'UTC':
-        sys.exit("\nWARNING!\n\n"
-            "System time is not set to UTC! This is a problem because " +
-            "imapclient will normalize INTERNALDATE responses to the 'local' "+
-            "timezone. \n\nYou can fix this by running \n\n" +
-            "$ echo 'UTC' | sudo tee /etc/timezone \n\n" +
-            "and then checking that it worked with \n\n"+
-            "$ sudo dpkg-reconfigure --frontend noninteractive tzdata\n\n")
+        sys.exit(_TZ_ERROR_TEXT)
 
 
 def load_overrides(file_path):

@@ -1,13 +1,17 @@
 import socket
 import sys
-from gevent import monkey; monkey.patch_all(aggressive=False)
-import gevent_openssl; gevent_openssl.monkey_patch()
+from gevent import monkey
+monkey.patch_all(aggressive=False)
+import gevent_openssl
+gevent_openssl.monkey_patch()
 from code import InteractiveConsole
 from nylas.logging import get_logger
 
 log = get_logger()
 
-doc = """\nThis is the Inbox console - you can use it to interact with mailsync and track memory leaks.\n
+doc = """
+This is the Inbox console - you can use it to interact with mailsync and track memory leaks.
+
 Guppy is installed. To start tracking leaks, you probably want to setup guppy like this:
 >>> from guppy import hpy
 >>> global hp # put this in the global space so it persists between connections
@@ -17,10 +21,13 @@ Guppy is installed. To start tracking leaks, you probably want to setup guppy li
 and then inspect the heap, like this:
 >>> hp.heap()
 
-Happy hacking!\n\n"""
+Happy hacking!
+
+"""  # noqa
 
 
 class RemoteConsole(InteractiveConsole):
+
     def __init__(self, socket, locals=None):
         self.socket = socket
         self.handle = socket.makefile('rw')
@@ -61,7 +68,7 @@ class RemoteConsole(InteractiveConsole):
             sys.ps2
         except AttributeError:
             sys.ps2 = "... "
-        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'  # noqa
         if banner is None:
             self.write("Python %s on %s\n%s\n(%s)\n" %
                        (sys.version, sys.platform, cprt,
@@ -69,7 +76,7 @@ class RemoteConsole(InteractiveConsole):
         else:
             self.write("%s\n" % str(banner))
         more = 0
-        while 1:
+        while True:
             try:
                 if more:
                     prompt = sys.ps2

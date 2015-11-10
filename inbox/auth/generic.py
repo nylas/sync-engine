@@ -19,6 +19,7 @@ AUTH_HANDLER_CLS = 'GenericAuthHandler'
 
 
 class GenericAuthHandler(AuthHandler):
+
     def get_account(self, target, email_address, response):
         account = account_or_none(target, GenericAccount, email_address)
         if not account:
@@ -221,7 +222,8 @@ def create_imap_connection(host, port):
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
 
-    conn = IMAPClient(host, port=port, use_uid=True, ssl=use_ssl, ssl_context=context)
+    conn = IMAPClient(host, port=port, use_uid=True,
+                      ssl=use_ssl, ssl_context=context)
     if not use_ssl:
         # Raises an exception if TLS can't be established
         conn.starttls(context)

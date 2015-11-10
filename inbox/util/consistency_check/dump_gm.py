@@ -54,8 +54,10 @@ class DumpGmailMixin(object):
                 messages.id IS NULL AS message_missing
             FROM
                 thread_messages
-                LEFT JOIN threads ON (thread_messages.thread_id = threads.id)
-                LEFT JOIN messages ON (thread_messages.message_id = messages.id)
+                LEFT JOIN threads
+                    ON (thread_messages.thread_id = threads.id)
+                LEFT JOIN messages
+                    ON (thread_messages.message_id = messages.id)
             ORDER BY threads.x_gm_thrid, messages.x_gm_msgid
             """)
         for row in res:
@@ -66,18 +68,23 @@ class DumpGmailMixin(object):
             if row['message_missing']:
                 print("** ERROR: thread_message with no corresponding message")
             if row['thread_x_gm_thrid'] != row['message_x_gm_thrid']:
-                print("** ERROR: thread_x_gm_thrid={thread_x_gm_thrid!r} != message_x_gm_thrid={message_x_gm_thrid!r}".format(**row))
+                print(
+                    "** ERROR: thread_x_gm_thrid={thread_x_gm_thrid!r} != "
+                    "message_x_gm_thrid={message_x_gm_thrid!r}".format(**row))
 
         #####
         print("-- sanity check x_gm_msgid != x_gm_thrid --")
-        # Check that at least one message has x_gm_thrid != x_gm_msgid, or we probably have a bug
+        # Check that at least one message has x_gm_thrid != x_gm_msgid, or we
+        # probably have a bug
         res = db.execute("""
             SELECT COUNT(*)
             FROM messages WHERE x_gm_msgid != x_gm_thrid
             """)
         count = res.fetchone()[0]
         if count == 0:
-            print("** WARNING: No messages where x_gm_msgid != x_gm_thrid.  Possible bug?")
+            print(
+                "** WARNING: No messages where x_gm_msgid != x_gm_thrid.  "
+                "Possible bug?")
 
         #####
         print("-- folders --")
@@ -110,7 +117,8 @@ class DumpGmailMixin(object):
                 messages.clean_subject
             FROM
                 folder_messages
-                LEFT JOIN messages ON (folder_messages.message_id = messages.id)
+                LEFT JOIN messages
+                    ON (folder_messages.message_id = messages.id)
                 LEFT JOIN folders USING (folder_name)
             ORDER BY
                 folder_messages.folder_name,
@@ -121,7 +129,9 @@ class DumpGmailMixin(object):
             print("[folder_message] " + ',\t'.join(
                 "{0}={1!r}".format(n, row[n]) for n in fields))
             print("[folder_message]   imap_uid={imap_uid!r}".format(**row))
-            print("[folder_message]   clean_subject={clean_subject!r}".format(**row))
+            print(
+                "[folder_message]   clean_subject={clean_subject!r}".format(
+                    **row))
             if row['folder_missing']:
                 print("** ERROR: folder_message with no corresponding folder")
             if row['message_missing']:
@@ -129,7 +139,8 @@ class DumpGmailMixin(object):
 
         #####
         print("-- folder threads --")
-        fields = ['clean_folder_name', 'x_gm_thrid', 'folder_missing', 'thread_missing']
+        fields = ['clean_folder_name', 'x_gm_thrid',
+                  'folder_missing', 'thread_missing']
         res = db.execute("""
             SELECT
                 COALESCE(

@@ -120,6 +120,7 @@ class Base36UID(TypeDecorator):
 # dumps() return standard Python dicts like the json.* equivalents
 # (because these are simply called under the hood)
 class MutableDict(Mutable, dict):
+
     @classmethod
     def coerce(cls, key, value):
         """ Convert plain dictionaries to MutableDict. """
@@ -155,6 +156,7 @@ class MutableDict(Mutable, dict):
 
 
 class MutableList(Mutable, list):
+
     @classmethod
     def coerce(cls, key, value):
         """Convert plain list to MutableList"""
@@ -246,6 +248,7 @@ def generate_public_id():
 # Without this, MySQL will silently insert invalid values in the database if
 # not running with sql-mode=traditional.
 class ForceStrictMode(PoolListener):
+
     def connect(self, dbapi_con, connection_record):
         cur = dbapi_con.cursor()
         cur.execute("SET SESSION sql_mode='TRADITIONAL'")

@@ -124,7 +124,7 @@ def vcard_from_vobject(vcard):
 
         except AttributeError:
             pass
-        if type(property_value) == list:
+        if isinstance(property_value, list):
             property_value = (',').join(property_value)
 
         vdict[property_name].append((property_value, line.params,))

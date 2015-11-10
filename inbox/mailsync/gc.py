@@ -36,6 +36,7 @@ class DeleteHandler(gevent.Greenlet):
 
         deleting it for good.
     """
+
     def __init__(self, account_id, namespace_id, uid_accessor,
                  message_ttl=DEFAULT_MESSAGE_TTL):
         bind_context(self, 'deletehandler', account_id)

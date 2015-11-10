@@ -18,6 +18,7 @@ def format_key(match):
 
 
 class IMAPSearchClient(object):
+
     def __init__(self, account):
         self.account_id = account.id
         self.log = get_logger().new(account_id=account.id,
@@ -50,10 +51,10 @@ class IMAPSearchClient(object):
 
         imap_uids = self._search(db_session, search_query)
         query = db_session.query(Message) \
-                .join(ImapUid) \
-                .filter(ImapUid.account_id == self.account_id,
-                        ImapUid.msg_uid.in_(imap_uids))\
-                .order_by(desc(Message.received_date))\
+            .join(ImapUid) \
+            .filter(ImapUid.account_id == self.account_id,
+                    ImapUid.msg_uid.in_(imap_uids))\
+            .order_by(desc(Message.received_date))\
 
         if offset:
             query = query.offset(offset)
@@ -72,12 +73,12 @@ class IMAPSearchClient(object):
 
         imap_uids = self._search(db_session, search_query)
         query = db_session.query(Thread) \
-                .join(Message) \
-                .join(ImapUid) \
-                .filter(ImapUid.account_id == self.account_id,
-                        ImapUid.msg_uid.in_(imap_uids),
-                        Thread.id == Message.thread_id)\
-                .order_by(desc(Message.received_date))
+            .join(Message) \
+            .join(ImapUid) \
+            .filter(ImapUid.account_id == self.account_id,
+                    ImapUid.msg_uid.in_(imap_uids),
+                    Thread.id == Message.thread_id)\
+            .order_by(desc(Message.received_date))
 
         if offset:
             query = query.offset(offset)
@@ -105,7 +106,7 @@ class IMAPSearchClient(object):
 
         for folder in folders:
             imap_uids.update(self._search_folder(db_session,
-                                                  folder, criteria))
+                                                 folder, criteria))
         self._close_crispin_connection()
         return imap_uids
 
@@ -123,7 +124,7 @@ class IMAPSearchClient(object):
             raise
 
         self.log.debug('Search found message for folder',
-                        folder_name=folder.name,
-                        matching_uids=len(matching_uids))
+                       folder_name=folder.name,
+                       matching_uids=len(matching_uids))
 
         return matching_uids

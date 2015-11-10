@@ -13,6 +13,7 @@ log = get_logger()
 
 
 class Category(MailSyncBase, HasRevisions, HasPublicID):
+
     @property
     def API_OBJECT_NAME(self):
         return self.type_

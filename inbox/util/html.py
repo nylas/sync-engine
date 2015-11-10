@@ -64,7 +64,7 @@ def strip_tags(html):
     return s.get_data()
 
 # https://djangosnippets.org/snippets/19/
-re_string = re.compile(ur'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I|re.U)  # noqa
+re_string = re.compile(ur'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S | re.M | re.I | re.U)  # noqa
 
 
 def plaintext2html(text, tabstop=4):
@@ -77,11 +77,11 @@ def plaintext2html(text, tabstop=4):
         if c['lineend']:
             return '<br>'
         elif c['space']:
-            t = m.group().replace('\t', u'&nbsp;'*tabstop)
+            t = m.group().replace('\t', u'&nbsp;' * tabstop)
             t = t.replace(' ', '&nbsp;')
             return t
         elif c['space'] == '\t':
-            return ' '*tabstop
+            return ' ' * tabstop
         else:
             url = m.group('protocol')
             if url.startswith(' '):

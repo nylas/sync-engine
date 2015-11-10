@@ -28,6 +28,7 @@ MAX_TIME_WITHOUT_SYNC = timedelta(seconds=3600)
 
 class EventSync(BaseSyncMonitor):
     """Per-account event sync engine."""
+
     def __init__(self, email_address, provider_name, account_id, namespace_id,
                  poll_frequency=POLL_FREQUENCY):
         bind_context(self, 'eventsync', account_id)
@@ -156,8 +157,8 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
             if isinstance(local_event, RecurringEvent) and \
                     event.status == 'cancelled' and \
                     local_event.status != 'cancelled':
-                    for override in local_event.overrides:
-                        override.status = 'cancelled'
+                for override in local_event.overrides:
+                    override.status = 'cancelled'
 
             merged_participants = local_event.\
                 _partial_participants_merge(event)

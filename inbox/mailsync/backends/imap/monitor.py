@@ -28,6 +28,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
     refresh_frequency: Integer
         Seconds to wait between checking for new folders to sync.
     """
+
     def __init__(self, account,
                  heartbeat=1, refresh_frequency=30):
         self.refresh_frequency = refresh_frequency

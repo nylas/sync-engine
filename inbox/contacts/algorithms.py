@@ -144,7 +144,7 @@ def _expand_molecule_pool(molecules_dict):
             new_molecule = tuple(sorted(list(g1.intersection(g2))))
             if len(new_molecule) >= MIN_GROUP_SIZE:
                 molecules_dict[new_molecule] = \
-                        molecules_dict[new_molecule].union(m1).union(m2)
+                    molecules_dict[new_molecule].union(m1).union(m2)
 
 
 def _subsume_molecules(molecules_list, get_message_list_weight):

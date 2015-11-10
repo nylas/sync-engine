@@ -68,7 +68,7 @@ def calendar_update(account_public_id):
         raise InputError('Invalid public ID')
     except NoResultFound:
         g.log.info('Getting push notifications for non-existing account',
-                    account_public_id=account_public_id)
+                   account_public_id=account_public_id)
         raise NotFoundError("Couldn't find account `{0}`"
                             .format(account_public_id))
 
@@ -88,6 +88,6 @@ def event_update(calendar_public_id):
         raise InputError('Invalid public ID')
     except NoResultFound:
         g.log.info('Getting push notifications for non-existing calendar',
-                    calendar_public_id=calendar_public_id)
+                   calendar_public_id=calendar_public_id)
         raise NotFoundError("Couldn't find calendar `{0}`"
                             .format(calendar_public_id))

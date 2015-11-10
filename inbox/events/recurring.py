@@ -61,7 +61,7 @@ def parse_rrule(event):
             start = event.start.datetime
         try:
             rule = rrulestr(event.rrule, dtstart=start,
-                             compatible=True)
+                            compatible=True)
 
             return rule
         except Exception as e:

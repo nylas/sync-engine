@@ -44,12 +44,12 @@ def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
         while True:
             try:
                 return func(*args, **kwargs)
-            except gevent.GreenletExit, e:
+            except gevent.GreenletExit as e:
                 # GreenletExit isn't actually a subclass of Exception.
                 # This is also considered to be a successful execution
                 # (somebody intentionally killed the greenlet).
                 raise
-            except Exception, e:
+            except Exception as e:
                 if not should_retry_on(e):
                     raise
                 if exc_callback is not None:

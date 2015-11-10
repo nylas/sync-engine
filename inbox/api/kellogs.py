@@ -23,7 +23,7 @@ def format_categories(categories):
         return []
     return [{'id': category.public_id, 'name': category.name,
              'display_name': category.api_display_name} for category in
-             categories]
+            categories]
 
 
 def format_phone_numbers(phone_numbers):
@@ -322,7 +322,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         # Get time dictionary e.g. 'start_time': x, 'end_time': y or 'date': z
         times = obj.get_time_dict()
         resp = {k: encode(v, legacy_nsid=legacy_nsid) for
-                                         k, v in times.iteritems()}
+                k, v in times.iteritems()}
         resp['object'] = _get_lowercase_class_name(obj)
         return resp
 
@@ -378,6 +378,7 @@ class APIEncoder(object):
         public id of the namespace to which the object to serialize belongs.
 
     """
+
     def __init__(self, namespace_public_id=None, expand=False,
                  legacy_nsid=False):
         self.encoder_class = self._encoder_factory(namespace_public_id, expand,
@@ -385,6 +386,7 @@ class APIEncoder(object):
 
     def _encoder_factory(self, namespace_public_id, expand, legacy_nsid):
         class InternalEncoder(JSONEncoder):
+
             def default(self, obj):
                 custom_representation = encode(obj,
                                                namespace_public_id,

@@ -36,6 +36,7 @@ def _trim_filename(s, mid, max_len=64):
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
+
     @property
     def API_OBJECT_NAME(self):
         return 'message' if not self.is_draft else 'draft'
@@ -284,7 +285,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         self.received_date = received_date if received_date else \
             get_internaldate(parsed.headers.get('Date'),
-                                parsed.headers.get('Received'))
+                             parsed.headers.get('Received'))
 
         # Custom Inbox header
         self.inbox_uid = parsed.headers.get('X-INBOX-ID')
@@ -340,7 +341,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 plain_parts.append(normalized_data)
             else:
                 log.info('Saving other text MIME part as attachment',
-                            content_type=content_type, mid=mid)
+                         content_type=content_type, mid=mid)
                 self._save_attachment(mimepart, 'attachment', content_type,
                                       filename, content_id, namespace_id, mid)
             return

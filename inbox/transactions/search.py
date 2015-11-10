@@ -27,6 +27,7 @@ class ContactSearchIndexService(Greenlet):
     corresponding CloudSearch index operations.
 
     """
+
     def __init__(self, poll_interval=30, chunk_size=DOC_UPLOAD_CHUNK_SIZE):
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
@@ -59,17 +60,20 @@ class ContactSearchIndexService(Greenlet):
         try:
             for key in engine_manager.engines:
                 with session_scope_by_shard_id(key) as db_session:
-                    pointer = db_session.query(ContactSearchIndexCursor).first()
+                    pointer = db_session.query(
+                        ContactSearchIndexCursor).first()
                     if pointer:
                         self.transaction_pointers[key] = pointer.transaction_id
                     else:
-                        # Never start from 0; if the service hasn't run before
-                        # start from the latest transaction, with the expectation
-                        # that a backfill will be run separately.
+                        # Never start from 0; if the service hasn't
+                        # run before start from the latest
+                        # transaction, with the expectation that a
+                        # backfill will be run separately.
                         latest_transaction = db_session.query(Transaction). \
                             order_by(desc(Transaction.created_at)).first()
                         if latest_transaction:
-                            self.transaction_pointers[key] = latest_transaction.id
+                            self.transaction_pointers[
+                                key] = latest_transaction.id
                         else:
                             self.transaction_pointers[key] = 0
 
@@ -79,21 +83,22 @@ class ContactSearchIndexService(Greenlet):
             while True:
                 for key in engine_manager.engines:
                     with session_scope_by_shard_id(key) as db_session:
-                        transactions = db_session.query(Transaction). \
-                            filter(Transaction.id > self.transaction_pointers[key],
-                                   Transaction.object_type == 'contact'). \
-                            with_hint(Transaction,
-                                      "USE INDEX (ix_transaction_table_name)"). \
-                            order_by(asc(Transaction.id)). \
-                            limit(self.chunk_size). \
-                            options(joinedload(Transaction.namespace)).all()
+                        transactions = db_session.query(Transaction). filter(
+                            Transaction.id > self.transaction_pointers[key],
+                            Transaction.object_type == 'contact') \
+                            .with_hint(
+                                Transaction,
+                                "USE INDEX (ix_transaction_table_name)") \
+                            .order_by(asc(Transaction.id)) \
+                            .limit(self.chunk_size) \
+                            .options(joinedload(Transaction.namespace)).all()
 
                         # index up to chunk_size transactions
                         should_sleep = False
                         if transactions:
                             self.index(transactions, db_session)
-                            oldest_transaction = min(transactions,
-                                                     key=lambda t: t.created_at)
+                            oldest_transaction = min(
+                                transactions, key=lambda t: t.created_at)
                             current_timestamp = datetime.utcnow()
                             latency = (current_timestamp -
                                        oldest_transaction.created_at).seconds
@@ -126,7 +131,7 @@ class ContactSearchIndexService(Greenlet):
             joinedload("phone_numbers")).filter(
                 Contact.id.in_(add_record_ids))
         add_docs = [{'type': 'add', 'id': obj.id,
-                    'fields': cloudsearch_contact_repr(obj)}
+                     'fields': cloudsearch_contact_repr(obj)}
                     for obj in add_records]
         docs = delete_docs + add_docs
 

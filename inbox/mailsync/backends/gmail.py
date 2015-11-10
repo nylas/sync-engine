@@ -48,6 +48,7 @@ MAX_DOWNLOAD_COUNT = 1
 
 
 class GmailSyncMonitor(ImapSyncMonitor):
+
     def __init__(self, *args, **kwargs):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
@@ -100,7 +101,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                     if folder.category:
                         if folder.category.display_name != \
                                 raw_folder.display_name:
-                            folder.category.display_name = raw_folder.display_name
+                            folder.category.display_name = raw_folder.display_name  # noqa
                     else:
                         log.info('Creating category for folder',
                                  account_id=self.account_id,
@@ -125,6 +126,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
 
 class GmailFolderSyncEngine(FolderSyncEngine):
+
     def __init__(self, *args, **kwargs):
         FolderSyncEngine.__init__(self, *args, **kwargs)
         self.saved_uids = set()

@@ -35,8 +35,8 @@ def local_uids(account_id, session, folder_id, limit=None):
         q += lambda q: q.order_by(desc(ImapUid.msg_uid))
         q += lambda q: q.limit(bindparam('limit'))
     results = q(session).params(account_id=account_id,
-                                   folder_id=folder_id,
-                                   limit=limit).all()
+                                folder_id=folder_id,
+                                limit=limit).all()
     return {u for u, in results}
 
 

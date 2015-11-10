@@ -57,7 +57,9 @@ def _strip_non_numeric(phone_number):
 
 # CloudSearch doesn't like these characters (reasonably so!)
 non_printable_chars_regex = re.compile(
-    '[\x01\x02\x03\x04\x05\x06\x07\x08\x1b\x1f\x1e\x0e\x1c\x1d\x11\x10\x0b\x1a\x15\x17\x19]')
+    '[\x01\x02\x03\x04\x05\x06\x07\x08'
+    '\x0b\x0e\x10\x11\x15\x17\x19'
+    '\x1a\x1b\x1c\x1d\x1e\x1f]')
 
 
 def cloudsearch_contact_repr(contact):
@@ -124,7 +126,7 @@ class ContactSearchClient(object):
 
     def fetch_all_matching_ids(self):
         """ Fetches *all* match IDs, even if there are tens of thousands. """
-        # see http://docs.aws.amazon.com/cloudsearch/latest/developerguide/paginating-results.html#deep-paging
+        # see http://docs.aws.amazon.com/cloudsearch/latest/developerguide/paginating-results.html#deep-paging # noqa
         #
         # boto limited page size to 500; not sure what boto3's limit is.
         # If higher, consider cranking up quite a bit since only IDs are

@@ -16,6 +16,7 @@ class CPUSampler(object):
     """A simple stack sampler for low-overhead CPU profiling: samples the call
     stack every `interval` seconds and keeps track of counts by frame. Because
     this uses signals, it only works on the main thread."""
+
     def __init__(self, interval=0.005):
         self.interval = interval
         self._started = None
@@ -73,6 +74,7 @@ class GreenletTracer(object):
         Log a warning if a greenlet blocks for more than max_blocking_time
         seconds.
     """
+
     def __init__(self, max_blocking_time=MAX_BLOCKING_TIME):
         self.max_blocking_time = max_blocking_time
         self.time_spent_by_context = collections.defaultdict(float)
@@ -104,7 +106,7 @@ class GreenletTracer(object):
     def log_stats(self, max_stats=60):
         total_time = round(time.time() - self.start_time, 2)
         greenlets_by_cost = sorted(self.time_spent_by_context.items(),
-                                   key=lambda (k, v): v, reverse=True)
+                                   key=lambda k_v: k_v[1], reverse=True)
         formatted_times = {k: round(v, 2) for k, v in
                            greenlets_by_cost[:max_stats]}
         self.log.info('greenlet stats',
@@ -112,7 +114,8 @@ class GreenletTracer(object):
                       total_switches=self.total_switches,
                       total_time=total_time)
 
-    def _trace(self, event, (origin, target)):
+    def _trace(self, event, xxx_todo_changeme):
+        (origin, target) = xxx_todo_changeme
         self.total_switches += 1
         current_time = time.time()
         if self._last_switch_time is not None:

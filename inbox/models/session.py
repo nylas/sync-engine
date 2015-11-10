@@ -46,8 +46,8 @@ def new_session(engine, versioned=True):
         # Make statsd calls for transaction times
         transaction_start_map = {}
         frame, modname = find_first_app_frame_and_name(
-                ignores=['sqlalchemy', 'inbox.models.session', 'nylas.logging',
-                         'contextlib'])
+            ignores=['sqlalchemy', 'inbox.models.session', 'nylas.logging',
+                     'contextlib'])
         funcname = frame.f_code.co_name
         modname = modname.replace(".", "-")
         metric_name = 'db.{}.{}.{}'.format(engine.url.database, modname,
