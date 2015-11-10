@@ -5,11 +5,10 @@ from inbox.models.session import session_scope
 from inbox.models.account import Account
 import optparse
 
-
 def print_usage():
     print "usage:   start-stop-account [--start|--stop|--migrate] --id 1000 --server sync-engine-debug --reason 'moving account'"
     print "example: start-stop-account --stop --id 1000 --softdelete"
-    print "         start-stop-account --migrate --id 1000 --server sync-engine-100"
+    print "         start-stop-account --migrate --id 1000 --host sync-engine-100"
     print "batch usage: start-stop-account also accepts tab-separated input on stdin."
     print "             echo 'karim@nylas.com	account_id' | start-stop-account --start --stdin"
     print "             bin/list-accounts --host precise64 --paying | start-stop-account --start --stdin"
@@ -35,8 +34,6 @@ def start_stop(options):
             if options.softdelete:
                 print "Marking account %s as deleted." % account.email_address
                 account.mark_deleted()
-                db_session.commit()
-                sys.exit(0)
 
             if options.reason is None:
                 print "Error: must specify a reason for stopping the sync (--reason)"
@@ -59,7 +56,6 @@ def start_stop(options):
             account.enable_sync(options.server)
 
         db_session.commit()
-
 
 def main():
     parser = optparse.OptionParser()

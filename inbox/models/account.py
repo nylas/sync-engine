@@ -193,6 +193,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         """ Tell the monitor that this account should stop syncing. """
         self.sync_should_run = False
         self._sync_status['sync_disabled_reason'] = reason
+        self._sync_status['sync_disabled_on'] = datetime.utcnow()
         self._sync_status['sync_disabled_by'] = os.environ.get('USER',
                                                                'unknown')
 
