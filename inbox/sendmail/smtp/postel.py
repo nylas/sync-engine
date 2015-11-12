@@ -10,6 +10,7 @@ import smtplib
 import requests
 
 from nylas.logging import get_logger
+log = get_logger()
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import token_manager as default_token_manager
@@ -18,7 +19,7 @@ from inbox.sendmail.base import generate_attachments, SendMailException
 from inbox.sendmail.message import create_email
 from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
-log = get_logger()
+from inbox.util.blockstore import get_from_blockstore
 
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
 AUTH_EXTNS = {'oauth2': 'XOAUTH2',
@@ -460,7 +461,8 @@ class SMTPClient(object):
         recipient_emails = [email for name, email in itertools.chain(
             msg.bcc_addr, msg.cc_addr, msg.to_addr)]
 
-        mime_body = re.sub(r'Bcc: [^\r\n]*\r\n', '', msg.full_body.data)
+        raw_message = get_from_blockstore(msg.data_sha256)
+        mime_body = re.sub(r'Bcc: [^\r\n]*\r\n', '', raw_message)
         self._send(recipient_emails, mime_body)
 
         # Sent to all successfully

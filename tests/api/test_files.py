@@ -69,8 +69,10 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
     assert len(draft_resp['files']) == len(uploaded_file_ids)
     d_id = draft_resp['id']
 
-    results = api_client.get_data('/files?message_id={}'
-                                  .format(d_id))
+    results = api_client.get_data('/files')
+    assert len(results) == len(uploaded_file_ids)
+
+    results = api_client.get_data('/files?message_id={}'.format(d_id))
 
     assert all([d_id in f['message_ids'] for f in results])
     assert len(results) == len(uploaded_file_ids)

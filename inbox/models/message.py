@@ -13,17 +13,18 @@ from sqlalchemy.orm import (relationship, backref, validates, joinedload,
 from sqlalchemy.sql.expression import false
 from sqlalchemy.ext.associationproxy import association_proxy
 
+from nylas.logging import get_logger
+log = get_logger()
 from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import JSON, json_field_too_long, bakery
 from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
+from inbox.util.blockstore import save_to_blockstore
 from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
-from nylas.logging import get_logger
-log = get_logger()
 
 
 def _trim_filename(s, mid, max_len=64):
@@ -94,11 +95,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     _compacted_body = Column(LONGBLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
     SNIPPET_LENGTH = 191
-
-    # A reference to the block holding the full contents of the message
-    full_body_id = Column(ForeignKey('block.id', name='full_body_id_fk'),
-                          nullable=True)
-    full_body = relationship('Block', cascade='all, delete')
 
     # this might be a mail-parsing bug, or just a message from a bad client
     decode_error = Column(Boolean, server_default=false(), nullable=False,
@@ -204,13 +200,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         msg = Message()
 
-        from inbox.models.block import Block
-        body_block = Block()
-        body_block.namespace_id = account.namespace.id
-        body_block.data = body_string
-        body_block.content_type = "text/plain"
-        msg.full_body = body_block
+        msg.data_sha256 = sha256(body_string).hexdigest()
 
+        # Persist the raw MIME message to disk/ S3
+        save_to_blockstore(msg.data_sha256, body_string)
+
+        # Persist the processed message to the database
         msg.namespace_id = account.namespace.id
 
         try:
@@ -254,6 +249,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     setattr(msg, field, [])
                     msg._mark_error()
 
+            # This is a non-persisted instance attribute.
+            msg.full_body = parsed
+
         return msg
 
     def _parse_metadata(self, parsed, body_string, received_date,
@@ -264,8 +262,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             log.warning('Unexpected MIME-Version',
                         account_id=account_id, folder_name=folder_name,
                         mid=mid, mime_version=mime_version)
-
-        self.data_sha256 = sha256(body_string).hexdigest()
 
         self.subject = parsed.subject
         self.from_addr = parse_mimepart_address_header(parsed, 'From')
@@ -506,9 +502,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         if self.decode_error:
             log.warning('Error getting message header', mid=mid)
             return
-
-        parsed = mime.from_string(self.full_body.data)
-        return parsed.headers.get(header)
+        return self.full_body.headers.get(header)
 
     @classmethod
     def from_public_id(cls, public_id, namespace_id, db_session):

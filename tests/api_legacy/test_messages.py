@@ -1,5 +1,8 @@
 import pytest
 import json
+
+from inbox.util.blockstore import get_from_blockstore
+
 from tests.util.base import (add_fake_message, default_namespace,
                              new_message_from_synced, mime_message, thread,
                              add_fake_thread, generic_account, gmail_account)
@@ -69,7 +72,7 @@ def test_rfc822_format(stub_message_from_raw, api_client, mime_message):
 
     results = api_client.client.get(full_path,
                                     headers={'Accept': 'message/rfc822'})
-    assert results.data == stub_message_from_raw.full_body.data
+    assert results.data == get_from_blockstore(stub_message_from_raw.data_sha256)
 
 
 def test_sender_and_participants(stub_message, api_client):
