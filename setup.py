@@ -42,11 +42,13 @@ setup(
         "arrow==0.5.4",
         "statsd>=3.1",
         "boto3>=1.1.4",
-        "Pympler==0.4.2"
+        "Pympler==0.4.2",
+        "backports.ssl>=0.0.7"
     ],
     dependency_links=[
         # TODO: remove this when IMAPClient 1.0 is out
         "hg+https://bitbucket.org/mjs0/imapclient@d8ea261f28ee29#egg=imapclient-1.0a0",
+        "git+https://github.com/alekstorm/backports.ssl.git#egg=backports.ssl"
     ],
 
     include_package_data=True,
