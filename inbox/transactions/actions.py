@@ -84,7 +84,8 @@ class SyncbackService(gevent.Greenlet):
             query = db_session.query(ActionLog).join(Namespace).join(Account).\
                 filter(ActionLog.discriminator == 'actionlog',
                        ActionLog.status == 'pending',
-                       Account.sync_host == platform.node()).\
+                       Account.sync_host == platform.node(),
+                       Account.sync_should_run).\
                 order_by(ActionLog.id).\
                 options(contains_eager(ActionLog.namespace, Namespace.account))
 
