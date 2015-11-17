@@ -37,9 +37,8 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
             display_name = unicode(display_name)
         display_name = display_name.rstrip()
         if len(display_name) > MAX_INDEXABLE_LENGTH:
-            log.warning("Truncating {} name for account {}; original name was "
-                        "'{}'".format(self.type_, self.namespace.account_id,
-                                      display_name))
+            log.warning('Truncating category name',
+                        type_=self.type_, original=display_name)
             display_name = display_name[:MAX_INDEXABLE_LENGTH]
         return display_name
 
