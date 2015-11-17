@@ -238,9 +238,11 @@ get_default_providers = lambda: {
         "imap": ("imap.aol.com", 993),
         "smtp": ("smtp.aol.com", 587),
         "auth": "password",
+        # .endswith() string match
         "domains": ["aol.com"],
-        "mx_servers": ["mailin-01.mx.aol.com", "mailin-02.mx.aol.com",
-                       "mailin-03.mx.aol.com", "mailin-04.mx.aol.com"]
+        # regex match with dots interpreted literally and glob * as .*,
+        # pinned to start and end
+        "mx_servers": ["mailin-0[1-4].mx.aol.com"],
     },
     "eas": {
         "auth": "password",
@@ -250,7 +252,7 @@ get_default_providers = lambda: {
         ],
         "mx_servers": [
             # Office365
-            "mail.protection.outlook.com", "mail.eo.outlook.com",
+            "*.mail.protection.outlook.com", "*.mail.eo.outlook.com",
         ],
     },
     "outlook": {
@@ -281,7 +283,7 @@ get_default_providers = lambda: {
             "hotmail.com.tr",
         ],
         "mx_servers": [
-            ".*.pamx1.hotmail.com", "mx.*.hotmail.com",
+            "*.pamx1.hotmail.com", "mx.*.hotmail.com",
         ],
     },
     "_outlook": {
@@ -302,8 +304,8 @@ get_default_providers = lambda: {
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
                        "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
         "domains": ["fastmail.fm"],
-        "mx_servers": ["in1-smtp.messagingengine.com",
-                       "in2-smtp.messagingengine.com"],
+        "mx_servers": ["in[12]-smtp.messagingengine.com"],
+        # exact string matches
         "ns_servers": ["ns1.messagingengine.com.",
                        "ns2.messagingengine.com."],
     },
@@ -314,8 +316,7 @@ get_default_providers = lambda: {
         "smtp": ("mail.gandi.net", 587),
         "auth": "password",
         "domains": ["debuggers.co"],
-        "mx_servers": ["spool.mail.gandi.net", "fb.mail.gandi.net",
-                       "mail4.gandi.net", "mail5.gandi.net"],
+        "mx_servers": ["(spool|fb).mail.gandi.net", "mail[45].gandi.net"],
     },
     "gmail": {
         "imap": ("imap.gmail.com", 993),
@@ -324,25 +325,12 @@ get_default_providers = lambda: {
         "events": True,
         "contacts": True,
         "mx_servers": ["aspmx.l.google.com",
-                       "aspmx2.googlemail.com",
-                       "aspmx3.googlemail.com",
-                       "aspmx4.googlemail.com",
-                       "aspmx5.googlemail.com",
-                       "alt1.aspmx.l.google.com",
-                       "alt2.aspmx.l.google.com",
-                       "alt3.aspmx.l.google.com",
-                       "alt4.aspmx.l.google.com",
-                       "aspmx1.aspmx.l.google.com",
-                       "aspmx2.aspmx.l.google.com",
-                       "aspmx3.aspmx.l.google.com",
-                       "aspmx4.aspmx.l.google.com",
+                       "aspmx[2-6].googlemail.com",
+                       "(alt|aspmx)[1-4].aspmx.l.google.com",
                        "gmail-smtp-in.l.google.com",
-                       "alt1.gmail-smtp-in.l.google.com",
-                       "alt2.gmail-smtp-in.l.google.com",
-                       "alt3.gmail-smtp-in.l.google.com",
-                       "alt4.gmail-smtp-in.l.google.com",
+                       "alt[1-4].gmail-smtp-in.l.google.com",
                        # Postini
-                       ".*.psmtp.com"],
+                       "*.psmtp.com"],
     },
     "gmx": {
         "type": "generic",
@@ -368,9 +356,7 @@ get_default_providers = lambda: {
         "folder_map": {"Sent Messages": "sent",
                        "Deleted Messages": "trash"},
         "domains": ["icloud.com"],
-        "mx_servers": ["mx1.mail.icloud.com", "mx2.mail.icloud.com",
-                       "mx3.mail.icloud.com", "mx4.mail.icloud.com",
-                       "mx5.mail.icloud.com", "mx6.mail.icloud.com"],
+        "mx_servers": ["mx[1-6].mail.icloud.com"]
     },
     "mail.ru": {
         "type": "generic",
@@ -385,7 +371,7 @@ get_default_providers = lambda: {
         "imap": ("mail.privateemail.com", 993),
         "smtp": ("mail.privateemail.com", 587),
         "auth": "password",
-        "mx_servers": ["mx1.privateemail.com", "mx2.privateemail.com"]
+        "mx_servers": ["mx[12].privateemail.com"]
     },
     "yahoo": {
         "type": "generic",
@@ -408,7 +394,7 @@ get_default_providers = lambda: {
                     "yahoo.co.th", "yahoo.com.tr", "yahoo.co.uk", "yahoo.com",
                     "yahoo.com.vn", "ymail.com", "rocketmail.com"],
         "mx_servers": ["mx-biz.mail.am0.yahoodns.net",
-                       "mx1.biz.mail.yahoo.com", "mx5.biz.mail.yahoo.com",
+                       "mx[15].biz.mail.yahoo.com",
                        "mxvm2.mail.yahoo.com", "mx-van.mail.am0.yahoodns.net"],
     },
     "yandex": {
@@ -432,9 +418,7 @@ get_default_providers = lambda: {
         "smtp": ("smtpout.secureserver.net", 465),
         "auth": "password",
         "mx_servers": ["smtp.secureserver.net",
-                       "mailstore1.secureserver.net",
-                       "mailstore1.asia.secureserver.net",
-                       "mailstore1.europe.secureserver.net"]
+                       "mailstore1.(asia.|europe.)?secureserver.net"]
     },
     "163": {
         "type": "generic",
@@ -442,10 +426,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.163.com", 465),
         "auth": "password",
         "domains": ["163.com"],
-        "mx_servers": ["163mx00.mxmail.netease.com",
-                       "163mx01.mxmail.netease.com",
-                       "163mx02.mxmail.netease.com",
-                       "163mx03.mxmail.netease.com"]
+        "mx_servers": ["163mx0[0-3].mxmail.netease.com"]
     },
     "163_ym": {
         "type": "generic",
@@ -459,8 +440,7 @@ get_default_providers = lambda: {
         "imap": ("imap.qiye.163.com", 993),
         "smtp": ("smtp.qiye.163.com", 994),
         "auth": "password",
-        "mx_servers": ["qiye163mx01.mxmail.netease.com",
-                       "qiye163mx02.mxmail.netease.com"]
+        "mx_servers": ["qiye163mx0[12].mxmail.netease.com"]
     },
     "126": {
         "type": "generic",
@@ -468,9 +448,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.126.com", 465),
         "auth": "password",
         "domains": ["126.com"],
-        "mx_servers": ["126mx00.mxmail.netease.com",
-                       "126mx01.mxmail.netease.com",
-                       "126mx02.mxmail.netease.com"]
+        "mx_servers": ["126mx0[0-2].mxmail.netease.com"]
     },
     "yeah.net": {
         "type": "generic",
@@ -478,8 +456,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.yeah.net", 465),
         "auth": "password",
         "domains": ["yeah.net"],
-        "mx_servers": ["yeahmx00.mxmail.netease.com",
-                       "yeahmx01.mxmail.netease.com"]
+        "mx_servers": ["yeahmx0[01].mxmail.netease.com"]
     },
     "qq": {
         "type": "generic",
@@ -487,7 +464,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.qq.com", 465),
         "auth": "password",
         "domains": ["qq.com", "vip.qq.com"],
-        "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+        "mx_servers": ["mx[1-3].qq.com"]
     },
     "foxmail": {
         "type": "generic",
@@ -495,14 +472,14 @@ get_default_providers = lambda: {
         "smtp": ("smtp.exmail.qq.com", 465),
         "auth": "password",
         "domains": ["foxmail.com"],
-        "mx_servers": ["mx1.qq.com", "mx2.qq.com", "mx3.qq.com"]
+        "mx_servers": ["mx[1-3].qq.com"]
     },
     "qq_enterprise": {
         "type": "generic",
         "imap": ("imap.exmail.qq.com", 993),
         "smtp": ("smtp.exmail.qq.com", 465),
         "auth": "password",
-        "mx_servers": ["mxbiz1.qq.com", "mxbiz2.qq.com"]
+        "mx_servers": ["mxbiz[12].qq.com"]
     },
     "aliyun": {
         "type": "generic",
@@ -518,9 +495,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.139.com", 465),
         "auth": "password",
         "domains": ["139.com"],
-        "mx_servers": ["mx1.mail.139.com",
-                       "mx2.mail.139.com",
-                       "mx3.mail.139.com"]
+        "mx_servers": ["mx[1-3].mail.139.com"]
     },
     "custom": {
         "type": "generic",
