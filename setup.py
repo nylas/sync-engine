@@ -43,6 +43,8 @@ setup(
         "statsd>=3.1",
         "boto3>=1.1.4",
         "Pympler==0.4.2",
+        "pyopenssl>=0.15.1",
+        "gevent_openssl==1.2",
         "backports.ssl>=0.0.7"
     ],
     dependency_links=[
