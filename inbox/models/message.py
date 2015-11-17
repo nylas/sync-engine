@@ -241,7 +241,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             # Occasionally people try to send messages to way too many
             # recipients. In such cases, empty the field and treat as a parsing
             # error so that we don't break the entire sync.
-            for field in ('to_addr', 'cc_addr', 'bcc_addr', 'references'):
+            for field in ('to_addr', 'cc_addr', 'bcc_addr', 'references',
+                          'reply_to'):
                 value = getattr(msg, field)
                 if json_field_too_long(value):
                     log.error('Recipient field too long', field=field,
