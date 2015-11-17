@@ -26,6 +26,7 @@ from email.parser import HeaderParser
 from collections import namedtuple, defaultdict
 
 import gevent
+from backports import ssl
 from gevent import socket
 from gevent.lock import BoundedSemaphore
 from gevent.queue import Queue
@@ -59,8 +60,21 @@ RawFolder = namedtuple('RawFolder', 'display_name role')
 # connection pools for a given account.
 _lock_map = defaultdict(threading.Lock)
 
+# Exception classes which indicate the network connection to the IMAP
+# server is broken.
+CONN_NETWORK_EXC_CLASSES = (socket.error, ssl.SSLError)
 
-CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
+# Exception classes on which operations should be retried.
+CONN_RETRY_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES + (imaplib.IMAP4.error,)
+
+# Exception classes on which connections should be discarded.
+CONN_DISCARD_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES +  \
+                           (ssl.CertificateError, imaplib.IMAP4.error)
+
+# Exception classes which indicate the IMAP connection has become
+# unusable.
+CONN_UNUSABLE_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES + \
+                            (ssl.CertificateError, imaplib.IMAP4.abort)
 
 
 class FolderMissingError(Exception):
@@ -155,8 +169,8 @@ class CrispinConnectionPool(object):
             # thing to do.
             log.info('IMAP connection error; discarding connection',
                      exc_info=True)
-            if (client is not None and not
-                    isinstance(exc, (imaplib.IMAP4.abort, socket.error))):
+            if client is not None and \
+               not isinstance(exc, CONN_UNUSABLE_EXC_CLASSES):
                 try:
                     client.logout()
                 except Exception:
@@ -210,7 +224,7 @@ def _exc_callback():
 
 
 retry_crispin = functools.partial(
-    retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback)
+    retry, retry_classes=CONN_RETRY_EXC_CLASSES, exc_callback=_exc_callback)
 
 
 class CrispinClient(object):
