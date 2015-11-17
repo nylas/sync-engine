@@ -68,8 +68,6 @@ class GreenletTracer(object):
 
     Parameters
     ----------
-    gather_stats: bool
-        Whether to periodically log statistics about time spent.
     max_blocking_time: float
         Log a warning if a greenlet blocks for more than max_blocking_time
         seconds.
@@ -148,7 +146,7 @@ class GreenletTracer(object):
         try:
             while True:
                 self._check_blocking()
-                if self.gather_stats and time.time() - last_logged_stats > 60:
+                if time.time() - last_logged_stats > 60:
                     self.log_stats()
                     last_logged_stats = time.time()
                 gevent.sleep(self.max_blocking_time)
