@@ -6,6 +6,7 @@ import urllib
 import gevent
 import requests
 import uuid
+import arrow
 
 from inbox.auth.oauth import OAuthRequestsWrapper
 from inbox.basicauth import AccessNotEnabledError
@@ -94,7 +95,12 @@ class GoogleEventsProvider(object):
         items = self._get_raw_events(calendar_uid, sync_from_time)
         read_only_calendar = self.calendars_table.get(calendar_uid, True)
         for item in items:
-            updates.append(parse_event_response(item, read_only_calendar))
+            try:
+                parsed = parse_event_response(item, read_only_calendar)
+                updates.append(parsed)
+            except arrow.parser.ParserError:
+                log.warning('Skipping unparseable event', exc_info=True,
+                            raw=item)
 
         return updates
 

@@ -314,6 +314,20 @@ def test_handle_offset_all_day_events():
     assert cmp_event_attrs(expected, parse_event_response(raw_event, False))
 
 
+def test_handle_unparseable_dates():
+    raw_response = [{
+        'id': '20140615_60o30dr564o30c1g60o30dr4ck',
+        'start': {'date': '0000-01-01'},
+        'end': {'date': '0000-01-02'},
+        'summary': 'test'
+    }]
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_raw_events = mock.MagicMock(
+        return_value=raw_response)
+    updates = provider.sync_events('uid', 1)
+    assert len(updates) == 0
+
+
 def test_pagination():
     first_response = requests.Response()
     first_response.status_code = 200
