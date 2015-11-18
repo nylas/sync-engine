@@ -251,7 +251,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     setattr(msg, field, [])
                     msg._mark_error()
 
-            # This is a non-persisted instance attribute.
+            # Non-persisted instance attribute used by EAS.
             msg.full_body = parsed
 
         return msg

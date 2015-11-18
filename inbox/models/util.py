@@ -42,8 +42,9 @@ def reconcile_message(new_message, session):
 
     if version is None or int(version) == existing_message.version:
         existing_message.message_id_header = new_message.message_id_header
-        existing_message.full_body = new_message.full_body
         existing_message.references = new_message.references
+        # Non-persisted instance attribute used by EAS.
+        existing_message.full_body = new_message.full_body
 
     return existing_message
 
