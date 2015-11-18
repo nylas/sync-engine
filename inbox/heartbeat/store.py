@@ -69,9 +69,6 @@ class HeartbeatStatusProxy(object):
         self.store = HeartbeatStore.store()
         self.value = {}
         self.email_address = email_address
-        self.publish(email_address=email_address,
-                     provider_name=provider_name,
-                     folder_name=folder_name)
 
     @safe_failure
     def publish(self, **kwargs):

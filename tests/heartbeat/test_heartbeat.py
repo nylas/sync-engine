@@ -8,8 +8,7 @@ from inbox.heartbeat.store import (HeartbeatStore, HeartbeatStatusProxy,
 from inbox.heartbeat.status import (clear_heartbeat_status, list_all_accounts,
                                     list_alive_accounts, list_dead_accounts,
                                     heartbeat_summary, get_account_metadata,
-                                    get_heartbeat_status, get_ping_status,
-                                    AccountHeartbeatStatus)
+                                    get_ping_status, AccountHeartbeatStatus)
 from inbox.heartbeat.config import ALIVE_EXPIRY
 from inbox.config import config
 
@@ -61,21 +60,6 @@ def test_heartbeat_status_key():
     assert key.folder_id == 1
 
 
-def test_proxy_publishes_on_init(redis_client):
-    proxy = proxy_for(1, 2)
-    # Check there was an initial publish
-    assert "1:2" in redis_client.keys()
-    folder = redis_client.hgetall("1:2")
-    # Check Gmail account published to device '0'
-    assert folder.keys() == ['0']
-    # Check the published keys were valid
-    folder = json.loads(folder['0'])
-    assert all([k in proxy.schema for k in folder.keys()])
-    assert 'folder_name' in folder.keys()
-    assert 'email_address' in folder.keys()
-    assert 'provider_name' in folder.keys()
-
-
 def test_proxy_publish_doesnt_break_everything(monkeypatch):
     def break_things(s, k, d, v):
         raise Exception("Redis connection failure")
@@ -88,6 +72,7 @@ def test_proxy_publish_doesnt_break_everything(monkeypatch):
 
 def test_folder_publish_in_index(redis_client):
     proxy = proxy_for(1, 2)
+    proxy.publish()
     assert 'folder_index' in redis_client.keys()
     assert 'account_index' in redis_client.keys()
     assert '1' in redis_client.keys()
@@ -124,7 +109,9 @@ def test_account_index_oldest_timestamp(redis_client):
     # account, the account's timestamp in the index is the oldest of the two.
     proxies = []
     for i in [2, 3]:
-        proxies.append(proxy_for(1, i))
+        proxy = proxy_for(1, i)
+        proxy.publish()
+        proxies.append(proxy)
         time.sleep(0.5)
 
     # Check that folder 3 is in the right place
@@ -149,7 +136,9 @@ def test_remove_folder_from_index(redis_client, store):
     # index and the account's timestamp updated accordingly.
     proxies = []
     for i in [2, 3]:
-        proxies.append(proxy_for(1, i))
+        proxy = proxy_for(1, i)
+        proxy.publish()
+        proxies.append(proxy)
         time.sleep(0.5)
 
     n = store.remove_folders(1, 2)
@@ -169,7 +158,7 @@ def test_remove_folder_from_index(redis_client, store):
 
 def test_remove_account_from_index(store):
     for i in [2, 3]:
-        proxy_for(1, i)
+        proxy_for(1, i).publish()
     n = clear_heartbeat_status(1)
     assert n == 2
     assert store.get_folder_list() == []
@@ -179,6 +168,7 @@ def test_publish_with_timestamp(store):
     # Test that if we publish with an explicit timestamp argument, the
     # heartbeat has that timestamp, not now.
     proxy = proxy_for(1, 2)
+    proxy.publish()
     timestamp = datetime(2015, 01, 01, 02, 02, 02)
     proxy.publish(heartbeat_at=timestamp)
     account_timestamp = store.get_account_timestamp(1)
@@ -188,8 +178,8 @@ def test_publish_with_timestamp(store):
 def test_kill_device_multiple(store):
     # If we kill a device and the folder has multiple devices, don't clear
     # the heartbeat status
-    proxy_for(1, 2, device_id=2)
-    proxy_for(1, 2, device_id=3)
+    proxy_for(1, 2, device_id=2).publish()
+    proxy_for(1, 2, device_id=3).publish()
     clear_heartbeat_status(1, device_id=2)
     folders = store.get_account_folders(1)
     (f, ts) = folders[0]
@@ -199,7 +189,7 @@ def test_kill_device_multiple(store):
 def test_kill_device_lastone(store):
     # If we kill a device and it's the only device publishing heartbeats for
     # that folder, the folder is removed when the device is removed.
-    proxy_for(1, 2, device_id=2)
+    proxy_for(1, 2, device_id=2).publish()
     clear_heartbeat_status(1, device_id=2)
     folders = store.get_account_folders(1)
     assert len(folders) == 0
@@ -215,7 +205,9 @@ def random_heartbeats():
     for i in range(10):
         proxies[i] = {}
         for f in range(-2, 3):
-            proxies[i][f] = proxy_for(i, f)
+            proxy = proxy_for(i, f)
+            proxy.publish()
+            proxies[i][f] = proxy
     return proxies
 
 
@@ -281,43 +273,6 @@ def test_summary_metrics(store, random_heartbeats):
         'alive_accounts': 8,
         'dead_accounts': 2
     }
-
-
-def test_account_metadata(store):
-    proxy_for(1, 2)
-    proxy_for(3, 4, 'foo@bar.com', 'eas')
-
-    (email, provider) = get_account_metadata(account_id=1)
-    assert email == 'test@test.com'
-    assert provider == 'gmail'
-
-    (email, provider) = get_account_metadata(account_id=3)
-    assert email == 'foo@bar.com'
-    assert provider == 'eas'
-
-
-def test_get_full_status(store):
-    proxy_for(1, 3)
-    proxy_for(1, 7)
-    proxy_for(1, -1)
-    proxy_for(1, -2)
-
-    time.sleep(0.5)
-    status = get_heartbeat_status()
-
-    assert status.keys() == [1]
-    account = status[1]
-    assert isinstance(account, AccountHeartbeatStatus)
-    assert account.alive
-    assert len(account.folders) == 4
-    assert all([f.alive for f in account.folders])
-
-
-def test_missing_status(store):
-    status = get_heartbeat_status(account_id=12)
-    assert status.keys() == [12]
-    assert status[12].missing
-    assert not status[12].alive
 
 
 def test_ping(random_heartbeats):

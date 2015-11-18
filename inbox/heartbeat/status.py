@@ -184,29 +184,6 @@ def load_folder_status(k, v):
     return folder
 
 
-def get_heartbeat_status(host=None, port=6379, account_id=None):
-    # Gets the full (folder-by-folder) heartbeat status report for all
-    # accounts or a specific account ID.
-    store = HeartbeatStore.store(host, port)
-    folders = store.get_folders(load_folder_status, account_id)
-    accounts = {}
-    for key, folder in folders.iteritems():
-        account = accounts.get(key.account_id,
-                               AccountHeartbeatStatus(key.account_id))
-        # Update accounts list by adding folder heartbeat.
-        folder_hb = FolderHeartbeatStatus(key.folder_id, folder,
-                                          ALIVE_THRESHOLD)
-        account.add_folder(folder_hb)
-        accounts[key.account_id] = account
-
-    if account_id and account_id not in accounts:
-        # If we asked about a specific folder and it didn't come back,
-        # report it as missing.
-        accounts[account_id] = AccountHeartbeatStatus(account_id, missing=True)
-
-    return accounts
-
-
 def get_account_timestamps(host=None, port=6379, account_id=None):
     store = HeartbeatStore.store(host, port)
     if account_id:
