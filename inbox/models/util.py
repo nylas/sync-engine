@@ -44,7 +44,7 @@ def reconcile_message(new_message, session):
         existing_message.message_id_header = new_message.message_id_header
         existing_message.references = new_message.references
         # Non-persisted instance attribute used by EAS.
-        existing_message.full_body = new_message.full_body
+        existing_message.parsed_body = new_message.parsed_body
 
     return existing_message
 

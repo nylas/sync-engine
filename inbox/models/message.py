@@ -252,7 +252,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     msg._mark_error()
 
             # Non-persisted instance attribute used by EAS.
-            msg.full_body = parsed
+            msg.parsed_body = parsed
 
         return msg
 
@@ -504,7 +504,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         if self.decode_error:
             log.warning('Error getting message header', mid=mid)
             return
-        return self.full_body.headers.get(header)
+        return self.parsed_body.headers.get(header)
 
     @classmethod
     def from_public_id(cls, public_id, namespace_id, db_session):
