@@ -105,6 +105,12 @@ class SyncService(object):
                                      Account.sync_should_run,
                                      Account.sync_host == self.host,
                                      start_on_this_cpu)])
+
+                # Close the underlying connection rather than returning it to
+                # the pool. This allows this query to run against all shards
+                # without potentially acquiring a poorly-utilized, persistent
+                # connection from each sync host to each shard.
+                db_session.invalidate()
         return accounts
 
     def _run_impl(self):
