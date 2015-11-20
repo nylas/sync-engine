@@ -74,6 +74,12 @@ class GmailSyncMonitor(ImapSyncMonitor):
         """
         account = db_session.query(Account).get(self.account_id)
 
+        old_labels = {label for label in db_session.query(Label).filter(
+            Label.account_id == self.account_id,
+            Label.deleted_at == None)}
+
+        new_labels = set()
+
         # Create new labels, folders
         for raw_folder in raw_folders:
             if raw_folder.role == 'starred':
@@ -81,9 +87,18 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 # (we set Message.is_starred from the '\\Flagged' flag)
                 continue
 
-            Label.find_or_create(db_session, account,
-                                 raw_folder.display_name,
-                                 raw_folder.role)
+            label = Label.find_or_create(db_session, account,
+                                         raw_folder.display_name,
+                                         raw_folder.role)
+            new_labels.add(label)
+
+            if label.deleted_at is not None:
+                # This is a label which was previously marked as deleted
+                # but which mysteriously reappeared. Unmark it.
+                log.info('Deleted label recreated on remote',
+                         name=raw_folder.display_name)
+                label.deleted_at = None
+                label.category.deleted_at = None
 
             if raw_folder.role in ('all', 'spam', 'trash'):
                 folder = db_session.query(Folder).filter(
@@ -122,6 +137,18 @@ class GmailSyncMonitor(ImapSyncMonitor):
         for folder in account.folders:
             if folder.imapsyncstatus:
                 folder.imapsyncstatus.sync_should_run = True
+
+        # Go through the labels which have been "deleted" (i.e: they don't
+        # show up when running LIST) and mark them as such.
+        # We can't delete labels directly because Gmail allows users to hide
+        # folders --- we need to check that there's no messages still
+        # associated with the label.
+        deleted_labels = old_labels - new_labels
+        for deleted_label in deleted_labels:
+            deleted_label.deleted_at = datetime.now()
+            cat = deleted_label.category
+            cat.deleted_at = datetime.now()
+
         db_session.commit()
 
 

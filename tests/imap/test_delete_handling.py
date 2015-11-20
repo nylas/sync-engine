@@ -7,6 +7,7 @@ from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
 from inbox.mailsync.gc import DeleteHandler
 from inbox.models import Folder, Transaction
+from inbox.models.label import Label
 from tests.util.base import add_fake_imapuid, add_fake_message
 
 
@@ -155,3 +156,43 @@ def test_deletion_creates_revision(db, default_account, default_namespace,
                Transaction.namespace_id == default_namespace.id). \
         order_by(desc(Transaction.id)).first()
     assert latest_thread_transaction.command == 'delete'
+
+
+def test_deleted_labels_get_gced(db, default_account, thread, message,
+                                 imapuid, folder):
+    # Check that only the labels without messages attached to them
+    # get deleted.
+
+    default_namespace = default_account.namespace
+
+    # Create a label w/ no messages attached.
+    label = Label.find_or_create(db.session, default_account, 'dangling label')
+    label.deleted_at = datetime.utcnow()
+    label.category.deleted_at = datetime.utcnow()
+    label_id = label.id
+    db.session.commit()
+
+    # Create a label with attached messages.
+    msg_uid = imapuid.msg_uid
+    update_metadata(default_account.id, folder.id,
+                    {msg_uid: GmailFlags((), ('label',))}, db.session)
+
+    label_ids = []
+    for cat in message.categories:
+        for l in cat.labels:
+            label_ids.append(l.id)
+
+    handler = DeleteHandler(account_id=default_account.id,
+                            namespace_id=default_namespace.id,
+                            uid_accessor=lambda m: m.imapuids,
+                            message_ttl=0)
+    handler.gc_deleted_categories()
+    db.session.commit()
+
+    # Check that the first label got gc'ed
+    marked_deleted = db.session.query(Label).get(label_id)
+    assert marked_deleted is None
+
+    # Check that the other labels didn't.
+    for label_id in label_ids:
+        assert db.session.query(Label).get(label_id) is not None

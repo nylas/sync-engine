@@ -23,6 +23,7 @@ from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 from inbox.models.util import reconcile_message
 from inbox.sqlalchemy_ext.util import bakery
 from nylas.logging import get_logger
+
 log = get_logger()
 
 
@@ -59,6 +60,7 @@ def update_message_metadata(session, account, message, is_draft):
     message.is_draft = is_draft
 
     categories = set()
+
     for i in uids:
         categories.update(i.categories)
 
