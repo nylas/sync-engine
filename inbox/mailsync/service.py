@@ -57,6 +57,17 @@ class SyncService(object):
         self.event_sync_monitors = {}
         self.poll_interval = poll_interval
 
+        self.stealing_enabled = config.get('SYNC_STEAL_ACCOUNTS', True)
+        self.sync_hosts_for_shards = {}
+        for database in config['DATABASE_HOSTS']:
+            for shard in database['SHARDS']:
+                # If no sync hosts are explicitly configured for the shard,
+                # then try to steal from it. That way if you turn up a new
+                # shard without properly allocating sync hosts to it, accounts
+                # on it will still be started.
+                self.sync_hosts_for_shards[shard['ID']] = shard.get(
+                    'SYNC_HOSTS', [self.host])
+
     def run(self):
         if config.get('DEBUG_CONSOLE_ON'):
             # Enable the debugging console if this flag is set. Connect to
@@ -86,7 +97,8 @@ class SyncService(object):
             with session_scope_by_shard_id(key) as db_session:
                 start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
                                                             self.total_cpus)
-                if config.get('SYNC_STEAL_ACCOUNTS', True):
+                if (self.stealing_enabled and
+                        self.host in self.sync_hosts_for_shards[key]):
                     q = db_session.query(Account).filter(
                         Account.sync_host.is_(None),
                         Account.sync_should_run,

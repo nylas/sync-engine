@@ -5,12 +5,13 @@ from inbox.models import Account, Namespace
 from inbox.models.session import session_scope_by_shard_id, session_scope
 
 
-def purge_other_accounts(default_account):
+def purge_other_accounts(default_account=None):
     for key in engine_manager.engines:
         with session_scope_by_shard_id(key) as db_session:
-            db_session.query(Account).filter(
-                Account.id != default_account.id).delete(
-                    synchronize_session='fetch')
+            q = db_session.query(Account)
+            if default_account is not None:
+                q = q.filter(Account.id != default_account.id)
+            q.delete(synchronize_session='fetch')
             db_session.commit()
 
 
@@ -129,7 +130,7 @@ def test_accounts_started_on_all_shards(db, default_account, config):
     default_account.sync_host = None
     db.session.commit()
     ss = SyncService(cpu_id=0, total_cpus=1)
-    ss.host = 'localhost'
+    ss.host = platform.node()
     account_ids = {default_account.id}
     for key in (0, 1):
         with session_scope_by_shard_id(key) as db_session:
@@ -144,4 +145,26 @@ def test_accounts_started_on_all_shards(db, default_account, config):
     for id_ in account_ids:
         with session_scope(id_) as db_session:
             acc = db_session.query(Account).get(id_)
-            assert acc.sync_host == 'localhost'
+            assert acc.sync_host == ss.host
+
+
+def test_stealing_limited_by_host(db, config):
+    host = platform.node()
+    config['DATABASE_HOSTS'][0]['SHARDS'][0]['SYNC_HOSTS'] = [host]
+    config['DATABASE_HOSTS'][0]['SHARDS'][1]['SYNC_HOSTS'] = ['otherhost']
+    purge_other_accounts()
+    ss = SyncService(cpu_id=0, total_cpus=1)
+    for key in (0, 1):
+        with session_scope_by_shard_id(key) as db_session:
+            acc = Account()
+            acc.namespace = Namespace()
+            db_session.add(acc)
+            db_session.commit()
+
+    ss.accounts_to_start()
+    with session_scope_by_shard_id(0) as db_session:
+        acc = db_session.query(Account).first()
+        assert acc.sync_host == host
+    with session_scope_by_shard_id(1) as db_session:
+        acc = db_session.query(Account).first()
+        assert acc.sync_host is None
