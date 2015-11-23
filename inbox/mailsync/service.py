@@ -66,7 +66,7 @@ class SyncService(object):
                 # shard without properly allocating sync hosts to it, accounts
                 # on it will still be started.
                 self.sync_hosts_for_shards[shard['ID']] = shard.get(
-                    'SYNC_HOSTS', [self.host])
+                    'SYNC_HOSTS') or [self.host]
 
     def run(self):
         if config.get('DEBUG_CONSOLE_ON'):
