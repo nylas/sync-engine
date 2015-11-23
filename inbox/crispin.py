@@ -347,6 +347,13 @@ class CrispinClient(object):
     def selected_uidnext(self):
         return or_none(self.selected_folder_info, lambda i: i.get('UIDNEXT'))
 
+    @property
+    def folder_delimiter(self):
+        folders = self._fetch_folder_list()
+        _, delimiter, __ = folders[0]
+
+        return delimiter
+
     def sync_folders(self):
         """
         List of folders to sync.

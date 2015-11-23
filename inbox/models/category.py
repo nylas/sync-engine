@@ -9,6 +9,7 @@ from inbox.models.mixins import (HasRevisions, HasPublicID,
                                  CaseInsensitiveComparator)
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from nylas.logging import get_logger
+from inbox.util.misc import fs_folder_path, is_imap_folder_path
 log = get_logger()
 
 
@@ -82,6 +83,11 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
         if self.namespace.account.provider == 'gmail' and \
                 self.display_name.startswith('[Gmail]/'):
             return self.display_name[8:]
+
+        if self.namespace.account.provider in ['generic', 'fastmail'] and \
+                is_imap_folder_path(self.display_name):
+            return fs_folder_path(self.display_name)
+
         return self.display_name
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name',

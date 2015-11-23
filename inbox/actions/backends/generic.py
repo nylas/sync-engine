@@ -12,6 +12,7 @@ from inbox.models.category import Category
 from imaplib import IMAP4
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email
+from inbox.util.misc import imap_folder_path
 
 log = get_logger()
 
@@ -93,13 +94,33 @@ def remote_move(account, message_id, db_session, destination):
 
 def remote_create_folder(account, category_id, db_session):
     category = db_session.query(Category).get(category_id)
+
     with writable_connection_pool(account.id).get() as crispin_client:
+        # Some generic IMAP providers have different conventions
+        # regarding folder names. For example, Fastmail wants paths
+        # to be of the form "INBOX.A". The API abstracts this.
+        if account.provider in ['generic', 'fastmail']:
+            # Update the name of the folder to 'INBOX.whatever'.
+            # We need to do this to keep track of the folder name
+            # on the backend. The API abstracts this anyway.
+            category.display_name = imap_folder_path(
+                category.display_name,
+                separator=crispin_client.folder_delimiter)
+
         crispin_client.conn.create_folder(category.display_name)
 
 
 def remote_update_folder(account, category_id, db_session, old_name):
     category = db_session.query(Category).get(category_id)
     with writable_connection_pool(account.id).get() as crispin_client:
+        if account.provider in ['generic', 'fastmail']:
+            # Update the name of the folder to 'INBOX.whatever'.
+            # We need to do this to keep track of the folder name
+            # on the backend. The API abstracts this anyway.
+            category.display_name = imap_folder_path(
+                category.display_name,
+                separator=crispin_client.folder_delimiter)
+
         crispin_client.conn.rename_folder(old_name, category.display_name)
 
 
