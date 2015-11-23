@@ -211,11 +211,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         try:
             parsed = mime.from_string(body_string)
+            # Non-persisted instance attribute used by EAS.
+            msg.parsed_body = parsed
             msg._parse_metadata(parsed, body_string, received_date, account.id,
                                 folder_name, mid)
         except (mime.DecodingError, AttributeError, RuntimeError,
                 TypeError) as e:
             parsed = None
+            # Non-persisted instance attribute used by EAS.
+            msg.parsed_body = ''
             log.error('Error parsing message metadata',
                       folder_name=folder_name, account_id=account.id, error=e)
             msg._mark_error()
@@ -250,9 +254,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                               mid=mid)
                     setattr(msg, field, [])
                     msg._mark_error()
-
-            # Non-persisted instance attribute used by EAS.
-            msg.parsed_body = parsed
 
         return msg
 
