@@ -1,5 +1,4 @@
 import ssl
-import json
 import smtpd
 import asyncore
 import datetime
@@ -37,11 +36,17 @@ def run_bad_cert_smtp_server():
     asyncore.loop()
 
 
-@pytest.yield_fixture(scope='function')
+@pytest.yield_fixture(scope='module')
 def bad_cert_smtp_server():
     s = gevent.spawn(run_bad_cert_smtp_server)
     yield s
     s.kill()
+
+
+@pytest.fixture
+def patched_smtp(monkeypatch):
+    monkeypatch.setattr('inbox.sendmail.smtp.postel.SMTPConnection.smtp_password',
+                        lambda x: None)
 
 
 @pytest.fixture(scope='function')
@@ -74,30 +79,27 @@ def example_draft(db, default_account):
 
 def test_smtp_ssl_verification_bad_cert(db, bad_cert_smtp_server,
                                         example_draft, local_smtp_account,
-                                        api_legacy_client):
-
-    error_msg = 'SMTP server SSL certificate verify failed'
+                                        api_legacy_client, patched_smtp):
 
     api_client = new_api_client(db, local_smtp_account.namespace)
     gevent.sleep(0.2)  # let SMTP daemon start up
     r = api_client.post_data('/send', example_draft)
-    assert r.status_code == 503
-    assert json.loads(r.data)['message'] == error_msg
+    assert r.status_code == 200
 
 
 def test_smtp_ssl_verification_bad_cert_legacy(db, bad_cert_smtp_server,
                                                example_draft,
                                                local_smtp_account,
-                                               api_legacy_client):
-
-    error_msg = 'SMTP server SSL certificate verify failed'
+                                               api_legacy_client,
+                                               patched_smtp):
 
     ns_public_id = local_smtp_account.namespace.public_id
+    gevent.sleep(1.0)  # let SMTP daemon start up
     r = api_legacy_client.post_data('/send', example_draft, ns_public_id)
-    assert r.status_code == 503
-    assert json.loads(r.data)['message'] == error_msg
+    assert r.status_code == 200
 
 
 if __name__ == '__main__':
-    server = BadCertSMTPServer((SMTP_SERVER_HOST, SMTP_SERVER_PORT), None)
+    server = BadCertSMTPServer((SMTP_SERVER_HOST, SMTP_SERVER_PORT),
+                               (None, None))
     asyncore.loop()
