@@ -67,9 +67,9 @@ def cloudsearch_contact_repr(contact):
     parsed = address.parse(contact.email_address)
     name = contact.name or ''
     email_address = parsed.address if parsed else ''
-    name_contains_bad_codepoints = re.match(
+    name_contains_bad_codepoints = re.search(
         non_printable_chars_regex, contact.name or '')
-    email_contains_bad_codepoints = re.match(
+    email_contains_bad_codepoints = re.search(
         non_printable_chars_regex, email_address)
     if name_contains_bad_codepoints or email_contains_bad_codepoints:
         log.warning("bad codepoint in contact", contact_id=contact.id,
