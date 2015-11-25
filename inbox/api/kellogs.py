@@ -36,10 +36,9 @@ def format_phone_numbers(phone_numbers):
     return formatted_phone_numbers
 
 
-def encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
+def encode(obj, namespace_public_id=None, expand=False):
     try:
-        return _encode(obj, namespace_public_id, expand,
-                       legacy_nsid=legacy_nsid)
+        return _encode(obj, namespace_public_id, expand)
     except Exception as e:
         error_context = {
             "id": getattr(obj, "id", None),
@@ -50,7 +49,7 @@ def encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         raise
 
 
-def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
+def _encode(obj, namespace_public_id=None, expand=False):
     """
     Returns a dictionary representation of an Inbox model object obj, or
     None if there is no such representation defined. If the optional
@@ -85,11 +84,6 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
     def _get_lowercase_class_name(obj):
         return type(obj).__name__.lower()
 
-    if legacy_nsid:
-        public_id_key_name = 'namespace_id'
-    else:
-        public_id_key_name = 'account_id'
-
     # Flask's jsonify() doesn't handle datetimes or json arrays as primary
     # objects.
     if isinstance(obj, datetime.datetime):
@@ -99,56 +93,28 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         return obj.isoformat()
 
     if isinstance(obj, arrow.arrow.Arrow):
-        return encode(obj.datetime, legacy_nsid=legacy_nsid)
+        return encode(obj.datetime)
 
-    # TODO deprecate this and remove -- legacy_nsid
-    elif isinstance(obj, Namespace) and legacy_nsid:
-        return {
-            'id': obj.public_id,
-            'object': 'namespace',
-            'namespace_id': obj.public_id,
-
-            # Account specific
-            'account_id': obj.account.public_id,
-            'email_address': obj.account.email_address,
-            'name': obj.account.name,
-            'provider': obj.account.provider,
-            'organization_unit': obj.account.category_type
-        }
-    elif isinstance(obj, Namespace):  # these are now "Account" objects
+    if isinstance(obj, Namespace):  # These are now "accounts"
         return {
             'id': obj.public_id,
             'object': 'account',
             'account_id': obj.public_id,
-
-            'email_address': obj.account.email_address,
+            'email_address': obj.account.email_address if obj.account else '',
             'name': obj.account.name,
             'provider': obj.account.provider,
             'organization_unit': obj.account.category_type,
             'sync_state': obj.account.sync_state
         }
 
-    elif isinstance(obj, Account) and not legacy_nsid:
-        raise Exception("Should never be serializing accounts (legacy_nsid)")
-
     elif isinstance(obj, Account):
-        return {
-            'account_id': obj.namespace.public_id,  # ugh
-            'id': obj.namespace.public_id,  # ugh
-            'object': 'account',
-            'email_address': obj.email_address,
-            'name': obj.name,
-            'organization_unit': obj.category_type,
-
-            'provider': obj.provider,
-            'sync_state': obj.sync_state
-        }
+        raise Exception("Should never be serializing accounts")
 
     elif isinstance(obj, Message):
         resp = {
             'id': obj.public_id,
             'object': 'message',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'from': format_address_list(obj.from_addr),
             'reply_to': format_address_list(obj.reply_to),
@@ -162,7 +128,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             'unread': not obj.is_read,
             'starred': obj.is_starred,
             'files': obj.api_attachment_metadata,
-            'events': [encode(e, legacy_nsid=legacy_nsid) for e in obj.events]
+            'events': [encode(e) for e in obj.events]
         }
 
         categories = format_categories(obj.categories)
@@ -193,7 +159,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         base = {
             'id': obj.public_id,
             'object': 'thread',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'participants': format_address_list(obj.participants),
             'last_message_timestamp': obj.recentdate,
@@ -227,7 +193,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
             resp = {
                 'id': msg.public_id,
                 'object': 'message',
-                public_id_key_name: _get_namespace_public_id(msg),
+                'account_id': _get_namespace_public_id(msg),
                 'subject': msg.subject,
                 'from': format_address_list(msg.from_addr),
                 'reply_to': format_address_list(msg.reply_to),
@@ -267,7 +233,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         return {
             'id': obj.public_id,
             'object': 'contact',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'name': obj.name,
             'email': obj.email_address,
             'phone_numbers': format_phone_numbers(obj.phone_numbers)
@@ -277,7 +243,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         resp = {
             'id': obj.public_id,
             'object': 'event',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'calendar_id': obj.calendar.public_id if obj.calendar else None,
             'message_id': obj.message.public_id if obj.message else None,
             'title': obj.title,
@@ -287,7 +253,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
                              for participant in obj.participants],
             'read_only': obj.read_only,
             'location': obj.location,
-            'when': encode(obj.when, legacy_nsid=legacy_nsid),
+            'when': encode(obj.when),
             'busy': obj.busy,
             'status': obj.status,
         }
@@ -297,8 +263,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
                 'timezone': obj.start_timezone
             }
         if isinstance(obj, RecurringEventOverride):
-            resp['original_start_time'] = encode(obj.original_start_time,
-                                                 legacy_nsid=legacy_nsid)
+            resp['original_start_time'] = encode(obj.original_start_time)
             if obj.master:
                 resp['master_event_id'] = obj.master.public_id
         if isinstance(obj, InflatedEvent):
@@ -312,7 +277,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         return {
             'id': obj.public_id,
             'object': 'calendar',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'name': obj.name,
             'description': obj.description,
             'read_only': obj.read_only,
@@ -321,8 +286,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
     elif isinstance(obj, When):
         # Get time dictionary e.g. 'start_time': x, 'end_time': y or 'date': z
         times = obj.get_time_dict()
-        resp = {k: encode(v, legacy_nsid=legacy_nsid) for
-                k, v in times.iteritems()}
+        resp = {k: encode(v) for k, v in times.iteritems()}
         resp['object'] = _get_lowercase_class_name(obj)
         return resp
 
@@ -330,7 +294,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         resp = {
             'id': obj.public_id,
             'object': 'file',
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'content_type': obj.content_type,
             'size': obj.size,
             'filename': obj.filename,
@@ -356,7 +320,7 @@ def _encode(obj, namespace_public_id=None, expand=False, legacy_nsid=False):
         resp = {
             'id': obj.public_id,
             'object': obj.type,
-            public_id_key_name: _get_namespace_public_id(obj),
+            'account_id': _get_namespace_public_id(obj),
             'name': obj.name,
             'display_name': obj.api_display_name
         }
@@ -378,20 +342,16 @@ class APIEncoder(object):
         public id of the namespace to which the object to serialize belongs.
 
     """
+    def __init__(self, namespace_public_id=None, expand=False):
+        self.encoder_class = self._encoder_factory(namespace_public_id, expand)
 
-    def __init__(self, namespace_public_id=None, expand=False,
-                 legacy_nsid=False):
-        self.encoder_class = self._encoder_factory(namespace_public_id, expand,
-                                                   legacy_nsid)
-
-    def _encoder_factory(self, namespace_public_id, expand, legacy_nsid):
+    def _encoder_factory(self, namespace_public_id, expand):
         class InternalEncoder(JSONEncoder):
 
             def default(self, obj):
                 custom_representation = encode(obj,
                                                namespace_public_id,
-                                               expand=expand,
-                                               legacy_nsid=legacy_nsid)
+                                               expand=expand)
                 if custom_representation is not None:
                     return custom_representation
                 # Let the base class default method raise the TypeError

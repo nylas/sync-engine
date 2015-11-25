@@ -81,22 +81,12 @@ if config.get('DEBUG_PROFILING_ON'):
     attach_pyinstrument_profiler()
 
 
-@app.url_value_preprocessor
-def pull_lang_code(endpoint, values):
-    if 'namespace_public_id' in values:
-        values.pop('namespace_public_id')
-        g.legacy_nsid = True
-    else:
-        g.legacy_nsid = False
-
-
 @app.before_request
 def start():
     engine = engine_manager.get_for_id(g.namespace_id)
     g.db_session = new_session(engine)
     g.namespace = Namespace.get(g.namespace_id, g.db_session)
-    g.encoder = APIEncoder(g.namespace.public_id,
-                           legacy_nsid=g.legacy_nsid)
+    g.encoder = APIEncoder(g.namespace.public_id)
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
@@ -128,22 +118,6 @@ def handle_input_error(error):
                              type='invalid_request_error')
     response.status_code = error.status_code
     return response
-
-
-# TODO remove legacy_nsid
-@app.route('/n/<namespace_id>')
-def single_namespace(namespace_id):
-    if not namespace_id == g.namespace.public_id:
-        return err(404, "Unknown namespace ID")
-    valid_public_id(namespace_id)
-
-    try:
-        f = g.db_session.query(Namespace).filter(
-            Namespace.public_id == namespace_id).one()
-        return APIEncoder(namespace_id, legacy_nsid=True).jsonify(f)
-    except NoResultFound:
-        raise NotFoundError("Couldn't find namespace {0} "
-                            .format(namespace_id))
 
 
 @app.route('/account')
@@ -212,8 +186,7 @@ def thread_query_api():
 
     # Use a new encoder object with the expand parameter set.
     encoder = APIEncoder(g.namespace.public_id,
-                         args['view'] == 'expanded',
-                         legacy_nsid=g.legacy_nsid)
+                         args['view'] == 'expanded')
     return encoder.jsonify(threads)
 
 
@@ -245,8 +218,7 @@ def thread_api(public_id):
     g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
     # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded',
-                         legacy_nsid=g.legacy_nsid)
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
@@ -346,8 +318,7 @@ def message_query_api():
         db_session=g.db_session)
 
     # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded',
-                         legacy_nsid=g.legacy_nsid)
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
     return encoder.jsonify(messages)
 
 
@@ -378,8 +349,7 @@ def message_search_api():
 def message_read_api(public_id):
     g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
-    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded',
-                         legacy_nsid=g.legacy_nsid)
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
 
     try:
         valid_public_id(public_id)
@@ -609,10 +579,7 @@ def tag_query_api():
          'readonly': False} for obj in categories
     ]
     for item in resp:
-        if g.legacy_nsid:
-            item['namespace_id'] = g.namespace.public_id
-        else:
-            item['account_id'] = g.namespace.public_id
+        item['account_id'] = g.namespace.public_id
     return g.encoder.jsonify(resp)
 
 
@@ -659,10 +626,7 @@ def tag_detail_api(public_id):
         'thread_count': thread_count
     }
 
-    if g.legacy_nsid:
-        to_ret['namespace_id'] = g.namespace.public_id
-    else:
-        to_ret['account_id'] = g.namespace.public_id
+    to_ret['account_id'] = g.namespace.public_id
     return g.encoder.jsonify(to_ret)
 
 
@@ -1406,8 +1370,7 @@ def sync_deltas():
         with session_scope(g.namespace.id) as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
-                exclude_types, include_types, exclude_folders,
-                legacy_nsid=g.legacy_nsid, expand=expand)
+                exclude_types, include_types, exclude_folders, expand=expand)
 
         response = {
             'cursor_start': cursor,
@@ -1517,7 +1480,7 @@ def stream_changes():
         g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=1, timeout=timeout, exclude_types=exclude_types,
         include_types=include_types, exclude_folders=exclude_folders,
-        legacy_nsid=g.legacy_nsid, expand=expand)
+        expand=expand)
     return Response(generator, mimetype='text/event-stream')
 
 

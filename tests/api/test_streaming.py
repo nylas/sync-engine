@@ -4,8 +4,6 @@ from gevent import Greenlet
 
 import pytest
 from tests.util.base import add_fake_message
-from inbox.models import Namespace
-from inbox.models.backends.generic import GenericAccount
 from inbox.util.url import url_concat
 from tests.api.base import api_client
 
@@ -61,22 +59,6 @@ def test_empty_response_when_latest_cursor_given(db,
     r = api_client.get_raw(url)
     assert r.status_code == 200
     assert r.data.strip() == ''
-
-
-def test_gracefully_handle_new_namespace(db, api_client):
-    new_namespace = Namespace()
-    new_account = GenericAccount()
-    new_account.password = 'hunter2'
-    new_namespace.account = new_account
-    db.session.add(new_namespace)
-    db.session.add(new_account)
-    db.session.commit()
-    cursor = get_cursor(api_client, int(time.time()),
-                        new_namespace)
-    url = url_concat('/n/{}/delta/streaming'.format(new_namespace.public_id),
-                     {'timeout': .1, 'cursor': cursor})
-    r = api_client.get_raw(url)
-    assert r.status_code == 200
 
 
 def test_exclude_and_include_object_types(db,

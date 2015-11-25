@@ -8,9 +8,8 @@ import gevent
 
 from tests.util.base import default_account
 from tests.api.base import api_client, new_api_client
-from tests.api_legacy.base import api_client as api_legacy_client
 
-__all__ = ['api_client', 'api_legacy_client', 'default_account']
+__all__ = ['api_client', 'default_account']
 
 SELF_SIGNED_CERTFILE = 'tests/data/self_signed_cert.pem'
 SELF_SIGNED_KEYFILE = 'tests/data/self_signed_cert.key'
@@ -79,23 +78,11 @@ def example_draft(db, default_account):
 
 def test_smtp_ssl_verification_bad_cert(db, bad_cert_smtp_server,
                                         example_draft, local_smtp_account,
-                                        api_legacy_client, patched_smtp):
+                                        api_client, patched_smtp):
 
     api_client = new_api_client(db, local_smtp_account.namespace)
     gevent.sleep(0.2)  # let SMTP daemon start up
     r = api_client.post_data('/send', example_draft)
-    assert r.status_code == 200
-
-
-def test_smtp_ssl_verification_bad_cert_legacy(db, bad_cert_smtp_server,
-                                               example_draft,
-                                               local_smtp_account,
-                                               api_legacy_client,
-                                               patched_smtp):
-
-    ns_public_id = local_smtp_account.namespace.public_id
-    gevent.sleep(1.0)  # let SMTP daemon start up
-    r = api_legacy_client.post_data('/send', example_draft, ns_public_id)
     assert r.status_code == 200
 
 
