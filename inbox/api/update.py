@@ -30,10 +30,6 @@ def update_message(message, request_data, db_session):
 
 def update_thread(thread, request_data, db_session):
     accept_labels = thread.namespace.account.provider == 'gmail'
-    # -- Begin tags API shim
-    added_tags = request_data.pop('add_tags', [])
-    removed_tags = request_data.pop('remove_tags', [])
-    # -- End tags API shim
 
     unread, starred, = parse_flags(request_data)
     if accept_labels:
@@ -43,39 +39,6 @@ def update_thread(thread, request_data, db_session):
     if request_data:
         raise InputError(u'Unexpected attribute: {}'.
                          format(request_data.keys()[0]))
-
-    # -- Begin tags API shim
-    if 'unread' in added_tags:
-        unread = True
-    elif 'unread' in removed_tags:
-        unread = False
-
-    if 'starred' in added_tags:
-        starred = True
-    elif 'starred' in removed_tags:
-        starred = False
-
-    if 'inbox' in removed_tags:
-        if accept_labels:
-            labels = {c for c in thread.categories}
-            inbox_category = next(
-                c for c in thread.categories if c.name == 'inbox')
-            labels.discard(inbox_category)
-        else:
-            folder = db_session.query(Category).filter(
-                Category.namespace_id == thread.namespace_id,
-                Category.name == 'archive').first()
-
-    elif 'inbox' in added_tags:
-        inbox_category = db_session.query(Category).filter(
-            Category.namespace_id == thread.namespace_id,
-            Category.name == 'inbox').first()
-        if accept_labels:
-            labels = {c for c in thread.categories}
-            labels.add(inbox_category)
-        else:
-            folder = inbox_category
-    # -- End tags API shim
 
     if accept_labels:
         if labels is not None:

@@ -149,21 +149,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             categories.update(m.categories)
         return categories
 
-    @property
-    def tags(self):
-        # For backwards-compatibility -- remove after deprecating tags API
-        resp = [
-            {'name': c.display_name,
-             # Preserves behavior where "canonical" tags would have their role
-             # as id (e.g., "inbox"
-             'id': (c.name or c.public_id)} for c in self.categories
-        ]
-        if self.unread:
-            resp.append({'name': 'unread', 'id': 'unread'})
-        if self.starred:
-            resp.append({'name': 'starred', 'id': 'starred'})
-        return resp
-
     @classmethod
     def api_loading_options(cls, expand=False):
         message_columns = ['public_id', 'is_draft', 'from_addr', 'to_addr',

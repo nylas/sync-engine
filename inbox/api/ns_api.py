@@ -149,18 +149,7 @@ def thread_query_api():
     g.parser.add_argument('starred', type=strict_bool, location='args')
     g.parser.add_argument('view', type=view, location='args')
 
-    # For backwards-compatibility -- remove after deprecating tags API.
-    g.parser.add_argument('tag', type=bounded_str, location='args')
-
     args = strict_parse_args(g.parser, request.args)
-
-    # For backwards-compatibility -- remove after deprecating tags API.
-    if args['tag'] == 'unread':
-        unread = True
-        in_ = None
-    else:
-        in_ = args['in'] or args['tag']
-        unread = args['unread']
 
     threads = filtering.threads(
         namespace_id=g.namespace.id,
@@ -176,9 +165,9 @@ def thread_query_api():
         last_message_before=args['last_message_before'],
         last_message_after=args['last_message_after'],
         filename=args['filename'],
-        unread=unread,
+        unread=args['unread'],
         starred=args['starred'],
-        in_=in_,
+        in_=args['in'],
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
@@ -285,12 +274,7 @@ def message_query_api():
     g.parser.add_argument('starred', type=strict_bool, location='args')
     g.parser.add_argument('view', type=view, location='args')
 
-    # For backwards-compatibility -- remove after deprecating tags API.
-    g.parser.add_argument('tag', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-
-    # For backwards-compatibility -- remove after deprecating tags API.
-    in_ = args['in'] or args['tag']
 
     messages = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
@@ -309,7 +293,7 @@ def message_query_api():
         received_before=args['received_before'],
         received_after=args['received_after'],
         filename=args['filename'],
-        in_=in_,
+        in_=args['in'],
         unread=args['unread'],
         starred=args['starred'],
         limit=args['limit'],
@@ -563,74 +547,6 @@ def folder_label_delete_api(public_id):
     g.db_session.commit()
 
     return g.encoder.jsonify(None)
-
-
-# -- Begin tags API shim
-
-
-@app.route('/tags')
-def tag_query_api():
-    categories = g.db_session.query(Category). \
-        filter(Category.namespace_id == g.namespace.id)
-    resp = [
-        {'object': 'tag',
-         'name': obj.display_name,
-         'id': obj.name or obj.public_id,
-         'readonly': False} for obj in categories
-    ]
-    for item in resp:
-        item['account_id'] = g.namespace.public_id
-    return g.encoder.jsonify(resp)
-
-
-@app.route('/tags/<public_id>')
-def tag_detail_api(public_id):
-    # Interpret former special public ids for 'canonical' tags.
-    if public_id in ('inbox', 'sent', 'archive', 'important', 'trash', 'spam',
-                     'all'):
-        category = g.db_session.query(Category). \
-            filter(Category.namespace_id == g.namespace.id,
-                   Category.name == public_id).first()
-    else:
-        category = g.db_session.query(Category). \
-            filter(Category.namespace_id == g.namespace.id,
-                   Category.public_id == public_id).first()
-    if category is None:
-        raise NotFoundError('Category {} not found'.format(public_id))
-
-    message_subquery = g.db_session.query(Message.thread_id). \
-        join(MessageCategory). \
-        filter(
-            Message.namespace_id == g.namespace.id,
-            MessageCategory.category_id == category.id).subquery()
-    thread_count = g.db_session.query(func.count(1)). \
-        select_from(Thread).filter(
-            Thread.id.in_(message_subquery)).scalar()
-
-    unread_subquery = g.db_session.query(Message.thread_id). \
-        join(MessageCategory). \
-        filter(
-            Message.namespace_id == g.namespace.id,
-            MessageCategory.category_id == category.id,
-            Message.is_read == False).subquery()  # noqa
-    unread_count = g.db_session.query(func.count(1)). \
-        select_from(Thread).filter(
-            Thread.id.in_(unread_subquery)).scalar()
-
-    to_ret = {
-        'object': 'tag',
-        'name': category.display_name,
-        'id': category.name or category.public_id,
-        'readonly': False,
-        'unread_count': unread_count,
-        'thread_count': thread_count
-    }
-
-    to_ret['account_id'] = g.namespace.public_id
-    return g.encoder.jsonify(to_ret)
-
-
-# -- End tags API shim
 
 
 #

@@ -170,8 +170,6 @@ def _encode(obj, namespace_public_id=None, expand=False):
             'starred': obj.starred,
             'has_attachments': obj.has_attachments,
             'version': obj.version,
-            # For backwards-compatibility -- remove after deprecating tags API
-            'tags': obj.tags
         }
 
         categories = format_categories(obj.categories)

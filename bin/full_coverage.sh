@@ -34,8 +34,6 @@ run_for_cover inbox-start
 sleep 4
 run_for_cover inbox-api --prod
 
-# Run the system tests
-py.test tests/system/test_sending.py tests/system/test_tags.py --tb=short
 
 kill -15 ${pids[@]}
 wait ${pids[@]}
