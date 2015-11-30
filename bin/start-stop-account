@@ -30,17 +30,19 @@ def start_stop(options):
                 account.enable_sync(options.server)
             else:
                 account.enable_sync(None)
-        elif options.stop:
-            if options.softdelete:
-                print "Marking account %s as deleted." % account.email_address
-                account.mark_deleted()
 
-            if options.reason is None:
-                print "Error: must specify a reason for stopping the sync (--reason)"
+        elif options.stop:
+            if not options.softdelete and options.reason is None:
+                print "Must specify '--softdelete' OR a reason for stopping the sync (--reason)"
                 sys.exit(-1)
 
-            print "Stopping account %s" % account.email_address
-            account.disable_sync(options.reason)
+            if options.softdelete:
+                print "Stopping sync and marking account %s as deleted" % account.email_address
+                account.mark_deleted()
+            else:
+                assert options.reason is not None
+                print "Stopping sync for account %s" % account.email_address
+                account.disable_sync(options.reason)
 
         elif options.migrate:
             print "Migrating account %s" % account.email_address
