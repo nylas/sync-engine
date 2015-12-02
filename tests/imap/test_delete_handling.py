@@ -5,11 +5,10 @@ from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
-from inbox.mailsync.gc import DeleteHandler, LabelRenameHandler
+from inbox.mailsync.gc import DeleteHandler
 from inbox.models import Folder, Transaction
 from inbox.models.label import Label
 from tests.util.base import add_fake_imapuid, add_fake_message
-from tests.imap.data import mock_imapclient, MockIMAPClient
 
 
 @pytest.fixture()
@@ -197,31 +196,3 @@ def test_deleted_labels_get_gced(db, default_account, thread, message,
     # Check that the other labels didn't.
     for label_id in label_ids:
         assert db.session.query(Label).get(label_id) is not None
-
-
-def test_renamed_label_refresh(db, default_account, thread, message,
-                               imapuid, folder, mock_imapclient, monkeypatch):
-    # Check that imapuids see their labels refreshed after running
-    # the LabelRenameHandler.
-    msg_uid = imapuid.msg_uid
-    uid_dict = {msg_uid: GmailFlags((), ('stale label',))}
-
-    update_metadata(default_account.id, folder.id, uid_dict, db.session)
-
-    new_flags = {msg_uid: {'FLAGS': ('\\Seen',), 'X-GM-LABELS': ('new label',)}}
-    mock_imapclient._data['[Gmail]/All mail'] = new_flags
-
-    mock_imapclient.add_folder_data(folder.name, new_flags)
-
-    monkeypatch.setattr(MockIMAPClient, 'search',
-                        lambda x, y: [msg_uid])
-
-    rename_handler = LabelRenameHandler(default_account.id,
-                                        default_account.namespace.id,
-                                        'new label')
-    rename_handler.start()
-    rename_handler.join()
-
-    labels = list(imapuid.labels)
-    assert len(labels) == 1
-    assert labels[0].name == 'new label'

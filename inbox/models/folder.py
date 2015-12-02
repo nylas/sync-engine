@@ -58,7 +58,7 @@ class Folder(MailSyncBase):
         return name
 
     @classmethod
-    def find(cls, session, account, name, role=None):
+    def find_or_create(cls, session, account, name, role=None):
         q = session.query(cls).filter(cls.account_id == account.id)
 
         if role is not None:
@@ -72,33 +72,20 @@ class Folder(MailSyncBase):
                         "original name was '{}'" .format(account.id, name))
             name = name[:MAX_FOLDER_NAME_LENGTH]
         q = q.filter(cls.name == name)
+
         try:
-            return q.one()
+            obj = q.one()
         except NoResultFound:
-            return None
-        except MultipleResultsFound:
-            log.info('Duplicate folder rows for name {}, account_id {}'
-                     .format(name, account.id))
-            raise
-
-    @classmethod
-    def find_or_create(cls, session, account, name, role=None):
-        # Remove trailing whitespace, truncate to max folder name length.
-        # Not ideal but necessary to work around MySQL limitations.
-        name = name.rstrip()
-        if len(name) > MAX_FOLDER_NAME_LENGTH:
-            log.warning("Truncating long folder name for account {}; "
-                        "original name was '{}'" .format(account.id, name))
-            name = name[:MAX_FOLDER_NAME_LENGTH]
-
-        obj = cls.find(session, account, name, role=role)
-
-        if obj is None:
             obj = cls(account=account, name=name, canonical_name=role)
             obj.category = Category.find_or_create(
                 session, namespace_id=account.namespace.id, name=role,
                 display_name=name, type_='folder')
             session.add(obj)
+        except MultipleResultsFound:
+            log.info('Duplicate folder rows for name {}, account_id {}'
+                     .format(name, account.id))
+            raise
+
         return obj
 
     @classmethod
