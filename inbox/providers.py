@@ -249,6 +249,7 @@ get_default_providers = lambda: {
         "domains": [
             "onmicrosoft.com",
             "exchange.mit.edu",
+            "savills-studley.com",
         ],
         "mx_servers": [
             # Office365
