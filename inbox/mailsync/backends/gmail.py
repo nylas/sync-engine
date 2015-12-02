@@ -91,7 +91,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
             label = Label.find_or_create(db_session, account,
                                          raw_folder.display_name,
                                          raw_folder.role)
-            new_labels.add(label)
+            current_labels.add(label)
 
             if label.deleted_at is not None:
                 # This is a label which was previously marked as deleted
