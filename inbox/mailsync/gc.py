@@ -1,7 +1,9 @@
-import gevent
 import datetime
-from sqlalchemy import func
+
+import gevent
+
 from nylas.logging import get_logger
+log = get_logger()
 from inbox.models import Message
 from inbox.models.category import Category
 from inbox.models.message import MessageCategory
@@ -12,8 +14,6 @@ from inbox.mailsync.backends.imap import common
 from inbox.util.debug import bind_context
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.crispin import connection_pool
-
-log = get_logger()
 
 DEFAULT_MESSAGE_TTL = 120
 MAX_FETCH = 1000
@@ -42,8 +42,8 @@ class DeleteHandler(gevent.Greenlet):
         `uid_accessor=lambda m: m.imapuids`
     message_ttl: int
         Number of seconds to wait after a message is marked for deletion before
-
         deleting it for good.
+
     """
 
     def __init__(self, account_id, namespace_id, uid_accessor,
@@ -139,7 +139,8 @@ class DeleteHandler(gevent.Greenlet):
 
 
 class LabelRenameHandler(gevent.Greenlet):
-    """Gmail has a long-standing bug where it won't notify us
+    """
+    Gmail has a long-standing bug where it won't notify us
     of a label rename (https://stackoverflow.com/questions/19571456/how-imap-client-can-detact-gmail-label-rename-programmatically).
 
     Because of this, we manually refresh the labels for all the UIDs in
@@ -147,6 +148,7 @@ class LabelRenameHandler(gevent.Greenlet):
     for the uids holding the new label.
 
     This isn't elegant but it beats having to issue a complex query to the db.
+
     """
     def __init__(self, account_id, namespace_id, label_name,
                  message_ttl=DEFAULT_MESSAGE_TTL):
