@@ -1,4 +1,5 @@
 import datetime
+from imapclient.imap_utf7 import encode as utf7_encode
 
 import gevent
 
@@ -179,7 +180,7 @@ class LabelRenameHandler(gevent.Greenlet):
                 crispin_client.select_folder(folder_name, uidvalidity_cb)
 
                 found_uids = crispin_client.search_uids(
-                    ['X-GM-LABELS', self.label_name])
+                    ['X-GM-LABELS', utf7_encode(self.label_name)])
                 flags = crispin_client.flags(found_uids)
 
                 self.log.info('Running metadata update for folder',
