@@ -1,7 +1,7 @@
 import datetime
 import getpass
 from backports import ssl
-from imapclient import IMAPClient, create_default_context
+from imapclient import IMAPClient
 import socket
 
 from nylas.logging import get_logger
@@ -16,6 +16,8 @@ from inbox.sendmail.smtp.postel import SMTPClient
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
+
+_ossl = ssl.ossl
 
 
 class GenericAuthHandler(AuthHandler):
@@ -219,8 +221,6 @@ def create_imap_connection(host, port):
 
     # TODO: certificate pinning for well known sites
     context = create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
 
     conn = IMAPClient(host, port=port, use_uid=True,
                       ssl=use_ssl, ssl_context=context, timeout=120)
@@ -228,3 +228,39 @@ def create_imap_connection(host, port):
         # Raises an exception if TLS can't be established
         conn.starttls(context)
     return conn
+
+
+def create_default_context():
+    """Return a backports.ssl.SSLContext object configured with sensible
+    default settings. This was adapted from imapclient.create_default_context
+    to allow all ciphers and disable certificate verification.
+
+    """
+    # adapted from Python 3.4's ssl.create_default_context
+
+    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+
+    # do not verify that certificate is signed nor that the
+    # certificate matches the hostname
+    context.verify_mode = ssl.CERT_NONE
+    context.check_hostname = False
+
+    # SSLv2 considered harmful.
+    context.options |= _ossl.OP_NO_SSLv2
+
+    # SSLv3 has problematic security and is only required for really old
+    # clients such as IE6 on Windows XP
+    context.options |= _ossl.OP_NO_SSLv3
+
+    # disable compression to prevent CRIME attacks (OpenSSL 1.0+)
+    context.options |= getattr(_ossl, "OP_NO_COMPRESSION", 0)
+
+    # Prefer the server's ciphers by default so that we get stronger
+    # encryption
+    context.options |= getattr(_ossl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+
+    # Use single use keys in order to improve forward secrecy
+    context.options |= getattr(_ossl, "OP_SINGLE_DH_USE", 0)
+    context.options |= getattr(_ossl, "OP_SINGLE_ECDH_USE", 0)
+
+    return context
