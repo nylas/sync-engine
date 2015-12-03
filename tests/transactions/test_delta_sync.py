@@ -13,9 +13,12 @@ def get_cursor(api_client, timestamp):
 
 
 def test_latest_cursor(api_client):
+    time.sleep(5)
     now = int(time.time())
+
     latest_cursor_resp = api_client.post_raw('/delta/latest_cursor', None)
     latest_cursor = json.loads(latest_cursor_resp.data)['cursor']
+
     now_cursor = get_cursor(api_client, now)
     assert latest_cursor == now_cursor
 
