@@ -52,6 +52,14 @@ class ContactSearchIndexService(Greenlet):
         for metric in metric_names:
             statsd_client.timing(metric, latency)
 
+    def _publish_heartbeat(self):
+        metric_names = [
+            "inbox-contacts-search.heartbeat",
+        ]
+
+        for metric in metric_names:
+            statsd_client.incr(metric)
+
     def _run(self):
         """
         Index into CloudSearch the contacts of all namespaces.
@@ -111,6 +119,7 @@ class ContactSearchIndexService(Greenlet):
                     if should_sleep:
                         log.info('sleeping')
                         sleep(self.poll_interval)
+                    self._publish_heartbeat()
         except Exception:
             log_uncaught_errors(log)
 
