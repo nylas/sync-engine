@@ -63,8 +63,9 @@ def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
 
 
 def retry_with_logging(func, logger=None, retry_classes=None,
-                       fail_classes=None, account_id=None,
+                       fail_classes=None, account_id=None, provider=None,
                        backoff_delay=BACKOFF_DELAY):
-    callback = lambda: log_uncaught_errors(logger, account_id=account_id)
+    callback = lambda: log_uncaught_errors(logger, account_id=account_id,
+                                           provider=provider)
     return retry(func, exc_callback=callback, retry_classes=retry_classes,
                  fail_classes=fail_classes, backoff_delay=backoff_delay)()

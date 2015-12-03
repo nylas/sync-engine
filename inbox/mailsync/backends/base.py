@@ -72,17 +72,19 @@ class BaseMailSyncMonitor(Greenlet):
         self.account_id = account.id
         self.namespace_id = account.namespace.id
         self.email_address = account.email_address
-        self.provider_name = account.provider
+        self.provider_name = account.verbose_provider
 
         Greenlet.__init__(self)
 
     def _run(self):
         return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  logger=self.log)
+                                  provider=self.provider_name, logger=self.log)
 
     def _run_impl(self):
         sync = Greenlet(retry_with_logging, self.sync,
-                        account_id=self.account_id, logger=self.log)
+                        account_id=self.account_id,
+                        provider=self.provider_name,
+                        logger=self.log)
         sync.start()
 
         while not sync.ready():

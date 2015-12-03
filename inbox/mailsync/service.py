@@ -183,7 +183,7 @@ class SyncService(object):
                     info = acc.provider_info
                     if info.get('contacts', None) and acc.sync_contacts:
                         contact_sync = ContactSync(acc.email_address,
-                                                   acc.provider,
+                                                   acc.verbose_provider,
                                                    acc.id,
                                                    acc.namespace.id)
                         self.contact_sync_monitors[acc.id] = contact_sync
@@ -193,12 +193,12 @@ class SyncService(object):
                         if (USE_GOOGLE_PUSH_NOTIFICATIONS and
                                 acc.provider == 'gmail'):
                             event_sync = GoogleEventSync(acc.email_address,
-                                                         acc.provider,
+                                                         acc.verbose_provider,
                                                          acc.id,
                                                          acc.namespace.id)
                         else:
                             event_sync = EventSync(acc.email_address,
-                                                   acc.provider,
+                                                   acc.verbose_provider,
                                                    acc.id,
                                                    acc.namespace.id)
                         self.event_sync_monitors[acc.id] = event_sync

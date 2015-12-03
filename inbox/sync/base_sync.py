@@ -30,6 +30,7 @@ class BaseSyncMonitor(Greenlet):
 
         self.account_id = account_id
         self.namespace_id = namespace_id
+        self.provider_name = provider_name
         self.poll_frequency = poll_frequency
         self.scope = scope
 
@@ -47,7 +48,7 @@ class BaseSyncMonitor(Greenlet):
         # Bind greenlet-local logging context.
         self.log = self.log.new(account_id=self.account_id)
         return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  logger=self.log)
+                                  provider=self.provider_name, logger=self.log)
 
     def _run_impl(self):
         # Return true/false based on whether the greenlet succeeds or throws

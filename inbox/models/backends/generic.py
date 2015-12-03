@@ -24,6 +24,12 @@ class GenericAccount(ImapAccount):
     __mapper_args__ = {'polymorphic_identity': 'genericaccount'}
 
     @property
+    def verbose_provider(self):
+        if self.provider == 'custom':
+            return 'imap'
+        return self.provider
+
+    @property
     def password(self):
         return self.secret.secret
 

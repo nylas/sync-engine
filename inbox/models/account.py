@@ -30,6 +30,16 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         raise NotImplementedError
 
     @property
+    def verbose_provider(self):
+        """
+        A detailed identifier for the account provider
+        (e.g., 'gmail', 'office365', 'outlook').
+        Subclasses may override this.
+
+        """
+        return self.provider
+
+    @property
     def category_type(self):
         """
         Whether the account is organized by folders or labels

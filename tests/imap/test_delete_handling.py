@@ -72,6 +72,7 @@ def test_deletion_with_short_ttl(db, default_account, default_namespace,
                                  marked_deleted_message, thread, folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
@@ -89,6 +90,7 @@ def test_non_orphaned_messages_get_unmarked(db, default_account,
                                             folder, imapuid):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
@@ -104,6 +106,7 @@ def test_threads_only_deleted_when_no_messages_left(db, default_account,
                                                     thread, folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     # Add another message onto the thread
@@ -124,6 +127,7 @@ def test_deletion_deferred_with_longer_ttl(db, default_account,
                                            folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=5)
     db.session.commit()
@@ -140,6 +144,7 @@ def test_deletion_creates_revision(db, default_account, default_namespace,
     thread_id = thread.id
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
@@ -185,6 +190,7 @@ def test_deleted_labels_get_gced(db, default_account, thread, message,
 
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
+                            provider_name=default_account.provider,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     handler.gc_deleted_categories()

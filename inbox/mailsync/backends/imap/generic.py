@@ -158,7 +158,7 @@ class FolderSyncEngine(Greenlet):
         # eagerly signal the sync status
         self.heartbeat_status.publish()
         return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  logger=log)
+                                  provider=self.provider_name, logger=log)
 
     def _run_impl(self):
         try:
