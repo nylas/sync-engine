@@ -2,7 +2,7 @@ import datetime
 from imapclient.imap_utf7 import encode as utf7_encode
 
 import gevent
-
+from sqlalchemy import func
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.models import Message
@@ -131,10 +131,10 @@ class DeleteHandler(gevent.Greenlet):
             for cat in cats:
                 # Check if no message is associated with the category. If yes,
                 # delete it.
-                qu = db_session.query(MessageCategory).filter(
-                    MessageCategory.category_id == cat.id)
+                count = db_session.query(func.count(MessageCategory.id)).filter(
+                    MessageCategory.category_id == cat.id).scalar()
 
-                if qu.count() == 0:
+                if count == 0:
                     db_session.delete(cat)
                     db_session.commit()
 
