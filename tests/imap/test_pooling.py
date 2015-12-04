@@ -1,11 +1,7 @@
 import imaplib
-import socket
-
 import gevent
 import pytest
 import mock
-from backports import ssl
-
 from inbox.crispin import CrispinConnectionPool
 
 
@@ -34,25 +30,17 @@ def test_block_on_depleted_pool():
                 pass
 
 
-@pytest.mark.parametrize("error_class,expect_logout_called", [
-    (imaplib.IMAP4.error, True),
-    (imaplib.IMAP4.abort, False),
-    (socket.error, False),
-    (socket.timeout, False),
-    (ssl.SSLError, False),
-    (ssl.CertificateError, False),
-])
-def test_imap_and_network_errors(error_class, expect_logout_called):
+def test_connection_discarded_on_imap_errors():
     pool = TestableConnectionPool(1, num_connections=3, readonly=True)
-    with pytest.raises(error_class):
+    with pytest.raises(imaplib.IMAP4.error):
         with pool.get() as conn:
-            raise error_class
+            raise imaplib.IMAP4.error
     assert pool._queue.full()
     # Check that the connection wasn't returned to the pool
     while not pool._queue.empty():
         item = pool._queue.get()
         assert item is None
-    assert conn.logout.called is expect_logout_called
+    assert conn.logout.called
 
 
 def test_connection_retained_on_other_errors():
@@ -61,4 +49,4 @@ def test_connection_retained_on_other_errors():
         with pool.get() as conn:
             raise ValueError
     assert conn in pool._queue
-    assert not conn.logout.called
+    assert conn.logout.called == False

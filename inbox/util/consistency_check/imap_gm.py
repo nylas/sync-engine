@@ -17,7 +17,7 @@ import json
 from StringIO import StringIO
 from flanker.mime.message.headers import MimeHeaders
 from flanker.mime.message.headers.parsing import parse_header_value
-from inbox.auth.generic import create_imap_connection
+from imapclient import IMAPClient
 from inbox.util.addr import parse_email_address_list
 from inbox.util.misc import cleanup_subject
 
@@ -44,7 +44,7 @@ class ImapGmailPlugin(DumpGmailMixin):
         info = account.provider_info
         host, port = account.imap_endpoint
 
-        imap = create_imap_connection(host, port)
+        imap = IMAPClient(host, port=port, use_uid=True, ssl=True)
         imap.debug = self.args.debug_imap
         if info['auth'] == 'oauth2':
             imap.oauth2_login(account.email_address, account.access_token)

@@ -2,9 +2,6 @@
 from gevent import monkey
 monkey.patch_all()
 
-import gevent_openssl
-gevent_openssl.monkey_patch()
-
 import os
 import socket
 import platform

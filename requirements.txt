@@ -20,7 +20,7 @@ setproctitle==1.1.8
 gdata==2.0.18
 git+https://github.com/nylas/dateutil.git#egg=python-dateutil
 git+https://github.com/khamidou/flanker.git#egg=flanker
-imapclient==1.0.0
+hg+https://bitbucket.org/mjs0/imapclient@2290a2ab355484#egg=imapclient
 alembic==0.6.5
 iconv==1.0
 pep8==1.4.6
@@ -54,6 +54,3 @@ hypothesis==1.10.3
 statsd==3.1
 boto3==1.1.4
 Pympler==0.4.2
-pyopenssl>=0.15.1
-gevent_openssl==1.2
-git+https://github.com/alekstorm/backports.ssl.git#egg=backports.ssl
