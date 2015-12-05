@@ -20,7 +20,7 @@ setproctitle==1.1.8
 gdata==2.0.18
 git+https://github.com/nylas/dateutil.git#egg=python-dateutil
 git+https://github.com/khamidou/flanker.git#egg=flanker
-hg+https://bitbucket.org/mjs0/imapclient@d8ea261f28ee29#egg=imapclient-1.0a0
+imapclient==1.0.0
 alembic==0.6.5
 iconv==1.0
 pep8==1.4.6

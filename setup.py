@@ -44,7 +44,8 @@ setup(
         "Pympler==0.4.2",
         "pyopenssl>=0.15.1",
         "gevent_openssl==1.2",
-        "backports.ssl>=0.0.7"
+        "backports.ssl>=0.0.7",
+        "imapclient==1.0.0",
     ],
     dependency_links=[
         "git+https://github.com/alekstorm/backports.ssl.git#egg=backports.ssl"
