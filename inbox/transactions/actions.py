@@ -104,7 +104,7 @@ class SyncbackService(gevent.Greenlet):
                                         action_log_id=log_entry.id,
                                         record_id=log_entry.record_id,
                                         account_id=namespace.account_id,
-                                        provider=namespace.account.provider,
+                                        provider=namespace.account.verbose_provider,
                                         retry_interval=self.retry_interval,
                                         extra_args=log_entry.extra_args)
                 self.workers.add(worker)
@@ -198,7 +198,8 @@ class SyncbackWorker(gevent.Greenlet):
                         return
 
                     except Exception:
-                        log_uncaught_errors(log, account_id=self.account_id)
+                        log_uncaught_errors(log, account_id=self.account_id,
+                                            provider=self.provider)
                         with session_scope(self.account_id) as db_session:
                             action_log_entry.retries += 1
                             if (action_log_entry.retries ==
