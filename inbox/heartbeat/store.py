@@ -56,9 +56,6 @@ class HeartbeatStatusKey(object):
 
 
 class HeartbeatStatusProxy(object):
-    schema = {'email_address', 'provider_name', 'folder_name',
-              'heartbeat_at', 'state', 'action'}
-
     def __init__(self, account_id, folder_id, folder_name=None,
                  email_address=None, provider_name=None, device_id=0):
         self.key = HeartbeatStatusKey(account_id, folder_id)
@@ -72,24 +69,11 @@ class HeartbeatStatusProxy(object):
 
     @safe_failure
     def publish(self, **kwargs):
-        def check_schema(**kwargs):
-            for kw in kwargs:
-                assert kw in self.schema
-
         try:
-            check_schema(**kwargs)
             self.value.update(kwargs or {})
-            # If we got a 'heartbeat_at' datetime argument, publish this
-            # heartbeat with that timestamp.
-            if 'heartbeat_at' in kwargs and \
-                    isinstance(kwargs['heartbeat_at'], datetime):
-                epoch = time.mktime(kwargs.get('heartbeat_at').timetuple())
-                self.heartbeat_at = epoch
-                self.value['heartbeat_at'] = str(kwargs['heartbeat_at'])
-            else:
-                self.heartbeat_at = time.time()
-                self.value['heartbeat_at'] = str(datetime.fromtimestamp(
-                    self.heartbeat_at))
+            self.heartbeat_at = time.time()
+            self.value['heartbeat_at'] = str(datetime.fromtimestamp(
+                self.heartbeat_at))
             self.store.publish(
                 self.key, self.device_id, json.dumps(self.value),
                 self.heartbeat_at)
@@ -200,132 +184,22 @@ class HeartbeatStore(object):
         client.delete(account_id)
         client.zrem('account_index', account_id)
 
-    def get_index(self, index, timestamp_threshold=None):
-        # Get all elements in the specified index, optionally above the
-        # provided timestamp threshold.
-        if not timestamp_threshold:
-            return self.client.zrange(index, 0, -1, withscores=True)
-        else:
-            lower_bound = time.time() - timestamp_threshold
-            return self.client.zrangebyscore(index, lower_bound, '+inf',
-                                             withscores=True)
+    def get_index(self, index):
+        # Get all elements in the specified index.
+        return self.client.zrange(index, 0, -1, withscores=True)
 
-    def get_folder_list(self, timestamp_threshold=None):
-        # Query the folder index for all folders or for all folders which
-        # have reported in fewer than timestamp_threshold seconds ago.
-        # Returns (folder_id, timestamp) tuples.
-        return self.get_index('folder_index', timestamp_threshold)
+    def get_account_folders(self, account_id):
+        return self.get_index(account_id)
 
-    def get_account_folders(self, account_id, timestamp_threshold=None):
-        return self.get_index(account_id, timestamp_threshold)
-
-    def get_accounts_folders(self, account_ids, timestamp_threshold=None):
+    def get_accounts_folders(self, account_ids):
         # Preferred method of querying for multiple accounts. Uses pipelining
         # to reduce the number of requests to redis.
         pipe = self.client.pipeline()
-        if not timestamp_threshold:
-            for index in account_ids:
-                pipe.zrange(index, 0, -1, withscores=True)
-        else:
-            for index in account_ids:
-                lower_bound = time.time() - timestamp_threshold
-                pipe.zrangebyscore(index, lower_bound, '+inf', withscores=True)
+        for index in account_ids:
+            pipe.zrange(index, 0, -1, withscores=True)
         return pipe.execute()
 
-    def get_single_folder(self, account_id):
-        try:
-            folder_id = self.client.zrange(account_id, 0, 0)[0]
-        except IndexError:
-            return (None, {})
-        key = HeartbeatStatusKey(account_id, folder_id)
-        folder = self.client.hgetall(key)
-        return (folder_id, folder)
-
-    def get_account_timestamp(self, account_id):
-        return self.client.zscore('account_index', account_id)
-
-    def get_account_list(self, timestamp_threshold=None):
-        # Return all accounts, optionally limited to those with timestamps
-        # newer than the provided threshold, in ascending order (by timestamp)
+    def get_account_list(self):
+        # Return all accounts, in ascending order (by timestamp)
         # Returns (account_id, timestamp) tuples.
-        return self.get_index('account_index', timestamp_threshold)
-
-    def get_accounts_below(self, timestamp_threshold):
-        # Return all accounts with timestamps older than the provided
-        # threshold, in descending order (by timestamp)
-        # Returns (account_id, timestamp) tuples.
-        upper_bound = time.time() - timestamp_threshold
-        return self.client.zrevrangebyscore('account_index',
-                                            upper_bound, '-inf',
-                                            withscores=True)
-
-    def get_accounts_between(self, lower_time_ago, upper_time_ago):
-        # Return all accounts with timestamps between lower_time_ago and
-        # upper_time_ago seconds ago, in ascending order by timestamp.
-        # Returns (account_id, timestamp) tuples.
-        lower_bound = time.time() - lower_time_ago
-        upper_bound = time.time() - upper_time_ago
-        return self.client.zrangebyscore('account_index', lower_bound,
-                                         upper_bound, withscores=True)
-
-    def count_accounts(self, lower_bound=None, upper_bound=None,
-                       above=True):
-        # Count the number of accounts in the index.
-        # :param lower_bound: Only accounts updated since this time
-        # :param upper_bound: Only accounts updated before this time (optional)
-        # :param above: Show accounts above lower bound (default True)
-        if lower_bound:
-            lower = time.time() - lower_bound
-            if upper_bound:
-                upper = time.time() - upper_bound
-                return self.client.zcount('account_index', lower, upper)
-            # If we only have a lower threshold, count below or above?
-            if above:
-                return self.client.zcount('account_index', lower, '+inf')
-            else:
-                return self.client.zcount('account_index', '-inf', lower)
-        else:
-            return self.client.zcard('account_index')
-
-    def folder_iterator(self, account_id=None, timestamp_threshold=None):
-        # Iterate through the folder heartbeat list
-        # :param account_id: restrict to folders for account account_id
-        # :param timestamp_threshold: restrict to updates since threshold
-        if account_id:
-            for (k, ts) in self.get_account_folders(account_id):
-                # We have to construct a key from this
-                yield HeartbeatStatusKey(account_id, k)
-        else:
-            # getting all folders from the index is cheaper than zscan
-            for (f, ts) in self.get_folder_list(timestamp_threshold):
-                yield HeartbeatStatusKey.from_string(f)
-
-    def get_folders(self, callback, account_id=None):
-        return self.fetch(self.client,
-                          lambda c: self.folder_iterator(account_id),
-                          lambda p, k: p.hgetall(k),
-                          [],
-                          callback)
-
-    # Callback is: result = f(key, value)
-    def fetch(self, client, scan_cmd, get_cmd, skip_keys=[],
-              response_callback=None):
-        # Convert a scan operation into a response dictionary of keys: values.
-        pipeline = client.pipeline()
-        keys = []
-        result = {}
-        for k in scan_cmd(client):
-            if k in skip_keys:
-                continue
-            get_cmd(pipeline, k)
-            keys.append(k)
-
-        values = pipeline.execute()
-        pipeline.reset()
-
-        for (k, v) in zip(keys, values):
-            if response_callback:
-                result[k] = response_callback(k, v)
-            else:
-                result[k] = v
-        return result
+        return self.get_index('account_index')

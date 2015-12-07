@@ -5,10 +5,8 @@ from datetime import datetime, timedelta
 
 from inbox.heartbeat.store import (HeartbeatStore, HeartbeatStatusProxy,
                                    HeartbeatStatusKey)
-from inbox.heartbeat.status import (clear_heartbeat_status, list_all_accounts,
-                                    list_alive_accounts, list_dead_accounts,
-                                    heartbeat_summary, get_account_metadata,
-                                    get_ping_status, AccountHeartbeatStatus)
+from inbox.heartbeat.status import (clear_heartbeat_status,
+                                    get_ping_status)
 from inbox.heartbeat.config import ALIVE_EXPIRY
 from inbox.config import config
 
@@ -151,9 +149,6 @@ def test_remove_folder_from_index(redis_client, store):
     # Account-folder index is removed
     account_folders = [f for f, ts in store.get_account_folders(1)]
     assert account_folders == ['3']
-    # Account timestamp is updated
-    account_timestamp = store.get_account_timestamp(1)
-    assert fuzzy_equals(proxies[1].heartbeat_at, account_timestamp)
 
 
 def test_remove_account_from_index(store):
@@ -162,17 +157,6 @@ def test_remove_account_from_index(store):
     n = clear_heartbeat_status(1)
     assert n == 2
     assert store.get_folder_list() == []
-
-
-def test_publish_with_timestamp(store):
-    # Test that if we publish with an explicit timestamp argument, the
-    # heartbeat has that timestamp, not now.
-    proxy = proxy_for(1, 2)
-    proxy.publish()
-    timestamp = datetime(2015, 01, 01, 02, 02, 02)
-    proxy.publish(heartbeat_at=timestamp)
-    account_timestamp = store.get_account_timestamp(1)
-    assert account_timestamp == time.mktime(timestamp.timetuple())
 
 
 def test_kill_device_multiple(store):
@@ -218,63 +202,6 @@ def make_dead_heartbeat(store, proxies, account_id, folder_id, time_dead):
                   json.dumps(dead_proxy.value), dead_time)
 
 
-def test_get_all_heartbeats(random_heartbeats):
-    accs = list_all_accounts()
-    # the keys should be account IDs and the values should be True or False
-    assert sorted(accs.keys()) == [str(i) for i in range(10)]
-    assert all([isinstance(b, bool) for b in accs.values()])
-
-
-def test_get_alive_dead_heartbeats(store, random_heartbeats):
-    # kill an account by publishing one expired folder
-    make_dead_heartbeat(store, random_heartbeats, 3, 1, 100)
-
-    alive = list_alive_accounts()
-    assert '3' not in alive
-
-    dead = list_dead_accounts()
-    assert dead == ['3']
-
-
-def test_get_new_dead_heartbeats(store, random_heartbeats):
-    # test the 'between' logic for checking newly-dead accounts
-    make_dead_heartbeat(store, random_heartbeats, 7, -1, 100)
-    make_dead_heartbeat(store, random_heartbeats, 2, -2, 1000)
-
-    # All thresholds are in 'seconds before now'
-    new_dead_threshold = ALIVE_EXPIRY + 500
-    new_dead = list_dead_accounts(dead_since=new_dead_threshold)
-    assert new_dead == ['7']
-
-    old_dead = list_dead_accounts(dead_threshold=new_dead_threshold,
-                                  dead_since=new_dead_threshold + 1000)
-    assert old_dead == ['2']
-
-    # The future is impossible
-    wrong_threshold = ALIVE_EXPIRY / 2
-    impossible_dead = list_dead_accounts(dead_since=wrong_threshold)
-    assert impossible_dead == []
-
-
-def test_count_heartbeats(random_heartbeats):
-    accounts = list_alive_accounts(count=True)
-    assert accounts == 10
-
-
-def test_summary_metrics(store, random_heartbeats):
-    make_dead_heartbeat(store, random_heartbeats, 5, 2, 100)
-    make_dead_heartbeat(store, random_heartbeats, 8, 0, 248)
-
-    summary = heartbeat_summary()
-    del summary['timestamp']
-    assert summary == {
-        'accounts': 10,
-        'accounts_percent': '80.00%',
-        'alive_accounts': 8,
-        'dead_accounts': 2
-    }
-
-
 def test_ping(random_heartbeats):
     # Get the lightweight ping (only checks indices) and make sure it conforms
     # to the expected format.
@@ -282,10 +209,9 @@ def test_ping(random_heartbeats):
     assert isinstance(ping, dict)
     assert sorted(ping.keys()) == sorted(random_heartbeats.keys())
     single = ping[0]
-    attrs = ('id', 'alive', 'timestamp', 'folders')
+    attrs = ('id', 'folders')
     for attr in attrs:
         assert hasattr(single, attr)
-    assert single.alive
     for f in single.folders:
         assert f.alive
 
@@ -294,4 +220,5 @@ def test_ping_single(random_heartbeats):
     ping = get_ping_status(0)
     assert isinstance(ping, dict)
     single = ping[0]
-    assert single.alive
+    for f in single.folders:
+        assert f.alive

@@ -69,7 +69,6 @@ setup(
              'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/delete-account-data',
-             'bin/alive-dead-metrics',
              'bin/create-db',
              'bin/create-test-db',
              'bin/verify-db',
