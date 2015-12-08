@@ -1,6 +1,4 @@
-from datetime import datetime
 import time
-import json
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -62,23 +60,13 @@ class HeartbeatStatusProxy(object):
         self.account_id = account_id
         self.folder_id = folder_id
         self.device_id = device_id
-        self.heartbeat_at = datetime.min
         self.store = HeartbeatStore.store()
-        self.value = {}
-        self.email_address = email_address
 
     @safe_failure
     def publish(self, **kwargs):
         try:
-            self.value.update(kwargs or {})
             self.heartbeat_at = time.time()
-            self.value['heartbeat_at'] = str(datetime.fromtimestamp(
-                self.heartbeat_at))
-            self.store.publish(
-                self.key, self.device_id, json.dumps(self.value),
-                self.heartbeat_at)
-            if 'action' in self.value:
-                del self.value['action']
+            self.store.publish(self.key, self.heartbeat_at)
         except Exception:
             log = get_logger()
             log.error('Error while writing the heartbeat status',
@@ -110,14 +98,9 @@ class HeartbeatStore(object):
         return cls._instances.get(host)
 
     @safe_failure
-    def publish(self, key, device_id, value, timestamp=None):
-        if not timestamp:
-            timestamp = time.time()
-        # Publish a heartbeat update for the given key and device_id.
-        self.client.hset(key, device_id, value)
+    def publish(self, key, timestamp):
         # Update indexes
         self.update_folder_index(key, float(timestamp))
-        self.update_accounts_index(key)
 
     def remove(self, key, device_id=None, client=None):
         # Remove a key from the store, or device entry from a key.
@@ -158,8 +141,6 @@ class HeartbeatStore(object):
 
     def update_folder_index(self, key, timestamp):
         assert isinstance(timestamp, float)
-        # Update a sorted set by timestamp for super easy key retrieval.
-        self.client.zadd('folder_index', timestamp, key)
         # Update the folder timestamp index for this specific account, too
         self.client.zadd(key.account_id, timestamp, key.folder_id)
 

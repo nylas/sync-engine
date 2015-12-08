@@ -74,7 +74,6 @@ def test_folder_publish_in_index(redis_client):
     assert 'folder_index' in redis_client.keys()
     assert 'account_index' in redis_client.keys()
     assert '1' in redis_client.keys()
-    assert '1:2' in redis_client.keys()
 
     # Check the folder index was populated correctly: it should be a sorted
     # set of all folder keys with the timestamp of the last heartbeat
@@ -151,14 +150,6 @@ def test_remove_folder_from_index(redis_client, store):
     assert account_folders == ['3']
 
 
-def test_remove_account_from_index(store):
-    for i in [2, 3]:
-        proxy_for(1, i).publish()
-    n = clear_heartbeat_status(1)
-    assert n == 2
-    assert store.get_folder_list() == []
-
-
 def test_kill_device_multiple(store):
     # If we kill a device and the folder has multiple devices, don't clear
     # the heartbeat status
@@ -168,15 +159,6 @@ def test_kill_device_multiple(store):
     folders = store.get_account_folders(1)
     (f, ts) = folders[0]
     assert f == '2'
-
-
-def test_kill_device_lastone(store):
-    # If we kill a device and it's the only device publishing heartbeats for
-    # that folder, the folder is removed when the device is removed.
-    proxy_for(1, 2, device_id=2).publish()
-    clear_heartbeat_status(1, device_id=2)
-    folders = store.get_account_folders(1)
-    assert len(folders) == 0
 
 
 # Test querying heartbeats
@@ -205,7 +187,7 @@ def make_dead_heartbeat(store, proxies, account_id, folder_id, time_dead):
 def test_ping(random_heartbeats):
     # Get the lightweight ping (only checks indices) and make sure it conforms
     # to the expected format.
-    ping = get_ping_status()
+    ping = get_ping_status(range(10))
     assert isinstance(ping, dict)
     assert sorted(ping.keys()) == sorted(random_heartbeats.keys())
     single = ping[0]
@@ -217,7 +199,7 @@ def test_ping(random_heartbeats):
 
 
 def test_ping_single(random_heartbeats):
-    ping = get_ping_status(0)
+    ping = get_ping_status([0])
     assert isinstance(ping, dict)
     single = ping[0]
     for f in single.folders:
