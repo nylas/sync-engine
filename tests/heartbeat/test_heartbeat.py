@@ -71,25 +71,7 @@ def test_proxy_publish_doesnt_break_everything(monkeypatch):
 def test_folder_publish_in_index(redis_client):
     proxy = proxy_for(1, 2)
     proxy.publish()
-    assert 'folder_index' in redis_client.keys()
-    assert 'account_index' in redis_client.keys()
     assert '1' in redis_client.keys()
-
-    # Check the folder index was populated correctly: it should be a sorted
-    # set of all folder keys with the timestamp of the last heartbeat
-    folder_index = redis_client.zrange('folder_index', 0, -1, withscores=True)
-    assert len(folder_index) == 1
-    key, timestamp = folder_index[0]
-    assert key == '1:2'
-    assert fuzzy_equals(proxy.heartbeat_at, timestamp)
-
-    # Check the account index was populated correctly: it should be a sorted
-    # set of all account IDs with the timestamp of the oldest heartbeat
-    acct_index = redis_client.zrange('account_index', 0, -1, withscores=True)
-    assert len(acct_index) == 1
-    key, timestamp = acct_index[0]
-    assert key == '1'
-    assert fuzzy_equals(proxy.heartbeat_at, timestamp)
 
     # Check the per-account folder-list index was populated correctly: it
     # should be a sorted set of all folder IDs for that account, with the
@@ -99,55 +81,6 @@ def test_folder_publish_in_index(redis_client):
     key, timestamp = acct_folder_index[0]
     assert key == '2'
     assert fuzzy_equals(proxy.heartbeat_at, timestamp)
-
-
-def test_account_index_oldest_timestamp(redis_client):
-    # Test that when we publish heartbeats to two different folders for an
-    # account, the account's timestamp in the index is the oldest of the two.
-    proxies = []
-    for i in [2, 3]:
-        proxy = proxy_for(1, i)
-        proxy.publish()
-        proxies.append(proxy)
-        time.sleep(0.5)
-
-    # Check that folder 3 is in the right place
-    acct_folder_index = redis_client.zrange('1', 0, -1, withscores=True)
-    assert len(acct_folder_index) == 2
-    # The highest score should belong to folder 3.
-    acct_folder_index = redis_client.zrevrange('1', 0, 0)
-    assert acct_folder_index[0] == '3'
-
-    # Check the timestamp on the account itself.
-    acct_index = redis_client.zrange('account_index', 0, -1, withscores=True)
-    assert len(acct_index) == 1
-    key, timestamp = acct_index[0]
-    # The proxy heartbeat_at is the time it was published by the proxy, whereas
-    # the index time is the time the index was updated, so they may differ but
-    # only by a very small amount.
-    assert fuzzy_equals(proxies[0].heartbeat_at, timestamp)
-
-
-def test_remove_folder_from_index(redis_client, store):
-    # When we remove a folder, it should also be removed from the folder
-    # index and the account's timestamp updated accordingly.
-    proxies = []
-    for i in [2, 3]:
-        proxy = proxy_for(1, i)
-        proxy.publish()
-        proxies.append(proxy)
-        time.sleep(0.5)
-
-    n = store.remove_folders(1, 2)
-    assert n == 1
-    # Folder is removed
-    assert redis_client.hgetall("1:2") == {}
-    # Folder index is removed
-    folder_ids = [f for f, ts in store.get_folder_list()]
-    assert folder_ids == ['1:3']
-    # Account-folder index is removed
-    account_folders = [f for f, ts in store.get_account_folders(1)]
-    assert account_folders == ['3']
 
 
 def test_kill_device_multiple(store):
