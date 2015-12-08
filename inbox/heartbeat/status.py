@@ -17,27 +17,24 @@ AccountPing = namedtuple('AccountPing', ['id', 'folders'])
 FolderPing = namedtuple('FolderPing', ['id', 'alive', 'timestamp'])
 
 
-def get_ping_status(host=None, port=6379, account_id=None,
-                    threshold=ALIVE_EXPIRY):
+def get_ping_status(account_ids, host=None, port=6379, threshold=ALIVE_EXPIRY):
     # Query the indexes and not the per-folder info for faster lookup.
     store = HeartbeatStore.store(host, port)
     now = time.time()
     expiry = now - threshold
-    if account_id:
+    if len(account_ids) == 1:
         # Get a single account's heartbeat
+        account_id = account_ids[0]
         folder_heartbeats = store.get_account_folders(account_id)
         folders = [FolderPing(int(aid), ts > expiry, ts)
                    for (aid, ts) in folder_heartbeats]
         account = AccountPing(account_id, folders)
         return {account_id: account}
     else:
-        # Start from the account index
-        account_heartbeats = store.get_account_list()
         accounts = {}
         # grab the folders from all accounts in one batch
-        all_folder_heartbeats = store.get_accounts_folders(
-            [aid for aid, ts in account_heartbeats])
-        for i, (account_id, account_ts) in enumerate(account_heartbeats):
+        all_folder_heartbeats = store.get_accounts_folders(account_ids)
+        for i, account_id in enumerate(account_ids):
             account_id = int(account_id)
             folder_heartbeats = all_folder_heartbeats[i]
             folders = [FolderPing(int(aid), ts > expiry, ts)

@@ -198,8 +198,3 @@ class HeartbeatStore(object):
         for index in account_ids:
             pipe.zrange(index, 0, -1, withscores=True)
         return pipe.execute()
-
-    def get_account_list(self):
-        # Return all accounts, in ascending order (by timestamp)
-        # Returns (account_id, timestamp) tuples.
-        return self.get_index('account_index')
