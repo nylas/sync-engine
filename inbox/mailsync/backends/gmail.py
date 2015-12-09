@@ -35,7 +35,6 @@ from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.gc import LabelRenameHandler
 from inbox.mailsync.backends.base import THROTTLE_COUNT, THROTTLE_WAIT
 log = get_logger()
 
@@ -79,7 +78,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
             Label.account_id == self.account_id,
             Label.deleted_at == None)}
 
-        current_labels = set()
+        new_labels = set()
 
         # Create new labels, folders
         for raw_folder in raw_folders:
@@ -91,7 +90,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
             label = Label.find_or_create(db_session, account,
                                          raw_folder.display_name,
                                          raw_folder.role)
-            current_labels.add(label)
+            new_labels.add(label)
 
             if label.deleted_at is not None:
                 # This is a label which was previously marked as deleted
@@ -144,20 +143,11 @@ class GmailSyncMonitor(ImapSyncMonitor):
         # We can't delete labels directly because Gmail allows users to hide
         # folders --- we need to check that there's no messages still
         # associated with the label.
-        deleted_labels = old_labels - current_labels
+        deleted_labels = old_labels - new_labels
         for deleted_label in deleted_labels:
             deleted_label.deleted_at = datetime.now()
             cat = deleted_label.category
             cat.deleted_at = datetime.now()
-
-        new_labels = current_labels - old_labels
-        for label in new_labels:
-            rename_handler = LabelRenameHandler(
-                account_id=self.account_id,
-                namespace_id=self.namespace_id,
-                label_name=label.name)
-
-            rename_handler.start()
 
         db_session.commit()
 
