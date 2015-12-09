@@ -855,6 +855,12 @@ def event_rsvp_api():
     if email not in participants:
         raise InputError('Cannot find %s among the participants' % email)
 
+    p = participants[email]
+
+    # Make this API idempotent.
+    if p["status"] == status and p['comment'] == comment:
+        return g.encoder.jsonify(event)
+
     participant = {"email": email, "status": status, "comment": comment}
 
     body_text = comment
