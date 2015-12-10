@@ -342,7 +342,8 @@ class CrispinClient(object):
 
     def sync_folders(self):
         """
-        List of folders to sync.
+        List of folders to sync, in order of sync priority. Currently, that
+        simply means inbox folder first.
 
         In generic IMAP, the 'INBOX' folder is required.
 
@@ -359,8 +360,12 @@ class CrispinClient(object):
             "Missing required 'inbox' folder for account_id: {}".\
             format(self.account_id)
 
-        for names in have_folders.itervalues():
-            to_sync.extend(names)
+        # Sync inbox folder first, then others.
+        to_sync = have_folders['inbox']
+        for role, folder_names in have_folders.items():
+            if role == 'inbox':
+                continue
+            to_sync.extend(folder_names)
 
         return to_sync
 

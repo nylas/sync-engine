@@ -320,3 +320,6 @@ def test_imap_folders(monkeypatch):
             assert len(names) == 2
         else:
             assert len(names) == 1
+
+    # Inbox folder should be synced first.
+    assert client.sync_folders()[0] == 'INBOX'
