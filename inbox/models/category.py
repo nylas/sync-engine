@@ -48,7 +48,6 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
         try:
             obj = session.query(cls).filter(
                 cls.namespace_id == namespace_id,
-                cls.name == name,
                 cls.display_name == display_name).one()
         except NoResultFound:
             obj = cls(namespace_id=namespace_id, name=name,
@@ -59,6 +58,9 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
                       'name {}, display_name: {}'.
                       format(namespace_id, name, display_name))
             raise
+
+        if obj.name is None:
+            obj.name = name
 
         return obj
 
