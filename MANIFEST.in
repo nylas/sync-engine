@@ -6,7 +6,6 @@ include *.md
 include *.sh
 include *.txt
 include *.yml
-include Dockerfile
 include LICENSE
 include Vagrantfile
 include alembic.ini
@@ -15,7 +14,6 @@ include tox.ini
 recursive-include arclib *.php
 recursive-include bin *.sh
 recursive-include debian *.triggers
-recursive-include docker *.conf
 recursive-include migrations *.mako
 recursive-include migrations *.py
 recursive-include tests *.agignore
