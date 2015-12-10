@@ -1,5 +1,4 @@
 import datetime
-from imapclient.imap_utf7 import encode as utf7_encode
 
 import gevent
 from sqlalchemy import func
