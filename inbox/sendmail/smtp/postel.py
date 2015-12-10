@@ -196,17 +196,20 @@ class SMTPConnection(object):
 
     def smtp_oauth2(self):
         code, resp = self._try_xoauth2()
-        # If auth failed, try to refresh the access token and try again.
+        if code in SMTP_TEMP_AUTH_FAIL_CODES and resp.startswith('4.7.0'):
+            # If we're getting 'too many login attempt errors', tell the client
+            # they are being rate-limited.
+            raise SendMailException('Temporary provider send throttling',
+                                    429)
+
         if code != SMTP_AUTH_SUCCESS:
+            # If auth failed for any other reason, try to refresh the access
+            # token and try again.
             self._smtp_oauth2_try_refresh()
             code, resp = self._try_xoauth2()
-            # Propagate known temporary authentication issues as such.
-            if code in SMTP_TEMP_AUTH_FAIL_CODES and resp.startswith('4.7.0'):
-                raise SendMailException('Temporary provider send throttling',
-                                        429)
-        if code != SMTP_AUTH_SUCCESS:
-            raise SendMailException(
-                'Could not authenticate with the SMTP server.', 403)
+            if code != SMTP_AUTH_SUCCESS:
+                raise SendMailException(
+                    'Could not authenticate with the SMTP server.', 403)
         self.log.info('SMTP Auth(OAuth2) success',
                       email_address=self.email_address)
 
