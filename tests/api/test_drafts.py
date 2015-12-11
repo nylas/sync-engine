@@ -64,14 +64,11 @@ def patch_remote_save_draft(monkeypatch):
 
     saved_drafts = []
 
-    def mock_remote_save_draft(account, message, db_sess):
-        saved_drafts.append(message)
+    def mock_save_draft(account_id, message_id, args):
+        saved_drafts.append(message_id)
 
     # Patch both, just in case
-    monkeypatch.setattr('inbox.actions.backends.generic.remote_save_draft',
-                        mock_remote_save_draft)
-    monkeypatch.setattr('inbox.actions.backends.gmail.remote_save_draft',
-                        mock_remote_save_draft)
+    monkeypatch.setattr('inbox.actions.base.save_draft', mock_save_draft)
 
     return saved_drafts
 
@@ -82,15 +79,14 @@ def test_save_update_bad_recipient_draft(db, patch_remote_save_draft,
     # You should be able to save a draft, even if
     # the recipient's email is invalid.
     from inbox.sendmail.base import create_message_from_json
-    from inbox.actions.base import save_draft as save_draft_remote
+    from inbox.actions.base import save_draft
 
     for example_draft in example_bad_recipient_drafts:
         draft = create_message_from_json(example_draft,
                                          default_account.namespace, db.session,
                                          is_draft=True)
 
-        save_draft_remote(default_account.id, draft.id, db.session,
-                          {'version': draft.version})
+        save_draft(default_account.id, draft.id, {'version': draft.version})
 
     assert len(patch_remote_save_draft) == 2
 

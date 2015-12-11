@@ -176,16 +176,16 @@ class SyncbackWorker(gevent.Greenlet):
                 extra_args=self.extra_args)
 
             for _ in range(ACTION_MAX_NR_OF_RETRIES):
-                with session_scope(self.account_id) as db_session:
-                    try:
+                try:
+                    if self.extra_args:
+                        self.func(self.account_id, self.record_id,
+                                  self.extra_args)
+                    else:
+                        self.func(self.account_id, self.record_id)
+
+                    with session_scope(self.account_id) as db_session:
                         action_log_entry = db_session.query(ActionLog).get(
                             self.action_log_id)
-                        if self.extra_args:
-                            self.func(self.account_id, self.record_id,
-                                      db_session, self.extra_args)
-                        else:
-                            self.func(self.account_id, self.record_id,
-                                      db_session)
                         action_log_entry.status = 'successful'
                         db_session.commit()
                         latency = round((datetime.utcnow() -
@@ -197,18 +197,18 @@ class SyncbackWorker(gevent.Greenlet):
                         self._log_to_statsd(action_log_entry.status, latency)
                         return
 
-                    except Exception:
-                        log_uncaught_errors(log, account_id=self.account_id,
-                                            provider=self.provider)
-                        with session_scope(self.account_id) as db_session:
-                            action_log_entry.retries += 1
-                            if (action_log_entry.retries ==
-                                    ACTION_MAX_NR_OF_RETRIES):
-                                log.critical('Max retries reached, giving up.',
-                                             exc_info=True)
-                                action_log_entry.status = 'failed'
-                                self._log_to_statsd(action_log_entry.status)
-                            db_session.commit()
+                except Exception:
+                    log_uncaught_errors(log, account_id=self.account_id,
+                                        provider=self.provider)
+                    with session_scope(self.account_id) as db_session:
+                        action_log_entry.retries += 1
+                        if (action_log_entry.retries ==
+                                ACTION_MAX_NR_OF_RETRIES):
+                            log.critical('Max retries reached, giving up.',
+                                         exc_info=True)
+                            action_log_entry.status = 'failed'
+                            self._log_to_statsd(action_log_entry.status)
+                        db_session.commit()
 
                 # Wait before retrying
                 gevent.sleep(self.retry_interval)

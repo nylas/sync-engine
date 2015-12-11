@@ -172,7 +172,10 @@ class MockIMAPClient(object):
 
     def delete_messages(self, uids):
         for u in uids:
-            del self._data[self.selected_folder_name][u]
+            del self._data[self.selected_folder][u]
+
+    def expunge(self):
+        pass
 
 
 @pytest.fixture

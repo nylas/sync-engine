@@ -23,134 +23,117 @@ ACTIONS MUST BE IDEMPOTENT! We are going to have task workers guarantee
 at-least-once semantics.
 
 """
-from inbox.actions.backends import module_registry
+from inbox.actions.backends.generic import (set_remote_unread,
+                                            set_remote_starred, remote_move,
+                                            remote_save_draft,
+                                            remote_update_draft,
+                                            remote_delete_draft,
+                                            remote_save_sent,
+                                            remote_create_folder,
+                                            remote_update_folder,
+                                            remote_delete_folder)
+from inbox.actions.backends.gmail import (remote_change_labels,
+                                          remote_create_label,
+                                          remote_update_label,
+                                          remote_delete_label)
 
-from inbox.models import Account, Message
+from inbox.models import Message
+from inbox.models.session import session_scope
 from nylas.logging import get_logger
 log = get_logger()
 
 
-def mark_unread(account_id, message_id, db_session, args):
+def mark_unread(account_id, message_id, args):
     unread = args['unread']
-
-    account = db_session.query(Account).get(account_id)
-    set_remote_unread = module_registry[account.provider]. \
-        set_remote_unread
-    set_remote_unread(account, message_id, db_session, unread)
+    set_remote_unread(account_id, message_id, unread)
 
 
-def mark_starred(account_id, message_id, db_session, args):
+def mark_starred(account_id, message_id, args):
     starred = args['starred']
-    account = db_session.query(Account).get(account_id)
-    set_remote_starred = module_registry[account.provider]. \
-        set_remote_starred
-    set_remote_starred(account, message_id, db_session, starred)
+    set_remote_starred(account_id, message_id, starred)
 
 
-def move(account_id, message_id, db_session, args):
+def move(account_id, message_id, args):
     destination = args['destination']
-    account = db_session.query(Account).get(account_id)
-    remote_move = module_registry[account.provider].remote_move
-    remote_move(account, message_id, db_session, destination)
+    remote_move(account_id, message_id, destination)
 
 
-def change_labels(account_id, message_id, db_session, args):
+def change_labels(account_id, message_id, args):
     added_labels = args['added_labels']
     removed_labels = args['removed_labels']
-    account = db_session.query(Account).get(account_id)
-    assert account.provider == 'gmail'
-    remote_change_labels = module_registry[account.provider]. \
-        remote_change_labels
-    remote_change_labels(account, message_id, db_session, removed_labels,
+    remote_change_labels(account_id, message_id, removed_labels,
                          added_labels)
 
 
-def create_folder(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    remote_create = module_registry[account.provider].remote_create_folder
-    remote_create(account, category_id, db_session)
+def create_folder(account_id, category_id):
+    remote_create_folder(account_id, category_id)
 
 
-def create_label(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    assert account.provider == 'gmail'
-    remote_create = module_registry[account.provider].remote_create_label
-    remote_create(account, category_id, db_session)
+def create_label(account_id, category_id):
+    remote_create_label(account_id, category_id)
 
 
-def delete_label(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    assert account.provider == 'gmail'
-    remote_delete = module_registry[account.provider].remote_delete_label
-    remote_delete(account, category_id, db_session)
+def delete_label(account_id, category_id):
+    remote_delete_label(account_id, category_id)
 
 
-def update_folder(account_id, category_id, db_session, args):
+def update_folder(account_id, category_id, args):
     old_name = args['old_name']
-    account = db_session.query(Account).get(account_id)
-    remote_update = module_registry[account.provider].remote_update_folder
-    remote_update(account, category_id, db_session, old_name)
+    remote_update_folder(account_id, category_id, old_name)
 
 
-def delete_folder(account_id, category_id, db_session):
-    account = db_session.query(Account).get(account_id)
-    remote_delete = module_registry[account.provider].remote_delete_folder
-    remote_delete(account, category_id, db_session)
+def delete_folder(account_id, category_id):
+    remote_delete_folder(account_id, category_id)
 
 
-def update_label(account_id, category_id, db_session, args):
+def update_label(account_id, category_id, args):
     old_name = args['old_name']
-    account = db_session.query(Account).get(account_id)
-    assert account.provider == 'gmail'
-    remote_update = module_registry[account.provider].remote_update_label
-    remote_update(account, category_id, db_session, old_name)
+    remote_update_label(account_id, category_id, old_name)
 
 
-def save_draft(account_id, message_id, db_session, args):
+def save_draft(account_id, message_id, args):
     """ Sync a new draft back to the remote backend. """
-    account = db_session.query(Account).get(account_id)
-    message = db_session.query(Message).get(message_id)
-    version = args.get('version')
-    if message is None:
-        log.info('tried to save nonexistent message as draft',
-                 message_id=message_id, account_id=account_id)
-        return
-    if not message.is_draft:
-        log.warning('tried to save non-draft message as draft',
-                    message_id=message_id,
-                    account_id=account_id)
-        return
-    if version != message.version:
-        log.warning('tried to save outdated version of draft')
-        return
+    with session_scope(account_id) as db_session:
+        message = db_session.query(Message).get(message_id)
+        version = args.get('version')
+        if message is None:
+            log.info('tried to save nonexistent message as draft',
+                     message_id=message_id, account_id=account_id)
+            return
+        if not message.is_draft:
+            log.warning('tried to save non-draft message as draft',
+                        message_id=message_id,
+                        account_id=account_id)
+            return
+        if version != message.version:
+            log.warning('tried to save outdated version of draft')
+            return
 
-    remote_save_draft = module_registry[account.provider].remote_save_draft
-    remote_save_draft(account, message, db_session)
+    remote_save_draft(account_id, message_id)
 
 
-def update_draft(account_id, message_id, db_session, args):
+def update_draft(account_id, message_id, args):
     """ Sync an updated draft back to the remote backend. """
-    message = db_session.query(Message).get(message_id)
-    version = args.get('version')
-    if message is None:
-        log.info('tried to save nonexistent message as draft',
-                 message_id=message_id, account_id=account_id)
-        return
-    if not message.is_draft:
-        log.warning('tried to save non-draft message as draft',
-                    message_id=message_id,
-                    account_id=account_id)
-        return
-    if version != message.version:
-        log.warning('tried to save outdated version of draft')
-        return
+    with session_scope(account_id) as db_session:
+        message = db_session.query(Message).get(message_id)
+        version = args.get('version')
+        if message is None:
+            log.info('tried to save nonexistent message as draft',
+                     message_id=message_id, account_id=account_id)
+            return
+        if not message.is_draft:
+            log.warning('tried to save non-draft message as draft',
+                        message_id=message_id,
+                        account_id=account_id)
+            return
+        if version != message.version:
+            log.warning('tried to save outdated version of draft')
+            return
 
-    account = db_session.query(Account).get(account_id)
-    remote_update_draft = module_registry[account.provider].remote_update_draft
-    remote_update_draft(account, message, db_session)
+    remote_update_draft(account_id, message_id)
 
 
-def delete_draft(account_id, draft_id, db_session, args):
+def delete_draft(account_id, draft_id, args):
     """
     Delete a draft from the remote backend. `args` should contain an
     `inbox_uid` or a `message_id_header` key. This is used to find the draft on
@@ -160,22 +143,12 @@ def delete_draft(account_id, draft_id, db_session, args):
     inbox_uid = args.get('inbox_uid')
     message_id_header = args.get('message_id_header')
     assert inbox_uid or message_id_header, 'Need at least one header value'
-    account = db_session.query(Account).get(account_id)
-    remote_delete_draft = module_registry[account.provider].remote_delete_draft
-    remote_delete_draft(account, inbox_uid, message_id_header, db_session)
+    remote_delete_draft(account_id, inbox_uid, message_id_header)
 
 
-def save_sent_email(account_id, message_id, db_session):
+def save_sent_email(account_id, message_id):
     """
     Create an email on the remote backend. Generic providers expect
     us to create a copy of the message in the sent folder.
     """
-    account = db_session.query(Account).get(account_id)
-    message = db_session.query(Message).get(message_id)
-    if message is None:
-        log.info('tried to create nonexistent message',
-                 message_id=message_id, account_id=account_id)
-        return
-
-    remote_save_sent = module_registry[account.provider].remote_save_sent
-    remote_save_sent(account, message)
+    remote_save_sent(account_id, message_id)
