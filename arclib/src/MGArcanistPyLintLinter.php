@@ -1,243 +1,175 @@
 <?php
+final class MGArcanistPyLintLinter extends ArcanistExternalLinter {
+  private $config;
 
-/**
- * Uses "PyLint" to detect various errors in Python code. To use this linter,
- * you must install pylint and configure which codes you want to be reported as
- * errors, warnings and advice.
- *
- * You should be able to install pylint with ##sudo easy_install pylint##. If
- * your system is unusual, you can manually specify the location of pylint and
- * its dependencies by configuring these keys in your .arcconfig:
- *
- *   lint.pylint.prefix
- *   lint.pylint.logilab_astng.prefix
- *   lint.pylint.logilab_common.prefix
- *
- * You can specify additional command-line options to pass to PyLint by
- * setting ##lint.pylint.options##. You may also specify a list of additional
- * entries for PYTHONPATH with ##lint.pylint.pythonpath##. Those can be
- * absolute or relative to the project root.
- *
- * If you have a PyLint rcfile, specify its path with
- * ##lint.pylint.rcfile##. It can be absolute or relative to the project
- * root. Be sure not to define ##output-format##, or if you do, set it to
- * ##text##.
- *
- * Specify which PyLint messages map to which Arcanist messages by defining
- * the following regular expressions:
- *
- *   lint.pylint.codes.error
- *   lint.pylint.codes.warning
- *   lint.pylint.codes.advice
- *
- * The regexps are run in that order; the first to match determines which
- * Arcanist severity applies, if any. For example, to capture all PyLint
- * "E...." errors as Arcanist errors, set ##lint.pylint.codes.error## to:
- *
- *    ^E.*
- *
- * You can also match more granularly:
- *
- *    ^E(0001|0002)$
- *
- * According to ##man pylint##, there are 5 kind of messages:
- *
- *   (C) convention, for programming standard violation
- *   (R) refactor, for bad code smell
- *   (W) warning, for python specific problems
- *   (E) error, for probable bugs in the code
- *   (F) fatal, if an error occurred which prevented pylint from
- *       doing further processing.
- *
- * @group linter
- */
-final class MGArcanistPyLintLinter extends ArcanistLinter {
-
-  private function getMessageCodeSeverity($code) {
-
-    $config = $this->getEngine()->getConfigurationManager();
-
-    $error_regexp   =
-      $config->getConfigFromAnySource('lint.pylint.codes.error');
-    $warning_regexp =
-      $config->getConfigFromAnySource('lint.pylint.codes.warning');
-    $advice_regexp  =
-      $config->getConfigFromAnySource('lint.pylint.codes.advice');
-
-    if (!$error_regexp && !$warning_regexp && !$advice_regexp) {
-      throw new ArcanistUsageException(
-        "You are invoking the PyLint linter but have not configured any of ".
-        "'lint.pylint.codes.error', 'lint.pylint.codes.warning', or ".
-        "'lint.pylint.codes.advice'. Consult the documentation for ".
-        "MGArcanistPyLintLinter.");
-    }
-
-    $code_map = array(
-      ArcanistLintSeverity::SEVERITY_ERROR    => $error_regexp,
-      ArcanistLintSeverity::SEVERITY_WARNING  => $warning_regexp,
-      ArcanistLintSeverity::SEVERITY_ADVICE   => $advice_regexp,
-    );
-
-    foreach ($code_map as $sev => $codes) {
-      if ($codes === null) {
-        continue;
-      }
-      if (!is_array($codes)) {
-        $codes = array($codes);
-      }
-      foreach ($codes as $code_re) {
-        if (preg_match("/{$code_re}/", $code)) {
-          return $sev;
-        }
-      }
-    }
-
-    // If the message code doesn't match any of the provided regex's,
-    // then just disable it.
-    return ArcanistLintSeverity::SEVERITY_DISABLED;
+  public function getInfoName() {
+    return 'PyLint';
   }
 
-  private function getPyLintPath() {
-    $pylint_bin = "pylint";
-
-    // Use the PyLint prefix specified in the config file
-    $config = $this->getEngine()->getConfigurationManager();
-    $prefix = $config->getConfigFromAnySource('lint.pylint.prefix');
-    if ($prefix !== null) {
-      $pylint_bin = $prefix."/bin/".$pylint_bin;
-    }
-
-    if (!Filesystem::pathExists($pylint_bin)) {
-
-      list($err) = exec_manual('which %s', $pylint_bin);
-      if ($err) {
-        throw new ArcanistUsageException(
-          "PyLint does not appear to be installed on this system. Install it ".
-          "(e.g., with 'sudo easy_install pylint') or configure ".
-          "'lint.pylint.prefix' in your .arcconfig to point to the directory ".
-          "where it resides.");
-      }
-    }
-
-    return $pylint_bin;
+  public function getInfoURI() {
+    return 'http://www.pylint.org/';
   }
 
-  private function getPyLintPythonPath() {
-    // Get non-default install locations for pylint and its dependencies
-    // libraries.
-    $config = $this->getEngine()->getConfigurationManager();
-    $prefixes = array(
-      $config->getConfigFromAnySource('lint.pylint.prefix'),
-      $config->getConfigFromAnySource('lint.pylint.logilab_astng.prefix'),
-      $config->getConfigFromAnySource('lint.pylint.logilab_common.prefix'),
-    );
-
-    // Add the libraries to the python search path
-    $python_path = array();
-    foreach ($prefixes as $prefix) {
-      if ($prefix !== null) {
-        $python_path[] = $prefix.'/lib/python2.7/site-packages';
-        $python_path[] = $prefix.'/lib/python2.7/dist-packages';
-        $python_path[] = $prefix.'/lib/python2.6/site-packages';
-        $python_path[] = $prefix.'/lib/python2.6/dist-packages';
-      }
-    }
-
-    $working_copy = $this->getEngine()->getWorkingCopy();
-    $config_paths = $config->getConfigFromAnySource('lint.pylint.pythonpath');
-    if ($config_paths !== null) {
-      foreach ($config_paths as $config_path) {
-        if ($config_path !== null) {
-          $python_path[] =
-            Filesystem::resolvePath($config_path,
-                                    $working_copy->getProjectRoot());
-        }
-      }
-    }
-
-    $python_path[] = '';
-    return implode(":", $python_path);
-  }
-
-  private function getPyLintOptions() {
-    // '-rn': don't print lint report/summary at end
-    // '-iy': show message codes for lint warnings/errors
-    $options = array('-rn');
-
-    $working_copy = $this->getEngine()->getWorkingCopy();
-    $config = $this->getEngine()->getConfigurationManager();
-
-    // Specify an --rcfile, either absolute or relative to the project root.
-    // Stupidly, the command line args above are overridden by rcfile, so be
-    // careful.
-    $rcfile = $config->getConfigFromAnySource('lint.pylint.rcfile');
-    if ($rcfile !== null) {
-      $rcfile = Filesystem::resolvePath(
-                   $rcfile,
-                   $working_copy->getProjectRoot());
-      $options[] = csprintf('--rcfile=%s', $rcfile);
-    }
-
-    // Add any options defined in the config file for PyLint
-    $config_options = $config->getConfigFromAnySource('lint.pylint.options');
-    if ($config_options !== null) {
-      $options = array_merge($options, $config_options);
-    }
-
-    return implode(" ", $options);
+  public function getInfoDescription() {
+    return pht(
+      'PyLint is a Python source code analyzer which looks for '.
+      'programming errors, helps enforcing a coding standard and '.
+      'sniffs for some code smells.');
   }
 
   public function getLinterName() {
     return 'PyLint';
   }
 
-  public function lintPath($path) {
-    $pylint_bin = $this->getPyLintPath();
-    $python_path = $this->getPyLintPythonPath();
-    $options = $this->getPyLintOptions();
-    $path_on_disk = $this->getEngine()->getFilePathOnDisk($path);
+  public function getLinterConfigurationName() {
+    return 'pylint';
+  }
 
-    try {
-      list($stdout, $_) = execx(
-        '/usr/bin/env PYTHONPATH=%s$PYTHONPATH %s %C %s',
-        $python_path,
-        $pylint_bin,
-        $options,
-        $path_on_disk);
-    } catch (CommandException $e) {
-      if ($e->getError() == 32) {
-        // According to ##man pylint## the exit status of 32 means there was a
-        // usage error. That's bad, so actually exit abnormally.
-        throw $e;
-      } else {
-        // The other non-zero exit codes mean there were messages issued,
-        // which is expected, so don't exit.
-        $stdout = $e->getStdout();
-      }
-    }
+  public function getDefaultBinary() {
+    putenv("PYTHONPATH=inbox");
+    return 'pylint';
+  }
 
-    $lines = explode("\n", $stdout);
-    $messages = array();
-    foreach ($lines as $line) {
-      $matches = null;
-      if (!preg_match(
-              '/([A-Z]\d+): *(\d+)(?:|,\d*): *(.*)$/',
-              $line, $matches)) {
-        continue;
-      }
-      foreach ($matches as $key => $match) {
-        $matches[$key] = trim($match);
-      }
+  public function getVersion() {
+    list($stdout) = execx('%C --version', $this->getExecutableCommand());
 
-      $message = new ArcanistLintMessage();
-      $message->setPath($path);
-      $message->setLine($matches[2]);
-      $message->setCode($matches[1]);
-      $message->setName($this->getLinterName()." ".$matches[1]);
-      $message->setDescription($matches[3]);
-      $message->setSeverity($this->getMessageCodeSeverity($matches[1]));
-      $this->addLintMessage($message);
+    $matches = array();
+    $regex = '/^pylint (?P<version>\d+\.\d+\.\d+),/';
+    if (preg_match($regex, $stdout, $matches)) {
+      return $matches['version'];
+    } else {
+      return false;
     }
   }
 
+  public function getInstallInstructions() {
+    return pht(
+      'Install PyLint using `%s`.',
+      'pip install pylint');
+  }
+
+  public function shouldExpectCommandErrors() {
+    return true;
+  }
+
+  public function getLinterConfigurationOptions() {
+    $options = array(
+      'pylint.config' => array(
+        'type' => 'optional string',
+        'help' => pht('Pass in a custom configuration file path.'),
+      ),
+    );
+
+    return $options + parent::getLinterConfigurationOptions();
+  }
+
+  public function setLinterConfigurationValue($key, $value) {
+    switch ($key) {
+      case 'pylint.config':
+        $this->config = $value;
+        return;
+
+      default:
+        return parent::setLinterConfigurationValue($key, $value);
+    }
+  }
+
+  protected function getMandatoryFlags() {
+    $options = array();
+
+    $options[] = '--reports=no';
+    $options[] = '--msg-template="{line}|{column}|{msg_id}|{symbol}|{msg}"';
+    $options[] = '-d all -e w0631';
+
+    // Specify an `--rcfile`, either absolute or relative to the project root.
+    // Stupidly, the command line args above are overridden by rcfile, so be
+    // careful.
+    $config = $this->config;
+    if ($config !== null) {
+      $options[] = '--rcfile='.$config;
+    }
+
+    return $options;
+  }
+
+  protected function getDefaultFlags() {
+    $options = array();
+
+    $installed_version = $this->getVersion();
+    $minimum_version = '1.0.0';
+    if (version_compare($installed_version, $minimum_version, '<')) {
+      throw new ArcanistMissingLinterException(
+        pht(
+          '%s is not compatible with the installed version of pylint. '.
+          'Minimum version: %s; installed version: %s.',
+          __CLASS__,
+          $minimum_version,
+          $installed_version));
+    }
+
+    return $options;
+  }
+
+  protected function parseLinterOutput($path, $err, $stdout, $stderr) {
+    if ($err === 32) {
+      // According to `man pylint` the exit status of 32 means there was a
+      // usage error. That's bad, so actually exit abnormally.
+      return false;
+    }
+
+    list($stdout) = execx('pylint -d all -e w0631 inbox');
+    $lines = phutil_split_lines($stdout, false);
+    $messages = array();
+
+    foreach ($lines as $line) {
+      $matches = explode('|', $line, 5);
+
+      if (count($matches) < 5) {
+        continue;
+      }
+
+      $message = id(new ArcanistLintMessage())
+        ->setPath($path)
+        ->setLine($matches[0])
+        ->setChar($matches[1])
+        ->setCode($matches[2])
+        ->setSeverity($this->getLintMessageSeverity($matches[2]))
+        ->setName(ucwords(str_replace('-', ' ', $matches[3])))
+        ->setDescription($matches[4]);
+
+      $messages[] = $message;
+    }
+
+    return $messages;
+  }
+
+  protected function getDefaultMessageSeverity($code) {
+    switch (substr($code, 0, 1)) {
+      case 'R':
+      case 'C':
+        return ArcanistLintSeverity::SEVERITY_ADVICE;
+      case 'W':
+        return ArcanistLintSeverity::SEVERITY_WARNING;
+      case 'E':
+      case 'F':
+        return ArcanistLintSeverity::SEVERITY_ERROR;
+      default:
+        return ArcanistLintSeverity::SEVERITY_DISABLED;
+    }
+  }
+
+  protected function getLintCodeFromLinterConfigurationKey($code) {
+    if (!preg_match('/^(R|C|W|E|F)\d{4}$/', $code)) {
+      throw new Exception(
+        pht(
+          'Unrecognized lint message code "%s". Expected a valid Pylint '.
+          'lint code like "%s", or "%s", or "%s".',
+          $code,
+          'C0111',
+          'E0602',
+          'W0611'));
+    }
+
+    return $code;
+  }
 }

@@ -63,8 +63,8 @@ final class InboxServerLintEngine extends ArcanistLintEngine {
     // to run a Python linter and a more general text linter on every .py file).
 
     return array(
-      $pylint_linter,
       $flake8_linter,
+      $pylint_linter,
     );
   }
 
