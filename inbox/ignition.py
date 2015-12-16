@@ -1,3 +1,5 @@
+import time
+import weakref
 import gevent
 from socket import gethostname
 from urllib import quote_plus as urlquote
@@ -6,7 +8,7 @@ from sqlalchemy import create_engine, event
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 from inbox.config import config
 from inbox.util.stats import statsd_client
-from nylas.logging import get_logger
+from nylas.logging import get_logger, find_first_app_frame_and_name
 from warnings import filterwarnings
 filterwarnings('ignore', message='Invalid utf8mb4 character string')
 log = get_logger()
@@ -16,6 +18,9 @@ DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 # Sane default of max overflow=5 if value missing in config.
 DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
 DB_POOL_TIMEOUT = config.get('DB_POOL_TIMEOUT') or 60
+
+
+pool_tracker = weakref.WeakKeyDictionary()
 
 
 # See
@@ -64,6 +69,24 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
             ["dbconn", database_name, hostname, process_name,
              "overflow"]),
             connection_proxy._pool.overflow())
+
+        # Keep track of where and why this connection was checked out.
+        log = get_logger()
+        context = log._context._dict.copy()
+        f, name = find_first_app_frame_and_name(ignores=['sqlalchemy',
+                                                         'inbox.ignition'])
+        source = '{}:{}'.format(name, f.f_lineno)
+
+        pool_tracker[dbapi_connection] = {
+            'source': source,
+            'context': context,
+            'checkedout_at': time.time()
+        }
+
+    @event.listens_for(engine, 'checkin')
+    def receive_checkin(dbapi_connection, connection_record):
+        if dbapi_connection in pool_tracker:
+            del pool_tracker[dbapi_connection]
 
     return engine
 

@@ -1,7 +1,9 @@
+import json
 import gevent
 from werkzeug.serving import run_simple, WSGIRequestHandler
 from flask import Flask, jsonify, request
 from inbox.instrumentation.profiling import CPUSampler, GreenletTracer
+from inbox.ignition import pool_tracker
 from pympler import muppy, summary
 
 
@@ -54,6 +56,10 @@ class MetricsRunner():
             objs = muppy.get_objects()
             summ = summary.summarize(objs)
             return '\n'.join(summary.format_(summ)) + '\n'
+
+        @app.route('/pool')
+        def pool():
+            return json.dumps(pool_tracker.values())
 
         return app
 
