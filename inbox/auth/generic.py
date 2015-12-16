@@ -210,7 +210,8 @@ def _auth_is_invalid(exc):
         'login failed',
         'invalid login or password',
         'login login error password error',
-        '[auth] authentication failed.'
+        '[auth] authentication failed.',
+        'invalid login credentials'
     )
     return any(exc.message.lower().startswith(msg) for msg in
                AUTH_INVALID_PREFIXES)
