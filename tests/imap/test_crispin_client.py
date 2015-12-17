@@ -101,8 +101,10 @@ def test_gmail_flags(gmail_client, constants):
     patch_imap4(gmail_client, [expected_resp, unsolicited_resp])
     uid = constants['uid']
     flags = constants['flags']
+    modseq = constants['modseq']
     g_labels = constants['unicode_g_labels']
-    assert gmail_client.flags([uid]) == {uid: GmailFlags(flags, g_labels)}
+    assert gmail_client.flags([uid]) == {uid: GmailFlags(flags, g_labels,
+                                                         modseq)}
 
 
 def test_g_msgids(gmail_client, constants):
@@ -148,7 +150,7 @@ def test_flags(generic_client, constants):
     patch_imap4(generic_client, [expected_resp, unsolicited_resp])
     uid = constants['uid']
     flags = constants['flags']
-    assert generic_client.flags([uid]) == {uid: Flags(flags)}
+    assert generic_client.flags([uid]) == {uid: Flags(flags, None)}
 
 
 def test_body(generic_client, constants):

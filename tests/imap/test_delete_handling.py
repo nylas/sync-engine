@@ -23,7 +23,7 @@ def test_messages_deleted_asynchronously(db, default_account, thread, message,
                                          imapuid, folder):
     msg_uid = imapuid.msg_uid
     update_metadata(default_account.id, folder.id,
-                    {msg_uid: GmailFlags((), ('label',))}, db.session)
+                    {msg_uid: GmailFlags((), ('label',), None)}, db.session)
     assert 'label' in [cat.display_name for cat in message.categories]
     remove_deleted_uids(default_account.id, folder.id, [msg_uid], db.session)
     assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 2
@@ -180,7 +180,7 @@ def test_deleted_labels_get_gced(db, default_account, thread, message,
     # Create a label with attached messages.
     msg_uid = imapuid.msg_uid
     update_metadata(default_account.id, folder.id,
-                    {msg_uid: GmailFlags((), ('label',))}, db.session)
+                    {msg_uid: GmailFlags((), ('label',), None)}, db.session)
 
     label_ids = []
     for cat in message.categories:

@@ -45,9 +45,9 @@ log = get_logger()
 __all__ = ['CrispinClient', 'GmailCrispinClient']
 
 # Unify flags API across IMAP and Gmail
-Flags = namedtuple('Flags', 'flags')
+Flags = namedtuple('Flags', 'flags modseq')
 # Flags includes labels on Gmail because Gmail doesn't use \Draft.
-GmailFlags = namedtuple('GmailFlags', 'flags labels')
+GmailFlags = namedtuple('GmailFlags', 'flags labels modseq')
 GMetadata = namedtuple('GMetadata', 'g_msgid g_thrid size')
 RawMessage = namedtuple(
     'RawImapMessage',
@@ -576,7 +576,7 @@ class CrispinClient(object):
             seqset = uids
         data = self.conn.fetch(seqset, ['FLAGS'])
         uid_set = set(uids)
-        return {uid: Flags(ret['FLAGS'])
+        return {uid: Flags(ret['FLAGS'], None)
                 for uid, ret in data.items() if uid in uid_set}
 
     def delete_uids(self, uids):
@@ -720,7 +720,8 @@ class CrispinClient(object):
     def condstore_changed_flags(self, modseq):
         data = self.conn.fetch('1:*', ['FLAGS'],
                                modifiers=['CHANGEDSINCE {}'.format(modseq)])
-        return {uid: Flags(ret['FLAGS']) for uid, ret in data.items()}
+        return {uid: Flags(ret['FLAGS'], ret['MODSEQ'][0])
+                for uid, ret in data.items()}
 
 
 class GmailCrispinClient(CrispinClient):
@@ -770,7 +771,8 @@ class GmailCrispinClient(CrispinClient):
         data = self.conn.fetch(uids, ['FLAGS', 'X-GM-LABELS'])
         uid_set = set(uids)
         return {uid: GmailFlags(ret['FLAGS'],
-                                self._decode_labels(ret['X-GM-LABELS']))
+                                self._decode_labels(ret['X-GM-LABELS']),
+                                ret['MODSEQ'][0])
                 for uid, ret in data.items() if uid in uid_set}
 
     def condstore_changed_flags(self, modseq):
@@ -789,7 +791,8 @@ class GmailCrispinClient(CrispinClient):
                     continue
                 ret = data_for_uid[uid]
             results[uid] = GmailFlags(ret['FLAGS'],
-                                      self._decode_labels(ret['X-GM-LABELS']))
+                                      self._decode_labels(ret['X-GM-LABELS']),
+                                      ret['MODSEQ'][0])
         return results
 
     def g_msgids(self, uids):

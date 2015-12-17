@@ -7,7 +7,7 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
 from inbox.mailsync.exc import UidInvalid
-from tests.imap.data import uids, uid_data, mock_imapclient
+from tests.imap.data import uids, uid_data, mock_imapclient  # noqa
 
 
 def create_folder_with_syncstatus(account, name, canonical_name,
@@ -83,6 +83,40 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
     saved_uids = db.session.query(ImapUid).filter(
         ImapUid.folder_id == inbox_folder.id)
     assert {u.msg_uid for u in saved_uids} == set(uid_dict)
+
+
+def test_condstore_flags_refresh(db, default_account, all_mail_folder,
+                                 mock_imapclient, monkeypatch):
+    monkeypatch.setattr(
+        'inbox.mailsync.backends.imap.generic.CONDSTORE_FLAGS_REFRESH_BATCH_SIZE',
+        10)
+    uid_dict = uids.example()
+    mock_imapclient.add_folder_data(all_mail_folder.name, uid_dict)
+    mock_imapclient.capabilities = lambda: ['CONDSTORE']
+
+    folder_sync_engine = FolderSyncEngine(default_account.id,
+                                          default_account.namespace.id,
+                                          all_mail_folder.name,
+                                          all_mail_folder.id,
+                                          default_account.email_address,
+                                          'gmail',
+                                          BoundedSemaphore(1))
+    folder_sync_engine.initial_sync()
+
+    # Change the labels provided by the mock IMAP server
+    for k, v in mock_imapclient._data[all_mail_folder.name].items():
+        v['X-GM-LABELS'] = ('newlabel',)
+        v['MODSEQ'] = (k,)
+
+    folder_sync_engine.highestmodseq = 0
+    folder_sync_engine.poll_impl()
+    imapuids = db.session.query(ImapUid). \
+        filter_by(folder_id=all_mail_folder.id).all()
+    for imapuid in imapuids:
+        assert 'newlabel' in [l.name for l in imapuid.labels]
+
+    assert folder_sync_engine.highestmodseq == mock_imapclient.folder_status(
+        all_mail_folder.name, ['HIGHESTMODSEQ'])['HIGHESTMODSEQ']
 
 
 def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):

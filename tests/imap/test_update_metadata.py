@@ -9,7 +9,8 @@ def test_gmail_label_sync(db, default_account, message, folder,
     # Note that IMAPClient parses numeric labels into integer types. We have to
     # correctly handle those too.
     new_flags = {
-        msg_uid: GmailFlags((), (u'\\Important', u'\\Starred', u'foo', 42))
+        msg_uid: GmailFlags((), (u'\\Important', u'\\Starred', u'foo', 42),
+                            None)
     }
     update_metadata(default_namespace.account.id,
                     folder.id, new_flags, db.session)

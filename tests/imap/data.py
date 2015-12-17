@@ -32,7 +32,7 @@ def build_mime_message(from_, to, cc, bcc, subject, body):
     return msg.to_string()
 
 
-def build_uid_data(internaldate, flags, body, g_labels, g_msgid):
+def build_uid_data(internaldate, flags, body, g_labels, g_msgid, modseq):
     return {
         'INTERNALDATE': internaldate,
         'FLAGS': flags,
@@ -40,7 +40,8 @@ def build_uid_data(internaldate, flags, body, g_labels, g_msgid):
         'RFC822.SIZE': len(body),
         'X-GM-LABELS': g_labels,
         'X-GM-MSGID': g_msgid,
-        'X-GM-THRID': g_msgid  # For simplicity
+        'X-GM-THRID': g_msgid,  # For simplicity
+        'MODSEQ': modseq
     }
 
 
@@ -82,6 +83,7 @@ uid_data = s.builds(
     s.sampled_from([(), ('\\Seen',)]),
     mime_message,
     s.sampled_from([(), ('\\Inbox',)]),
+    randint,
     randint)
 
 
@@ -129,7 +131,7 @@ class MockIMAPClient(object):
         self.selected_folder = folder_name
         return self.folder_status(folder_name)
 
-    def fetch(self, items, data):
+    def fetch(self, items, data, modifiers=None):
         assert self.selected_folder is not None
         uid_dict = self._data[self.selected_folder]
         resp = {}
@@ -141,9 +143,16 @@ class MockIMAPClient(object):
         elif isinstance(items, basestring) and re.match('[0-9]+:\*', items):
             min_uid = int(items.split(':')[0])
             items = {u for u in uid_dict if u >= min_uid} | {max(uid_dict)}
+            if modifiers is not None:
+                m = re.match('CHANGEDSINCE (?P<modseq>[0-9]+)', modifiers[0])
+                if m:
+                    modseq = int(m.group('modseq'))
+                    items = {u for u in items
+                             if uid_dict[u]['MODSEQ'][0] > modseq}
         for u in items:
             if u in uid_dict:
-                resp[u] = {k: v for k, v in uid_dict[u].items() if k in data}
+                resp[u] = {k: v for k, v in uid_dict[u].items() if k in data
+                           or k == 'MODSEQ'}
         return resp
 
     def append(self, folder_name, mimemsg, flags, date):
@@ -165,10 +174,14 @@ class MockIMAPClient(object):
     def folder_status(self, folder_name, data=None):
         folder_data = self._data[folder_name]
         lastuid = max(folder_data) if folder_data else 0
-        return {
+        resp = {
             'UIDNEXT': lastuid + 1,
             'UIDVALIDITY': self.uidvalidity
         }
+        if data and 'HIGHESTMODSEQ' in data:
+            resp['HIGHESTMODSEQ'] = max(v['MODSEQ'][0] for v in
+                                        folder_data.values())
+        return resp
 
     def delete_messages(self, uids):
         for u in uids:
