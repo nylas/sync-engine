@@ -74,7 +74,8 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
         log = get_logger()
         context = log._context._dict.copy()
         f, name = find_first_app_frame_and_name(ignores=['sqlalchemy',
-                                                         'inbox.ignition'])
+                                                         'inbox.ignition',
+                                                         'nylas.logging'])
         source = '{}:{}'.format(name, f.f_lineno)
 
         pool_tracker[dbapi_connection] = {
