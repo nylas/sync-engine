@@ -27,10 +27,11 @@ from inbox.models.namespace import Namespace
 from inbox.models.category import Category
 
 
-def _trim_filename(s, mid, max_len=64):
+def _trim_filename(s, namespace_id, max_len=64):
     if s and len(s) > max_len:
         log.warning('filename is too long, truncating',
-                    mid=mid, max_len=max_len, filename=s)
+                    max_len=max_len, filename=s,
+                    namespace_id=namespace_id)
         return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
 
@@ -343,7 +344,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 plain_parts.append(normalized_data)
             else:
                 log.info('Saving other text MIME part as attachment',
-                         content_type=content_type, mid=mid)
+                         content_type=content_type, namespace_id=namespace_id)
                 self._save_attachment(mimepart, 'attachment', content_type,
                                       filename, content_id, namespace_id, mid)
             return
@@ -358,7 +359,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         from inbox.models import Part, Block
         block = Block()
         block.namespace_id = namespace_id
-        block.filename = _trim_filename(filename, mid=mid)
+        block.filename = _trim_filename(filename, namespace_id=namespace_id)
         block.content_type = content_type
         part = Part(block=block, message=self)
         if content_id:
