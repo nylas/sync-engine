@@ -858,8 +858,12 @@ def event_rsvp_api():
     p = participants[email]
 
     # Make this API idempotent.
-    if p["status"] == status and p['comment'] == comment:
-        return g.encoder.jsonify(event)
+    if p["status"] == status:
+        if 'comment' not in p and 'comment' not in data:
+            return g.encoder.jsonify(event)
+        elif ('comment' in p and 'comment' in data and
+              p['comment'] == data['comment']):
+            return g.encoder.jsonify(event)
 
     participant = {"email": email, "status": status, "comment": comment}
 

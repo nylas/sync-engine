@@ -614,23 +614,44 @@ def test_rsvp_updates_status(patch_smtp, api_client, example_rsvp,
     assert dct['participants'][0]['comment'] == 'I will come.'
 
 
+@pytest.mark.parametrize('status,comment', [
+    ('yes', ''),
+    ('no', ''),
+    ('yes', None),
+    ('maybe', None),
+    ('yes', 'I will come'),
+    ('no', "I won't come"),
+    ('yes', u"Нэ дуо рэгяонэ фабулаз аккоммодары."),
+])
 def test_rsvp_idempotent(db, patch_smtp, api_client, example_rsvp,
-                         imported_event):
-    imported_event.participants[0]['status'] = example_rsvp['status']
-    imported_event.participants[0]['comment'] = example_rsvp['comment']
+                         imported_event, status, comment):
+    part = imported_event.participants[0]
+    part['status'] = status
+    part['comment'] = comment
+
+    # MutableList shenanigans -- it won't update
+    # what's stored in the db otherwise.
+    imported_event.participants = []
     db.session.commit()
+
+    imported_event.participants = [part]
+    db.session.commit()
+
     old_update_date = imported_event.updated_at
     db.session.expunge(imported_event)
 
-    r = api_client.post_data('/send-rsvp', example_rsvp)
+    rsvp = {'event_id': imported_event.public_id,
+            'status': status, 'comment': comment}
+    r = api_client.post_data('/send-rsvp', rsvp)
     assert r.status_code == 200
     dct = json.loads(r.data)
 
     # check that the event's status is the same.
     assert len(dct['participants']) == 1
     assert dct['participants'][0]['email'] == 'inboxapptest@gmail.com'
-    assert dct['participants'][0]['status'] == 'yes'
-    assert dct['participants'][0]['comment'] == 'I will come.'
+    assert dct['participants'][0]['status'] == status
+
+    assert dct['participants'][0]['comment'] == comment
 
     # Check that the event hasn't been updated.
     refreshed_event = db.session.query(Event).get(imported_event.id)
