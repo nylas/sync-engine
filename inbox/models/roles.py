@@ -20,9 +20,7 @@ class Blob(object):
     def data(self):
         if self.size == 0:
             log.warning('Block size is 0')
-            # Placeholder for "empty bytes". If this doesn't work as intended,
-            # it will trigger the hash assertion later.
-            value = ''
+            return ''
         elif hasattr(self, '_data'):
             # On initial download we temporarily store data in memory
             value = self._data

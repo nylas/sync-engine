@@ -310,6 +310,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         if filename == '':
             filename = None
 
+        data = mimepart.body
+
         is_text = content_type.startswith('text')
         if disposition not in (None, 'inline', 'attachment'):
             log.error('Unknown Content-Disposition',
@@ -319,7 +321,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             return
 
         if disposition == 'attachment':
-            self._save_attachment(mimepart, disposition, content_type,
+            self._save_attachment(data, disposition, content_type,
                                   filename, content_id, namespace_id, mid)
             return
 
@@ -328,14 +330,14 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             # Some clients set Content-Disposition: inline on text MIME parts
             # that we really want to treat as part of the text body. Don't
             # treat those as attachments.
-            self._save_attachment(mimepart, disposition, content_type,
+            self._save_attachment(data, disposition, content_type,
                                   filename, content_id, namespace_id, mid)
             return
 
         if is_text:
-            if mimepart.body is None:
+            if data is None:
                 return
-            normalized_data = mimepart.body.encode('utf-8', 'strict')
+            normalized_data = data.encode('utf-8', 'strict')
             normalized_data = normalized_data.replace('\r\n', '\n'). \
                 replace('\r', '\n')
             if content_type == 'text/html':
@@ -345,16 +347,16 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             else:
                 log.info('Saving other text MIME part as attachment',
                          content_type=content_type, namespace_id=namespace_id)
-                self._save_attachment(mimepart, 'attachment', content_type,
+                self._save_attachment(data, 'attachment', content_type,
                                       filename, content_id, namespace_id, mid)
             return
 
         # Finally, if we get a non-text MIME part without Content-Disposition,
         # treat it as an attachment.
-        self._save_attachment(mimepart, 'attachment', content_type,
+        self._save_attachment(data, 'attachment', content_type,
                               filename, content_id, namespace_id, mid)
 
-    def _save_attachment(self, mimepart, content_disposition, content_type,
+    def _save_attachment(self, data, content_disposition, content_type,
                          filename, content_id, namespace_id, mid):
         from inbox.models import Part, Block
         block = Block()
@@ -366,7 +368,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             content_id = content_id[:255]
         part.content_id = content_id
         part.content_disposition = content_disposition
-        data = mimepart.body or ''
+        data = data or ''
         if isinstance(data, unicode):
             data = data.encode('utf-8', 'strict')
         block.data = data

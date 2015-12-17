@@ -408,6 +408,7 @@ def test_parse_body_on_bad_attachment(
                                    raw_message_with_bad_attachment)
     assert m.decode_error
     assert 'dingy blue carpet' in m.body
+    assert len(m.parts) == 0
 
 
 def test_calculate_snippet():
