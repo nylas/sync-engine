@@ -534,7 +534,8 @@ def messages_for_contact_scores(db_session, namespace_id, starts_after=None):
         .join(Category)
         .filter(Message.namespace_id == namespace_id)
         .filter(Category.name == 'sent')
-        .filter(~Message.is_draft))
+        .filter(~Message.is_draft)
+        .filter(Category.namespace_id == namespace_id))
 
     if starts_after:
         query = query.filter(Message.received_date > starts_after)
