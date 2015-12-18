@@ -20,6 +20,7 @@ from sqlalchemy.sql.expression import func
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Account, Message, Folder, ActionLog
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
+from inbox.models.session import session_scope
 from inbox.models.util import reconcile_message
 from inbox.sqlalchemy_ext.util import bakery
 from nylas.logging import get_logger
@@ -111,45 +112,58 @@ def update_metadata(account_id, folder_id, new_flags, session):
              out_of=len(new_flags))
 
 
-def remove_deleted_uids(account_id, folder_id, uids, session):
+def remove_deleted_uids(account_id, folder_id, uids):
     """
     Make sure you're holding a db write lock on the account. (We don't try
     to grab the lock in here in case the caller needs to put higher-level
     functionality in the lock.)
 
     """
-    if uids:
-        deletes = session.query(ImapUid).filter(
-            ImapUid.account_id == account_id,
-            ImapUid.folder_id == folder_id,
-            ImapUid.msg_uid.in_(uids)).all()
-        affected_messages = {uid.message for uid in deletes
-                             if uid.message is not None}
+    if not uids:
+        return
+    deleted_uid_count = 0
+    for uid in uids:
+        # We do this one-uid-at-a-time because issuing many deletes within a
+        # single database transaction is problematic. But loading many
+        # objects into a session and then frequently calling commit() is also
+        # bad, because expiring objects and checking for revisions is O(number
+        # of objects in session), resulting in quadratic runtimes.
+        # Performance could perhaps be additionally improved by choosing a
+        # sane balance, e.g., operating on 10 or 100 uids or something at once.
+        with session_scope(account_id) as db_session:
+            imapuid = db_session.query(ImapUid).filter(
+                ImapUid.account_id == account_id,
+                ImapUid.folder_id == folder_id,
+                ImapUid.msg_uid == uid).first()
+            if imapuid is None:
+                continue
+            deleted_uid_count += 1
+            message = imapuid.message
 
-        for uid in deletes:
-            session.delete(uid)
-            session.commit()
+            db_session.delete(imapuid)
+            db_session.commit()
 
-        for message in affected_messages:
+            if message is None:
+                continue
+
             if not message.imapuids and message.is_draft:
                 # Synchronously delete drafts.
                 thread = message.thread
                 thread.messages.remove(message)
-                session.delete(message)
+                db_session.delete(message)
                 if not thread.messages:
-                    session.delete(thread)
+                    db_session.delete(thread)
             else:
-                account = Account.get(account_id, session)
-                update_message_metadata(session, account, message,
+                account = Account.get(account_id, db_session)
+                update_message_metadata(db_session, account, message,
                                         message.is_draft)
                 if not message.imapuids:
                     # But don't outright delete messages. Just mark them as
                     # 'deleted' and wait for the asynchronous
                     # dangling-message-collector to delete them.
                     message.mark_for_deletion()
-            session.commit()
-
-        log.info('Deleted expunged UIDs', count=len(deletes))
+            db_session.commit()
+        log.info('Deleted expunged UIDs', count=deleted_uid_count)
 
 
 def get_folder_info(account_id, session, folder_name):

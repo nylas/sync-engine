@@ -308,10 +308,9 @@ class FolderSyncEngine(Greenlet):
                 with session_scope(self.namespace_id) as db_session:
                     local_uids = common.local_uids(self.account_id, db_session,
                                                    self.folder_id)
-                    common.remove_deleted_uids(
-                        self.account_id, self.folder_id,
-                        set(local_uids).difference(remote_uids),
-                        db_session)
+                common.remove_deleted_uids(
+                    self.account_id, self.folder_id,
+                    set(local_uids).difference(remote_uids))
 
             new_uids = set(remote_uids).difference(local_uids)
             with session_scope(self.namespace_id) as db_session:
@@ -406,8 +405,8 @@ class FolderSyncEngine(Greenlet):
                 filter_by(account_id=self.account_id,
                           folder_id=self.folder_id)
             }
-            common.remove_deleted_uids(self.account_id, self.folder_id,
-                                       invalid_uids, db_session)
+        common.remove_deleted_uids(self.account_id, self.folder_id,
+                                   invalid_uids)
         self.uidvalidity = remote_uidvalidity
         self.highestmodseq = None
         self.uidnext = remote_uidnext
@@ -657,10 +656,8 @@ class FolderSyncEngine(Greenlet):
             if remote_uids and lastseenuid < max(remote_uids):
                 log.info('Downloading new UIDs before expunging')
                 self.get_new_uids(crispin_client)
-            with session_scope(self.namespace_id) as db_session:
-                common.remove_deleted_uids(self.account_id, self.folder_id,
-                                           expunged_uids, db_session)
-                db_session.commit()
+            common.remove_deleted_uids(self.account_id, self.folder_id,
+                                       expunged_uids)
         self.highestmodseq = new_highestmodseq
 
     def generic_refresh_flags(self, crispin_client):
@@ -690,9 +687,9 @@ class FolderSyncEngine(Greenlet):
 
         flags = crispin_client.flags(local_uids)
         expunged_uids = set(local_uids).difference(flags.keys())
+        common.remove_deleted_uids(self.account_id, self.folder_id,
+                                   expunged_uids)
         with session_scope(self.namespace_id) as db_session:
-            common.remove_deleted_uids(self.account_id, self.folder_id,
-                                       expunged_uids, db_session)
             common.update_metadata(self.account_id, self.folder_id,
                                    flags, db_session)
 
