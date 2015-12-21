@@ -269,6 +269,8 @@ def _encode(obj, namespace_public_id=None, expand=False):
             if obj.master:
                 resp['master_event_id'] = obj.master.public_id
 
+                if obj.master.calendar:
+                    resp['calendar_id'] = obj.master.calendar.public_id
         return resp
 
     elif isinstance(obj, Calendar):

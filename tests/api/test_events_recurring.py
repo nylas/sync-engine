@@ -67,6 +67,10 @@ def test_api_expand_recurring(db, api_client, recurring_event):
             assert e['when']['start_time'] > prev
             prev = e['when']['start_time']
 
+            # Check that the parent event recurring id is included
+            # too.
+            assert e['calendar_id'] == recurring_event.calendar.public_id
+
         events = api_client.get_data('/events?' + recur + '&view=count')
         assert events.get('count') == 28
     else:
@@ -78,6 +82,10 @@ def test_api_expand_recurring(db, api_client, recurring_event):
         for e in all_events[1:]:
             assert e['when']['date'] > prev
             prev = e['when']['date']
+
+            # Check that the parent event recurring id is included
+            # too.
+            assert e['calendar_id'] == recurring_event.calendar.public_id
 
         events = api_client.get_data('/events?' + recur + '&view=count')
         assert events.get('count') == 29
