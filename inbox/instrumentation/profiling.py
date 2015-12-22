@@ -1,4 +1,5 @@
 import collections
+import math
 import signal
 import sys
 import time
@@ -10,6 +11,8 @@ from nylas.logging import get_logger
 
 
 MAX_BLOCKING_TIME = 5
+GREENLET_SAMPLING_INTERVAL = 1
+LOGGING_INTERVAL = 60
 
 
 class CPUSampler(object):
@@ -73,8 +76,13 @@ class GreenletTracer(object):
         seconds.
     """
 
-    def __init__(self, max_blocking_time=MAX_BLOCKING_TIME):
+    def __init__(self,
+                 max_blocking_time=MAX_BLOCKING_TIME,
+                 sampling_interval=GREENLET_SAMPLING_INTERVAL,
+                 logging_interval=LOGGING_INTERVAL):
         self.max_blocking_time = max_blocking_time
+        self.sampling_interval = sampling_interval
+        self.logging_interval = logging_interval
         self.time_spent_by_context = collections.defaultdict(float)
         self.total_switches = 0
         self._last_switch_time = None
@@ -82,6 +90,9 @@ class GreenletTracer(object):
         self._active_greenlet = None
         self._main_thread_id = gevent._threading.get_ident()
         self._hub = gevent.hub.get_hub()
+        self.loadavg_1 = 0
+        self.loadavg_5 = 0
+        self.loadavg_15 = 0
         self.log = get_logger()
 
     def start(self):
@@ -98,6 +109,9 @@ class GreenletTracer(object):
             'times': self.time_spent_by_context,
             'idle_fraction': idle_fraction,
             'total_time': total_time,
+            'loadavg_1': self.loadavg_1,
+            'loadavg_5': self.loadavg_5,
+            'loadavg_15': self.loadavg_15,
             'total_switches': self.total_switches
         }
 
@@ -110,7 +124,10 @@ class GreenletTracer(object):
         self.log.info('greenlet stats',
                       times=formatted_times,
                       total_switches=self.total_switches,
-                      total_time=total_time)
+                      total_time=total_time,
+                      loadavg_1=self.loadavg_1,
+                      loadavg_5=self.loadavg_5,
+                      loadavg_15=self.loadavg_15)
 
     def _trace(self, event, xxx_todo_changeme):
         (origin, target) = xxx_todo_changeme
@@ -141,15 +158,32 @@ class GreenletTracer(object):
                     blocking_greenlet_id=id(active_greenlet))
         self._switch_flag = False
 
+    def _calculate_loadavgs(self):
+        # Calculate a "load average" in roughly the same way as /proc/loadavg.
+        # I.e., a 1/5/15-minute exponentially-damped moving average of the
+        # number of greenlets that are waiting to run.
+        pendingcnt = self._hub.loop.pendingcnt
+        exp_1 = math.exp(- self.sampling_interval / 60.)
+        exp_5 = math.exp(- self.sampling_interval / 300.)
+        exp_15 = math.exp(- self.sampling_interval / 900.)
+        self.loadavg_1 = exp_1 * self.loadavg_1 + (1. - exp_1) * pendingcnt
+        self.loadavg_5 = exp_5 * self.loadavg_5 + (1. - exp_5) * pendingcnt
+        self.loadavg_15 = exp_15 * self.loadavg_15 + (1. - exp_15) * pendingcnt
+
     def _monitoring_thread(self):
         last_logged_stats = time.time()
+        last_checked_blocking = time.time()
         try:
             while True:
-                self._check_blocking()
-                if time.time() - last_logged_stats > 60:
+                self._calculate_loadavgs()
+                now = time.time()
+                if now - last_checked_blocking > self.max_blocking_time:
+                    self._check_blocking()
+                    last_checked_blocking = now
+                if now - last_logged_stats > self.logging_interval:
                     self.log_stats()
-                    last_logged_stats = time.time()
-                gevent.sleep(self.max_blocking_time)
+                    last_logged_stats = now
+                gevent.sleep(self.sampling_interval)
         # Swallow exceptions raised during interpreter shutdown.
         except Exception:
             if sys is not None:
