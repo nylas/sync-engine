@@ -63,8 +63,11 @@ def account_with_multiple_auth_creds(db):
     db.session.add(account)
     db.session.commit()
 
+    db.session.expunge_all()
+
     resp.update(second_auth_args)
     account = g.get_account(SHARD_ID, email, resp)
+
     db.session.add(account)
     db.session.commit()
 

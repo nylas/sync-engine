@@ -329,7 +329,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         else:
             self.status = 'confirmed'
 
-    @classmethod
     def __new__(cls, *args, **kwargs):
         # Decide whether or not to instantiate a RecurringEvent/Override
         # based on the kwargs we get.
@@ -342,6 +341,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             cls_ = RecurringEvent
         if master_event_uid:
             cls_ = RecurringEventOverride
+
         return object.__new__(cls_, *args, **kwargs)
 
     def __init__(self, **kwargs):

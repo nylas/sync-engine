@@ -1,6 +1,6 @@
 import datetime
 import getpass
-from backports import ssl
+import ssl
 from imapclient import IMAPClient
 import socket
 
@@ -16,8 +16,6 @@ from inbox.sendmail.smtp.postel import SMTPClient
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
-
-_ossl = ssl.ossl
 
 
 class GenericAuthHandler(AuthHandler):
@@ -231,7 +229,7 @@ def create_imap_connection(host, port):
 
 
 def create_default_context():
-    """Return a backports.ssl.SSLContext object configured with sensible
+    """Return an ssl.SSLContext object configured with sensible
     default settings. This was adapted from imapclient.create_default_context
     to allow all ciphers and disable certificate verification.
 
@@ -246,21 +244,21 @@ def create_default_context():
     context.check_hostname = False
 
     # SSLv2 considered harmful.
-    context.options |= _ossl.OP_NO_SSLv2
+    context.options |= ssl.OP_NO_SSLv2
 
     # SSLv3 has problematic security and is only required for really old
     # clients such as IE6 on Windows XP
-    context.options |= _ossl.OP_NO_SSLv3
+    context.options |= ssl.OP_NO_SSLv3
 
     # disable compression to prevent CRIME attacks (OpenSSL 1.0+)
-    context.options |= getattr(_ossl, "OP_NO_COMPRESSION", 0)
+    context.options |= getattr(ssl, "OP_NO_COMPRESSION", 0)
 
     # Prefer the server's ciphers by default so that we get stronger
     # encryption
-    context.options |= getattr(_ossl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+    context.options |= getattr(ssl, "OP_CIPHER_SERVER_PREFERENCE", 0)
 
     # Use single use keys in order to improve forward secrecy
-    context.options |= getattr(_ossl, "OP_SINGLE_DH_USE", 0)
-    context.options |= getattr(_ossl, "OP_SINGLE_ECDH_USE", 0)
+    context.options |= getattr(ssl, "OP_SINGLE_DH_USE", 0)
+    context.options |= getattr(ssl, "OP_SINGLE_ECDH_USE", 0)
 
     return context

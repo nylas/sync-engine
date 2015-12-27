@@ -2,3 +2,6 @@
 
 %:
 	dh $@ --with python-virtualenv
+
+override_dh_virtualenv:
+	dh_virtualenv --python pypy --preinstall "setuptools>=17.1" --preinstall "pip==7.1.2" --preinstall "wheel"

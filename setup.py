@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
 
     install_requires=[
-        "gevent>=1.0.1",
+        "gevent>=1.1rc3",
         "nylas-production-python>=0.2.0",
         "click>=2.4",
         "cpu_affinity>=0.1.0",
@@ -44,7 +44,6 @@ setup(
         "Pympler==0.4.2",
         "pyopenssl>=0.15.1",
         "gevent_openssl==1.2",
-        "backports.ssl>=0.0.9",
         "imapclient==1.0.1",
     ],
     dependency_links=[],

@@ -26,7 +26,7 @@ from email.parser import HeaderParser
 from collections import namedtuple, defaultdict
 
 import gevent
-from backports import ssl
+import ssl
 from gevent import socket
 from gevent.lock import BoundedSemaphore
 from gevent.queue import Queue

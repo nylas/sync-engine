@@ -1,10 +1,9 @@
 import imaplib
 import socket
 
-import gevent
 import pytest
 import mock
-from backports import ssl
+import ssl
 
 from inbox.crispin import CrispinConnectionPool
 
@@ -23,15 +22,6 @@ def test_pool():
         pass
     assert pool._queue.full()
     assert conn in pool._queue
-
-
-def test_block_on_depleted_pool():
-    pool = TestableConnectionPool(1, num_connections=1, readonly=True)
-    # Test that getting a connection when the pool is empty blocks
-    with pytest.raises(gevent.hub.LoopExit):
-        with pool.get():
-            with pool.get():
-                pass
 
 
 @pytest.mark.parametrize("error_class,expect_logout_called", [

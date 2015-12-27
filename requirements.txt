@@ -10,7 +10,7 @@ dnspython==1.11.1
 boto==2.10.0
 ipython==1.0.0
 Flask==0.10.1
-gevent==1.0.1
+gevent==1.1rc3
 gevent-socketio==0.3.5-rc2
 gunicorn==19.0.0
 mysqlclient==1.3.7
@@ -28,10 +28,8 @@ pyflakes==0.7.3
 pylint==1.5.1
 html2text==2014.9.8
 python-magic==0.4.6
-greenlet==0.4.2
 PyMySQL==0.6.2
 click==2.4
-faulthandler==2.3
 pyinstrument==0.12
 simplejson==3.6.0
 Flask-RESTful==0.3.2
@@ -41,9 +39,7 @@ pynacl==0.3.0
 pyaml==14.05.7
 enum34==1.0.4
 msgpack-python==0.4.2
-guppy==0.1.10
-redis==2.10.3
-hiredis==0.1.5
+git+https://github.com/ethe/redis-py.git@73a44f0ef00#egg=redis # PyPy compat
 mock==1.3.0
 mockredispy==2.9.0.10
 lunatic-python-bugfix==1.1.1  # For Redis mocking in tests
@@ -57,5 +53,4 @@ Pympler==0.4.2
 psutil==3.3.0
 pyopenssl>=0.15.1
 gevent_openssl==1.2
-backports.ssl==0.0.9
 imapclient==1.0.1
