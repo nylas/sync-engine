@@ -14,7 +14,7 @@ setup(
         "click>=2.4",
         "cpu_affinity>=0.1.0",
         "pyyaml",
-        "SQLAlchemy==1.0.6",
+        "SQLAlchemy==1.0.11",
         "alembic>=0.6.4",
         "requests>=2.4.3",
         "html2text>=2014.9.8",
