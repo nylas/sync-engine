@@ -158,8 +158,6 @@ class SyncbackWorker(gevent.Greenlet):
     def _log_to_statsd(self, action_log_status, latency=None):
         metric_names = [
             "syncback.overall.{}".format(action_log_status),
-            "syncback.accounts.{}.{}".format(self.account_id,
-                                             action_log_status),
             "syncback.providers.{}.{}".format(self.provider, action_log_status)
         ]
 
