@@ -3,9 +3,15 @@ import subprocess
 
 def create_test_db():
     """ Creates new, empty test databases. """
-    # Hardcode this part instead of reading from config because the idea of a
-    # general-purpose 'DROP DATABASE' function is unsettling
-    for name in ('test', 'test_1'):
+    from inbox.config import config
+
+    database_hosts = config.get_required('DATABASE_HOSTS')
+    schemas = [shard['SCHEMA_NAME'] for host in database_hosts for
+               shard in host['SHARDS']]
+    # The various test databases necessarily have "test" in their name.
+    assert all(['test' in s for s in schemas])
+
+    for name in schemas:
         cmd = 'DROP DATABASE IF EXISTS {name}; ' \
               'CREATE DATABASE IF NOT EXISTS {name} ' \
               'DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE ' \
