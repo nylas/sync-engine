@@ -21,8 +21,7 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
         order_by(desc(Thread.id)). \
         options(load_only('id', 'discriminator'),
                 joinedload(Thread.messages).load_only(
-                    'from_addr', 'to_addr', 'bcc_addr', 'cc_addr').
-                noload('namespace'))
+                    'from_addr', 'to_addr', 'bcc_addr', 'cc_addr'))
 
     for thread in threads:
         for match in thread.messages:
