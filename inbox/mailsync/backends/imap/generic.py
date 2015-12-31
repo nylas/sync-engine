@@ -86,8 +86,8 @@ from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.base import (MailsyncDone, THROTTLE_COUNT,
-                                          THROTTLE_WAIT)
+from inbox.mailsync.backends.base import (MailsyncDone, MailsyncError,
+                                          THROTTLE_COUNT, THROTTLE_WAIT)
 from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
 
@@ -110,13 +110,29 @@ CONDSTORE_FLAGS_REFRESH_BATCH_SIZE = 200
 class FolderSyncEngine(Greenlet):
     """Base class for a per-folder IMAP sync engine."""
 
-    def __init__(self, account_id, namespace_id, folder_name, folder_id,
+    def __init__(self, account_id, namespace_id, folder_name,
                  email_address, provider_name, syncmanager_lock):
-        bind_context(self, 'foldersyncengine', account_id, folder_id)
+
+        with session_scope(namespace_id) as db_session:
+            try:
+                folder = db_session.query(Folder). \
+                    filter(Folder.name == folder_name,
+                           Folder.account_id == account_id).one()
+            except NoResultFound:
+                raise MailsyncError(u"Missing Folder '{}' on account {}"
+                                    .format(folder_name, account_id))
+
+            self.folder_id = folder.id
+            self.folder_role = folder.canonical_name
+            # Metric flags for sync performance
+            self.is_initial_sync = folder.initial_sync_end is None
+            self.is_first_sync = folder.initial_sync_start is None
+            self.is_first_message = self.is_first_sync
+
+        bind_context(self, 'foldersyncengine', account_id, self.folder_id)
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.folder_name = folder_name
-        self.folder_id = folder_id
         if self.folder_name.lower() == 'inbox':
             self.poll_frequency = INBOX_POLL_FREQUENCY
         else:
@@ -126,18 +142,6 @@ class FolderSyncEngine(Greenlet):
         self.provider_name = provider_name
         self.last_fast_refresh = None
         self.conn_pool = connection_pool(self.account_id)
-
-        # Metric flags for sync performance
-        self.is_initial_sync = False
-        self.is_first_sync = False
-        self.is_first_message = False
-
-        with session_scope(self.namespace_id) as db_session:
-            folder = Folder.get(self.folder_id, db_session)
-            if folder:
-                self.is_initial_sync = folder.initial_sync_end is None
-                self.is_first_sync = folder.initial_sync_start is None
-                self.is_first_message = self.is_first_sync
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -624,7 +628,7 @@ class FolderSyncEngine(Greenlet):
         # In order to be able to sync changes to tens of thousands of flags at
         # once, we commit updates in batches. We do this in ascending order by
         # modseq and periodically "checkpoint" our saved highestmodseq. (It's
-        # save to checkpoint *because* we go in ascending order by modseq.)
+        # safe to checkpoint *because* we go in ascending order by modseq.)
         # That way if the process gets restarted halfway through this refresh,
         # we don't have to completely start over. It's also slow to load many
         # objects into the SQLAlchemy session and then issue lots of commits;

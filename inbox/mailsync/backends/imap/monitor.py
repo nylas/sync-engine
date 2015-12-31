@@ -1,7 +1,6 @@
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
-from sqlalchemy.orm.exc import NoResultFound
 from inbox.basicauth import ValidationError
 from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
@@ -9,8 +8,7 @@ from inbox.models import Account, Folder, Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
-from inbox.mailsync.backends.base import (MailsyncError,
-                                          thread_polling)
+from inbox.mailsync.backends.base import thread_polling
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.gc import DeleteHandler
 log = get_logger()
@@ -45,32 +43,20 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
     def prepare_sync(self):
         """
         Gets and save Folder objects for folders on the IMAP backend. Returns a
-        list of tuples (folder_name, folder_id) for each folder we want to sync
-        (in order).
+        list of folder names for the folders we want to sync (in order).
         """
-        with session_scope(self.namespace_id) as db_session:
-            with connection_pool(self.account_id).get() as crispin_client:
-                # Get a fresh list of the folder names from the remote
-                remote_folders = crispin_client.folders()
-                if self.saved_remote_folders != remote_folders:
-                    self.save_folder_names(db_session, remote_folders)
-                    self.saved_remote_folders = remote_folders
-                # The folders we should be syncing
-                sync_folders = crispin_client.sync_folders()
+        with connection_pool(self.account_id).get() as crispin_client:
+            # Get a fresh list of the folder names from the remote
+            remote_folders = crispin_client.folders()
+            # The folders we should be syncing
+            sync_folders = crispin_client.sync_folders()
 
-            sync_folder_names_ids = []
-            for folder_name in sync_folders:
-                try:
-                    id_, = db_session.query(Folder.id). \
-                        filter(Folder.name == folder_name,
-                               Folder.account_id == self.account_id).one()
-                    sync_folder_names_ids.append((folder_name, id_))
-                except NoResultFound:
-                    log.error('Missing Folder object when starting sync',
-                              folder_name=folder_name)
-                    raise MailsyncError(u"Missing Folder '{}' on account {}"
-                                        .format(folder_name, self.account_id))
-            return sync_folder_names_ids
+        if self.saved_remote_folders != remote_folders:
+            with session_scope(self.namespace_id) as db_session:
+                self.save_folder_names(db_session, remote_folders)
+                self.saved_remote_folders = remote_folders
+
+        return sync_folders
 
     def save_folder_names(self, db_session, raw_folders):
         """
@@ -130,18 +116,16 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
     def start_new_folder_sync_engines(self):
         running_monitors = {monitor.folder_id: monitor for monitor in
                             self.folder_monitors}
-        for folder_name, folder_id in self.prepare_sync():
-            if folder_id in running_monitors:
-                thread = running_monitors[folder_id]
+        for folder_name in self.prepare_sync():
+            if folder_name in running_monitors:
+                thread = running_monitors[folder_name]
             else:
                 log.info('Folder sync engine started',
                          account_id=self.account_id,
-                         folder_id=folder_id,
                          folder_name=folder_name)
                 thread = self.sync_engine_class(self.account_id,
                                                 self.namespace_id,
                                                 folder_name,
-                                                folder_id,
                                                 self.email_address,
                                                 self.provider_name,
                                                 self.syncmanager_lock)
@@ -152,7 +136,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             if thread.ready():
                 log.info('Folder sync engine exited',
                          account_id=self.account_id,
-                         folder_id=folder_id,
                          folder_name=folder_name,
                          error=thread.exception)
 

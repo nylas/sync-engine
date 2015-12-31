@@ -2,7 +2,7 @@
 import datetime
 import pytest
 from collections import namedtuple
-from inbox.auth.generic import GenericAuthHandler
+from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.models import Folder, Namespace
 from inbox.models.backends.imap import ImapUid
 from inbox.util.threading import fetch_corresponding_thread
@@ -12,19 +12,14 @@ MockRawMessage = namedtuple('RawMessage', ['flags'])
 
 
 @pytest.fixture
-def folder_sync_engine(db):
-    from inbox.mailsync.backends.imap.generic import FolderSyncEngine
-    # setup a dummy FolderSyncEngine - we only need to call a couple
-    # methods.
-    email = "inboxapptest1@fastmail.fm"
-    account = GenericAuthHandler('fastmail').create_account(
-        email, {"email": email, "password": "BLAH"})
-    db.session.add(account)
+def folder_sync_engine(db, generic_account):
+    db.session.add(Folder(account=generic_account, name='Inbox'))
     db.session.commit()
-
-    engine = None
-    engine = FolderSyncEngine(account.id, account.namespace.id, "Inbox", 0,
-                              email, "fastmail",
+    engine = FolderSyncEngine(generic_account.id,
+                              generic_account.namespace.id,
+                              "Inbox",
+                              generic_account.email_address,
+                              generic_account.provider,
                               None)
     return engine
 

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.base import MailsyncDone
+from inbox.models import Folder
 from inbox.auth.generic import GenericAuthHandler
 from inbox.crispin import FolderMissingError
 
@@ -29,16 +30,23 @@ def raise_folder_error(*args, **kwargs):
 
 @pytest.fixture
 def sync_engine_stub(db, yahoo_account):
+    db.session.add(Folder(account=yahoo_account, name='Inbox'))
+    db.session.commit()
     engine = FolderSyncEngine(yahoo_account.id, yahoo_account.namespace.id,
-                              "Inbox", 0, TEST_YAHOO_EMAIL, "yahoo", None)
+                              "Inbox", TEST_YAHOO_EMAIL, "yahoo", None)
 
     return engine
 
 
-def test_folder_engine_exits_if_folder_missing(sync_engine_stub):
+def test_folder_engine_exits_if_folder_missing(db, yahoo_account,
+                                               sync_engine_stub):
     # if the folder does not exist in our database, _load_state will
     # encounter an IntegrityError as it tries to insert a child
     # ImapFolderSyncStatus against an invalid foreign key
+    folder = db.session.query(Folder).filter_by(account=yahoo_account,
+                                                name='Inbox').one()
+    db.session.delete(folder)
+    db.session.commit()
     with pytest.raises(IntegrityError):
         sync_engine_stub._load_state()
 
@@ -53,21 +61,3 @@ def test_folder_engine_exits_if_folder_missing(sync_engine_stub):
     sync_engine_stub.poll_impl = raise_folder_error
     with pytest.raises(MailsyncDone):
         sync_engine_stub._run()
-
-
-def test_folder_monitor_handles_mailsync_done(yahoo_account, monkeypatch):
-    # test that the ImapFolderMonitor exits cleanly when MailsyncDone
-    # is raised as part of the initial sync.
-    monitor = ImapSyncMonitor(yahoo_account)
-
-    # Override the folders from `prepare_sync` to simulate a folder which was
-    # genuinely returned here but then immediately deleted. This triggers
-    # MailsyncDone (see the previous test).
-    folders = [('missing_folder', 0)]
-    monitor.prepare_sync = lambda: folders
-    # Try to start a sync engine for this folder. It should exit.
-    monitor.start_new_folder_sync_engines()
-    assert len(monitor.folder_monitors) == 0
-
-    # Note: it currently looks like ImapFolderMonitor doesn't have a good
-    # way of handling MailsyncDone raises during the poll stage.

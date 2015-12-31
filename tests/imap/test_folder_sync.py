@@ -47,7 +47,6 @@ def test_initial_sync(db, generic_account, inbox_folder, mock_imapclient):
     folder_sync_engine = FolderSyncEngine(generic_account.id,
                                           generic_account.namespace.id,
                                           inbox_folder.name,
-                                          inbox_folder.id,
                                           generic_account.email_address,
                                           'custom',
                                           BoundedSemaphore(1))
@@ -73,7 +72,6 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
     folder_sync_engine = FolderSyncEngine(generic_account.id,
                                           generic_account.namespace.id,
                                           inbox_folder.name,
-                                          inbox_folder.id,
                                           generic_account.email_address,
                                           'custom',
                                           BoundedSemaphore(1))
@@ -97,7 +95,6 @@ def test_condstore_flags_refresh(db, default_account, all_mail_folder,
     folder_sync_engine = FolderSyncEngine(default_account.id,
                                           default_account.namespace.id,
                                           all_mail_folder.name,
-                                          all_mail_folder.id,
                                           default_account.email_address,
                                           'gmail',
                                           BoundedSemaphore(1))
@@ -129,7 +126,6 @@ def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
     folder_sync_engine = FolderSyncEngine(generic_account.id,
                                           generic_account.namespace.id,
                                           inbox_folder.name,
-                                          inbox_folder.id,
                                           generic_account.email_address,
                                           'custom',
                                           BoundedSemaphore(1))
@@ -156,7 +152,6 @@ def test_gmail_initial_sync(db, default_account, all_mail_folder,
     folder_sync_engine = GmailFolderSyncEngine(default_account.id,
                                                default_account.namespace.id,
                                                all_mail_folder.name,
-                                               all_mail_folder.id,
                                                default_account.email_address,
                                                'gmail',
                                                BoundedSemaphore(1))
@@ -182,13 +177,13 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
 
     all_folder_sync_engine = GmailFolderSyncEngine(
         default_account.id, default_account.namespace.id, all_mail_folder.name,
-        all_mail_folder.id, default_account.email_address, 'gmail',
+        default_account.email_address, 'gmail',
         BoundedSemaphore(1))
     all_folder_sync_engine.initial_sync()
 
     trash_folder_sync_engine = GmailFolderSyncEngine(
         default_account.id, default_account.namespace.id, trash_folder.name,
-        trash_folder.id, default_account.email_address, 'gmail',
+        default_account.email_address, 'gmail',
         BoundedSemaphore(1))
     trash_folder_sync_engine.initial_sync()
 
