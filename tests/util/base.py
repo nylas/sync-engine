@@ -225,9 +225,9 @@ class ContactsProviderStub(object):
         return self._contacts
 
 
-def add_fake_folder(db, default_account):
+def add_fake_folder(db_session, default_account):
     from inbox.models.folder import Folder
-    return Folder.find_or_create(db.session, default_account,
+    return Folder.find_or_create(db_session, default_account,
                                  'All Mail', 'all')
 
 

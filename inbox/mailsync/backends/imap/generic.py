@@ -639,7 +639,8 @@ class FolderSyncEngine(Greenlet):
         for flag_batch in flag_batches:
             with session_scope(self.namespace_id) as db_session:
                 common.update_metadata(self.account_id, self.folder_id,
-                                       dict(flag_batch), db_session)
+                                       self.folder_role, dict(flag_batch),
+                                       db_session)
             if len(flag_batch) == CONDSTORE_FLAGS_REFRESH_BATCH_SIZE:
                 interim_highestmodseq = max(v.modseq for k, v in flag_batch)
                 self.highestmodseq = interim_highestmodseq
@@ -695,7 +696,7 @@ class FolderSyncEngine(Greenlet):
                                    expunged_uids)
         with session_scope(self.namespace_id) as db_session:
             common.update_metadata(self.account_id, self.folder_id,
-                                   flags, db_session)
+                                   self.folder_role, flags, db_session)
 
     def check_uid_changes(self, crispin_client):
         self.get_new_uids(crispin_client)

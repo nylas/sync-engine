@@ -27,7 +27,7 @@ def test_gmail_thread(db, default_account):
 
 @fixture
 def imap_folder(db, generic_account):
-    return add_fake_folder(db, generic_account)
+    return add_fake_folder(db.session, generic_account)
 
 
 @fixture

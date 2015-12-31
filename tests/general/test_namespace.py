@@ -1,4 +1,3 @@
-import pytest
 import random
 from tests.util.base import (add_fake_account, add_fake_thread, add_fake_message,
                              add_fake_calendar, add_fake_event, add_fake_folder,
@@ -19,7 +18,7 @@ def add_completely_fake_account(db, email='test@nylas.com'):
                             calendar=calendar, title='%s' % i)
 
     # Add fake Threads, Messages and ImapUids.
-    folder = add_fake_folder(db, fake_account)
+    folder = add_fake_folder(db.session, fake_account)
     for i in random_range(1, 4):
         th = add_fake_thread(db.session, fake_account.namespace.id)
 

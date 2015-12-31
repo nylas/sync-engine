@@ -76,7 +76,7 @@ def update_message_metadata(session, account, message, is_draft):
         _update_categories(session, message, categories)
 
 
-def update_metadata(account_id, folder_id, new_flags, session):
+def update_metadata(account_id, folder_id, folder_role, new_flags, session):
     """
     Update flags and labels (the only metadata that can change).
 
@@ -105,8 +105,9 @@ def update_metadata(account_id, folder_id, new_flags, session):
 
         if changed:
             change_count += 1
-            update_message_metadata(session, account, item.message,
-                                    item.is_draft)
+            is_draft = item.is_draft and (folder_role == 'drafts' or
+                                          folder_role == 'all')
+            update_message_metadata(session, account, item.message, is_draft)
             session.commit()
     log.info('Updated UID metadata', changed=change_count,
              out_of=len(new_flags))
@@ -203,8 +204,9 @@ def create_imap_message(db_session, account, folder, msg):
 
     # Update the message's metadata
     with db_session.no_autoflush:
-        update_message_metadata(db_session, account, new_message,
-                                imapuid.is_draft)
+        is_draft = imapuid.is_draft and (folder.canonical_name == 'drafts' or
+                                         folder.canonical_name == 'all')
+        update_message_metadata(db_session, account, new_message, is_draft)
 
     update_contacts_from_message(db_session, new_message, account.namespace)
 

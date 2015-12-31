@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
-from sqlalchemy import desc, inspect
+from sqlalchemy import desc
 from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
@@ -22,7 +22,7 @@ def marked_deleted_message(db, message):
 def test_messages_deleted_asynchronously(db, default_account, thread, message,
                                          imapuid, folder):
     msg_uid = imapuid.msg_uid
-    update_metadata(default_account.id, folder.id,
+    update_metadata(default_account.id, folder.id, folder.canonical_name,
                     {msg_uid: GmailFlags((), ('label',), None)}, db.session)
     assert 'label' in [cat.display_name for cat in message.categories]
     remove_deleted_uids(default_account.id, folder.id, [msg_uid])
@@ -183,7 +183,7 @@ def test_deleted_labels_get_gced(db, default_account, thread, message,
 
     # Create a label with attached messages.
     msg_uid = imapuid.msg_uid
-    update_metadata(default_account.id, folder.id,
+    update_metadata(default_account.id, folder.id, folder.canonical_name,
                     {msg_uid: GmailFlags((), ('label',), None)}, db.session)
 
     label_ids = []
