@@ -79,7 +79,8 @@ final class MGArcanistPyLintLinter extends ArcanistExternalLinter {
 
     $options[] = '--reports=no';
     $options[] = '--msg-template="{line}|{column}|{msg_id}|{symbol}|{msg}"';
-    $options[] = '-d all -e w0631';
+    $options[] = '--disable=all';
+    $options[] = '--enable=W0631';
 
     // Specify an `--rcfile`, either absolute or relative to the project root.
     // Stupidly, the command line args above are overridden by rcfile, so be
@@ -117,7 +118,6 @@ final class MGArcanistPyLintLinter extends ArcanistExternalLinter {
       return false;
     }
 
-    list($stdout) = execx('pylint -d all -e w0631 inbox');
     $lines = phutil_split_lines($stdout, false);
     $messages = array();
 
