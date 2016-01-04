@@ -1,12 +1,15 @@
 import collections
 import math
 import signal
+import socket
 import sys
 import time
 import traceback
 import gevent.hub
 import gevent._threading  # This is a clone of the *real* threading module
 import greenlet
+from inbox.config import config
+from inbox.util.stats import statsd_client
 from nylas.logging import get_logger
 
 
@@ -93,6 +96,8 @@ class GreenletTracer(object):
         self.loadavg_1 = 0
         self.loadavg_5 = 0
         self.loadavg_15 = 0
+        self.hostname = socket.gethostname().replace(".", "-")
+        self.process_name = str(config.get("PROCESS_NAME", "unknown"))
         self.log = get_logger()
 
     def start(self):
@@ -128,6 +133,7 @@ class GreenletTracer(object):
                       loadavg_1=self.loadavg_1,
                       loadavg_5=self.loadavg_5,
                       loadavg_15=self.loadavg_15)
+        self._publish_loadavgs()
 
     def _trace(self, event, xxx_todo_changeme):
         (origin, target) = xxx_todo_changeme
@@ -169,6 +175,17 @@ class GreenletTracer(object):
         self.loadavg_1 = exp_1 * self.loadavg_1 + (1. - exp_1) * pendingcnt
         self.loadavg_5 = exp_5 * self.loadavg_5 + (1. - exp_5) * pendingcnt
         self.loadavg_15 = exp_15 * self.loadavg_15 + (1. - exp_15) * pendingcnt
+
+    def _publish_loadavgs(self):
+        statsd_client.gauge(
+            'loadavg.{}.{}.01'.format(self.hostname, self.process_name),
+            self.loadavg_1)
+        statsd_client.gauge(
+            'loadavg.{}.{}.05'.format(self.hostname, self.process_name),
+            self.loadavg_5)
+        statsd_client.gauge(
+            'loadavg.{}.{}.15'.format(self.hostname, self.process_name),
+            self.loadavg_15)
 
     def _monitoring_thread(self):
         last_logged_stats = time.time()
