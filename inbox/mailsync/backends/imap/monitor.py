@@ -114,7 +114,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         db_session.commit()
 
     def start_new_folder_sync_engines(self):
-        running_monitors = {monitor.folder_id: monitor for monitor in
+        running_monitors = {monitor.folder_name: monitor for monitor in
                             self.folder_monitors}
         for folder_name in self.prepare_sync():
             if folder_name in running_monitors:
