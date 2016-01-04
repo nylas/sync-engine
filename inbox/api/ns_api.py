@@ -5,7 +5,8 @@ import gevent
 import time
 from datetime import datetime
 
-from flask import request, g, Blueprint, make_response, Response
+from flask import (request, g, Blueprint, make_response, Response,
+                   stream_with_context)
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
 from sqlalchemy import asc, func
@@ -1407,7 +1408,8 @@ def stream_changes():
         poll_interval=1, timeout=timeout, exclude_types=exclude_types,
         include_types=include_types, exclude_folders=exclude_folders,
         expand=expand)
-    return Response(generator, mimetype='text/event-stream')
+    return Response(stream_with_context(generator),
+                    mimetype='text/event-stream')
 
 
 ##
