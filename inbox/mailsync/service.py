@@ -37,6 +37,7 @@ class SyncService(object):
         self.keep_running = True
         self.host = platform.node()
         self.cpu_id = cpu_id
+        self.process_identifier = '{}:{}'.format(self.host, self.cpu_id)
         self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
@@ -92,7 +93,7 @@ class SyncService(object):
         return (Account.id % total_cpus == cpu_id)
 
     def accounts_to_start(self):
-        accounts = []
+        accounts = set()
         for key in engine_manager.engines:
             with session_scope_by_shard_id(key) as db_session:
                 start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
@@ -108,15 +109,24 @@ class SyncService(object):
                     if unscheduled_accounts_exist:
                         # Atomically claim unscheduled syncs by setting
                         # sync_host.
-                        q.update({'sync_host': self.host},
+                        q.update({'sync_host': self.process_identifier},
                                  synchronize_session=False)
                         db_session.commit()
 
-                accounts.extend([id_ for id_, in
+                accounts.update(id_ for id_, in
                                  db_session.query(Account.id).filter(
                                      Account.sync_should_run,
                                      Account.sync_host == self.host,
-                                     start_on_this_cpu)])
+                                     start_on_this_cpu))
+
+                # Also start accounts for which a process identifier has been
+                # explicitly recorded, e.g. 'sync-10-77-22-22:13'. This is
+                # messy for now as we transition to this more granular
+                # scheduling method.
+                accounts.update(
+                    id_ for id_, in db_session.query(Account.id).filter(
+                        Account.sync_should_run,
+                        Account.sync_host == self.process_identifier))
 
                 # Close the underlying connection rather than returning it to
                 # the pool. This allows this query to run against all shards
@@ -159,11 +169,11 @@ class SyncService(object):
             if acc is None:
                 self.log.error('no such account', account_id=account_id)
                 return
-            fqdn = platform.node()
             self.log.info('starting sync', account_id=acc.id,
                           email_address=acc.email_address)
 
-            if acc.sync_host is not None and acc.sync_host != fqdn:
+            if (acc.sync_host is not None and acc.sync_host != self.host and
+                    acc.sync_host != self.process_identifier):
                 self.log.error('Sync Host Mismatch',
                                message='account is syncing on another host {}'
                                        .format(acc.sync_host),
@@ -171,10 +181,6 @@ class SyncService(object):
 
             elif acc.id not in self.syncing_accounts:
                 try:
-                    if acc.is_sync_locked and acc.is_killed:
-                        acc.sync_unlock()
-                    acc.sync_lock()
-
                     if acc.sync_email:
                         monitor = self.monitor_cls_for[acc.provider](acc)
                         self.email_sync_monitors[acc.id] = monitor
@@ -209,9 +215,9 @@ class SyncService(object):
                     db_session.add(acc)
                     db_session.commit()
                     self.log.info('Sync started', account_id=account_id,
-                                  sync_host=fqdn)
-                except Exception as e:
-                    self.log.error('sync_error', message=str(e.message),
+                                  sync_host=acc.sync_host)
+                except Exception:
+                    self.log.error('Error starting sync', exc_info=True,
                                    account_id=account_id)
             else:
                 self.log.info('sync already started', account_id=account_id)
@@ -243,8 +249,6 @@ class SyncService(object):
 
         self.syncing_accounts.remove(account_id)
 
-        fqdn = platform.node()
-
         # Update the state in the database (if necessary)
         with session_scope(account_id) as db_session:
             acc = db_session.query(Account).get(account_id)
@@ -252,14 +256,12 @@ class SyncService(object):
                 self.log.error('No such account', account_id=account_id)
             elif acc.sync_host is None:
                 self.log.info('Sync not enabled', account_id=account_id)
-            elif acc.sync_host != fqdn:
+            elif (acc.sync_host != self.host and acc.sync_host !=
+                  self.process_identifier):
                 self.log.error('Sync Host Mismatch',
-                               message='acct.sync_host ({}) != FQDN ({})'
-                                       .format(acc.sync_host, fqdn),
+                               sync_host=acc.sync_host,
                                account_id=account_id)
             else:
                 self.log.info('sync stopped', account_id=account_id)
-                if acc.is_sync_locked:
-                    acc.sync_unlock()
                 acc.sync_stopped()
                 db_session.commit()

@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import false
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
-from inbox.util.file import Lock
 
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
                                  HasRevisions)
@@ -246,38 +245,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         self._sync_status['sync_error'] = error
 
     @classmethod
-    def _get_lock_object(cls, account_id, lock_for=dict()):
-        """
-        Make sure we only create one lock per account per process.
-
-        (Default args are initialized at import time, so `lock_for` acts as a
-        module-level memory cache.)
-
-        """
-        return lock_for.setdefault(account_id,
-                                   Lock(cls._sync_lockfile_name(account_id),
-                                        block=False))
-
-    @classmethod
     def get(cls, id_, session):
         q = bakery(lambda session: session.query(cls))
         q += lambda q: q.filter(cls.id == bindparam('id_'))
         return q(session).params(id_=id_).first()
-
-    @classmethod
-    def _sync_lockfile_name(cls, account_id):
-        return "/var/lock/inbox_sync/{}.lock".format(account_id)
-
-    @property
-    def _sync_lock(self):
-        return self._get_lock_object(self.id)
-
-    def sync_lock(self):
-        """ Prevent mailsync for this account from running more than once. """
-        self._sync_lock.acquire()
-
-    def sync_unlock(self):
-        self._sync_lock.release()
 
     @property
     def is_killed(self):
@@ -292,10 +263,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         return self.sync_state in ('stopped', 'killed', 'invalid') and \
             self.sync_should_run is False and \
             self._sync_status.get('sync_disabled_reason') == 'account deleted'
-
-    @property
-    def is_sync_locked(self):
-        return self._sync_lock.locked()
 
     @property
     def should_suppress_transaction_creation(self):
