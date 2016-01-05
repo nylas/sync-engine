@@ -82,9 +82,11 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
 
     @property
     def api_display_name(self):
-        if self.namespace.account.provider == 'gmail' and \
-                self.display_name.startswith('[Gmail]/'):
-            return self.display_name[8:]
+        if self.namespace.account.provider == 'gmail':
+            if self.display_name.startswith('[Gmail]/'):
+                return self.display_name[8:]
+            elif self.display_name.startswith('[Google Mail]/'):
+                return self.display_name[14:]
 
         if self.namespace.account.provider in ['generic', 'fastmail'] and \
                 is_imap_folder_path(self.display_name):
