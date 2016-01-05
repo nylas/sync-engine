@@ -95,10 +95,11 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         for name in discard:
             log.info('Folder deleted from remote', account_id=self.account_id,
                      name=name)
-            cat = db_session.query(Category).get(
-                local_folders[name].category_id)
-            if cat is not None:
-                db_session.delete(cat)
+            if local_folders[name].category_id is not None:
+                cat = db_session.query(Category).get(
+                    local_folders[name].category_id)
+                if cat is not None:
+                    db_session.delete(cat)
             del local_folders[name]
 
         # Create new folders
