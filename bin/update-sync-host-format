@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+import click
+from inbox.ignition import engine_manager
+from inbox.models import Account
+from inbox.models.session import session_scope_by_shard_id
+from nylas.logging import get_logger, configure_logging
+configure_logging()
+log = get_logger()
+
+
+@click.command()
+@click.option('--nprocs', type=int, default=16)
+@click.option('--revert', is_flag=True)
+def main(nprocs, revert):
+    """
+    Migrate the value of account.sync_host from <hostname> to
+    <hostname>:<process number> (or the opposite if the --revert flag is
+    passed).
+    """
+    for key in engine_manager.engines:
+        with session_scope_by_shard_id(key) as db_session:
+            accounts = db_session.query(Account). \
+                filter(Account.sync_host.isnot(None))
+            for account in accounts:
+                host = account.sync_host
+                if revert:
+                    account.sync_host = host.split(':')[0]
+                elif ':' not in host:
+                    account.sync_host = '{}:{}'.format(
+                        host, account.id % nprocs)
+                log.info('Updating account sync host',
+                         account_id=account.id,
+                         old_host_value=host,
+                         new_host_value=account.sync_host)
+                db_session.commit()
+
+
+if __name__ == '__main__':
+    main()

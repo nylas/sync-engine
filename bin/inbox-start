@@ -20,9 +20,9 @@ except ImportError:
              "Try running sudo ./setup.sh")
 
 from inbox.util.startup import preflight
-from inbox.instrumentation import MetricsRunner
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
+from inbox.mailsync.frontend import HTTPFrontend
 
 # Set a default timeout for sockets.
 SOCKET_TIMEOUT = 2 * 60
@@ -77,16 +77,15 @@ def main(prod, enable_tracer, config, process_num):
      Use CTRL-C to stop.
      """
 
-    if inbox_config.get('FEATURE_FLAGS', []) != []:
-        print >>sys.stderr, "Feature flags enabled: {}\n".format(
-            ' '.join(inbox_config['FEATURE_FLAGS']))
-
     port = 16384 + process_num
     enable_profiler = inbox_config.get('DEBUG_PROFILING_ON')
-    metrics_runner = MetricsRunner(port, enable_tracer, enable_profiler)
-    metrics_runner.start()
+    process_identifier = '{}:{}'.format(platform.node(), process_num)
+    http_frontend = HTTPFrontend(process_identifier, port, enable_tracer,
+                                 enable_profiler)
+    http_frontend.start()
 
-    sync_service = SyncService(process_num, total_processes)
+    sync_service = SyncService(process_identifier, process_num,
+                               total_processes)
     sync_service.run()
 
     print >>sys.stderr, "\033[94mInbox exiting...\033[0m"

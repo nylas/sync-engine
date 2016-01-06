@@ -32,12 +32,12 @@ class SyncService(object):
     poll_interval : int
         Seconds between polls for account changes.
     """
-
-    def __init__(self, cpu_id, total_cpus, poll_interval=10):
+    def __init__(self, process_identifier, cpu_id, total_cpus,
+                 poll_interval=10):
         self.keep_running = True
         self.host = platform.node()
         self.cpu_id = cpu_id
-        self.process_identifier = '{}:{}'.format(self.host, self.cpu_id)
+        self.process_identifier = process_identifier
         self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()

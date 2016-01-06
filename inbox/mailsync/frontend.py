@@ -1,29 +1,28 @@
-import json
 import gevent
+from pympler import muppy, summary
 from werkzeug.serving import run_simple, WSGIRequestHandler
 from flask import Flask, jsonify, request
-from inbox.instrumentation.profiling import CPUSampler, GreenletTracer
-from inbox.ignition import pool_tracker
-from pympler import muppy, summary
+from inbox.instrumentation import GreenletTracer, ProfileCollector
+from inbox.models import Account
+from inbox.models.session import session_scope
 
 
-class MetricsRunner():
-
-    def __init__(self, port, trace_greenlets, profile_cpu):
+class HTTPFrontend(object):
+    """This is a lightweight embedded HTTP server that runs inside a mailsync
+    process. It allows you can programmatically interact with the process:
+    to get profile/memory/load metrics, or to schedule new account syncs."""
+    def __init__(self, process_identifier, port, trace_greenlets, profile):
+        self.process_identifier = process_identifier
         self.port = port
-        self.trace_greenlets = trace_greenlets
-        self.profile_cpu = profile_cpu
-        self.sampler = None
-        self.tracer = None
+        self.profiler = ProfileCollector() if profile else None
+        self.tracer = GreenletTracer() if trace_greenlets else None
 
     def start(self):
-        if self.trace_greenlets:
-            self.tracer = GreenletTracer()
+        if self.tracer is not None:
             self.tracer.start()
 
-        if self.profile_cpu:
-            self.sampler = CPUSampler()
-            self.sampler.start()
+        if self.profiler is not None:
+            self.profiler.start()
 
         app = self._create_app()
 
@@ -35,11 +34,11 @@ class MetricsRunner():
 
         @app.route('/profile')
         def profile():
-            if self.sampler is None:
+            if self.profiler is None:
                 return 'Profiling disabled\n', 404
-            resp = self.sampler.stats()
+            resp = self.profiler.stats()
             if request.args.get('reset ') in (1, 'true'):
-                self.sampler.reset()
+                self.profiler.reset()
             return resp
 
         @app.route('/load')
@@ -57,15 +56,10 @@ class MetricsRunner():
             summ = summary.summarize(objs)
             return '\n'.join(summary.format_(summ)) + '\n'
 
-        @app.route('/pool')
-        def pool():
-            return json.dumps(pool_tracker.values())
-
         return app
 
 
 class _QuietHandler(WSGIRequestHandler):
-
     def log_request(self, *args, **kwargs):
         """Suppress request logging so as not to pollute application logs."""
         pass

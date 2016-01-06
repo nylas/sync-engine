@@ -8,8 +8,9 @@ import traceback
 import gevent.hub
 import gevent._threading  # This is a clone of the *real* threading module
 import greenlet
+import psutil
 from inbox.config import config
-from inbox.util.stats import statsd_client
+from inbox.util.stats import get_statsd_client
 from nylas.logging import get_logger
 
 
@@ -18,7 +19,7 @@ GREENLET_SAMPLING_INTERVAL = 1
 LOGGING_INTERVAL = 60
 
 
-class CPUSampler(object):
+class ProfileCollector(object):
     """A simple stack sampler for low-overhead CPU profiling: samples the call
     stack every `interval` seconds and keeps track of counts by frame. Because
     this uses signals, it only works on the main thread."""
@@ -86,6 +87,7 @@ class GreenletTracer(object):
         self.max_blocking_time = max_blocking_time
         self.sampling_interval = sampling_interval
         self.logging_interval = logging_interval
+
         self.time_spent_by_context = collections.defaultdict(float)
         self.total_switches = 0
         self._last_switch_time = None
@@ -93,12 +95,17 @@ class GreenletTracer(object):
         self._active_greenlet = None
         self._main_thread_id = gevent._threading.get_ident()
         self._hub = gevent.hub.get_hub()
-        self.loadavg_1 = 0
-        self.loadavg_5 = 0
-        self.loadavg_15 = 0
+
+        self.total_cpu_time = 0
+        self.process = psutil.Process()
+        self.pending_avgs = {1: 0, 5: 0, 15: 0}
+        self.cpu_avgs = {1: 0, 5: 0, 15: 0}
         self.hostname = socket.gethostname().replace(".", "-")
         self.process_name = str(config.get("PROCESS_NAME", "unknown"))
         self.log = get_logger()
+        # We need a new client instance here because this runs in its own
+        # thread.
+        self.statsd_client = get_statsd_client()
 
     def start(self):
         self.start_time = time.time()
@@ -114,9 +121,8 @@ class GreenletTracer(object):
             'times': self.time_spent_by_context,
             'idle_fraction': idle_fraction,
             'total_time': total_time,
-            'loadavg_1': self.loadavg_1,
-            'loadavg_5': self.loadavg_5,
-            'loadavg_15': self.loadavg_15,
+            'pending_avgs': self.pending_avgs,
+            'cpu_avgs': self.cpu_avgs,
             'total_switches': self.total_switches
         }
 
@@ -130,10 +136,8 @@ class GreenletTracer(object):
                       times=formatted_times,
                       total_switches=self.total_switches,
                       total_time=total_time,
-                      loadavg_1=self.loadavg_1,
-                      loadavg_5=self.loadavg_5,
-                      loadavg_15=self.loadavg_15)
-        self._publish_loadavgs()
+                      pending_avgs=self.pending_avgs)
+        self._publish_load_avgs()
 
     def _trace(self, event, xxx_todo_changeme):
         (origin, target) = xxx_todo_changeme
@@ -164,35 +168,42 @@ class GreenletTracer(object):
                     blocking_greenlet_id=id(active_greenlet))
         self._switch_flag = False
 
-    def _calculate_loadavgs(self):
-        # Calculate a "load average" in roughly the same way as /proc/loadavg.
-        # I.e., a 1/5/15-minute exponentially-damped moving average of the
-        # number of greenlets that are waiting to run.
+    def _calculate_pending_avgs(self):
+        # Calculate a "load average" for greenlet scheduling in roughly the
+        # same way as /proc/loadavg.  I.e., a 1/5/15-minute
+        # exponentially-damped moving average of the number of greenlets that
+        # are waiting to run.
         pendingcnt = self._hub.loop.pendingcnt
-        exp_1 = math.exp(- self.sampling_interval / 60.)
-        exp_5 = math.exp(- self.sampling_interval / 300.)
-        exp_15 = math.exp(- self.sampling_interval / 900.)
-        self.loadavg_1 = exp_1 * self.loadavg_1 + (1. - exp_1) * pendingcnt
-        self.loadavg_5 = exp_5 * self.loadavg_5 + (1. - exp_5) * pendingcnt
-        self.loadavg_15 = exp_15 * self.loadavg_15 + (1. - exp_15) * pendingcnt
+        for k, v in self.pending_avgs.items():
+            exp = math.exp(- self.sampling_interval / (60. * k))
+            self.pending_avgs[k] = exp * v + (1. - exp) * pendingcnt
 
-    def _publish_loadavgs(self):
-        statsd_client.gauge(
-            'loadavg.{}.{}.01'.format(self.hostname, self.process_name),
-            self.loadavg_1)
-        statsd_client.gauge(
-            'loadavg.{}.{}.05'.format(self.hostname, self.process_name),
-            self.loadavg_5)
-        statsd_client.gauge(
-            'loadavg.{}.{}.15'.format(self.hostname, self.process_name),
-            self.loadavg_15)
+    def _calculate_cpu_avgs(self):
+        times = self.process.cpu_times()
+        new_total_time = times.user + times.system
+        delta = new_total_time - self.total_cpu_time
+        for k, v in self.cpu_avgs.items():
+            exp = math.exp(- self.sampling_interval / (60. * k))
+            self.cpu_avgs[k] = exp * v + (1. - exp) * delta
+        self.total_cpu_time = new_total_time
+
+    def _publish_load_avgs(self):
+        for k, v in self.pending_avgs.items():
+            path = 'pending_avg.{}.{}.{:02d}'.format(self.hostname,
+                                                     self.process_name, k)
+            self.statsd_client.gauge(path, v)
+        for k, v in self.cpu_avgs.items():
+            path = 'cpu_avg.{}.{}.{:02d}'.format(self.hostname,
+                                                 self.process_name, k)
+            self.statsd_client.gauge(path, v)
 
     def _monitoring_thread(self):
         last_logged_stats = time.time()
         last_checked_blocking = time.time()
         try:
             while True:
-                self._calculate_loadavgs()
+                self._calculate_pending_avgs()
+                self._calculate_cpu_avgs()
                 now = time.time()
                 if now - last_checked_blocking > self.max_blocking_time:
                     self._check_blocking()

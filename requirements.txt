@@ -54,3 +54,4 @@ hypothesis==1.10.3
 statsd==3.1
 boto3==1.1.4
 Pympler==0.4.2
+psutil==3.3.0
