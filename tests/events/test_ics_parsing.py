@@ -442,3 +442,15 @@ def test_truncate_bogus_sequence_numbers(db, default_account):
     # Check that the sequence number got truncated to the biggest possible
     # number.
     assert ev.sequence_number == 2147483647L
+
+
+def test_handle_missing_sequence_number(db, default_account):
+    with open(absolute_path(FIXTURES + 'event_without_sequence.ics')) as fd:
+        data = fd.read()
+
+    events = events_from_ics(default_account.namespace,
+                             default_account.emailed_events_calendar, data)
+    events = events['invites']
+    assert len(events) == 1
+    ev = events[0]
+    assert ev.sequence_number == 0

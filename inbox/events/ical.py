@@ -229,7 +229,7 @@ def events_from_ics(namespace, calendar, ics_str):
 
             location = component.get('location')
             uid = str(component.get('uid'))
-            sequence_number = int(component.get('sequence'))
+            sequence_number = int(component.get('sequence', 0))
 
             # Some services (I'm looking at you, http://www.foogi.me/)
             # don't follow the spec and generate icalendar files with
