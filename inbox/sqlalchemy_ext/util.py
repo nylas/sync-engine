@@ -25,11 +25,8 @@ log = get_logger()
 MAX_SANE_QUERIES_PER_SESSION = 100
 MAX_TEXT_LENGTH = 65535
 
-# Automatically bake queries for lazily-loaded relationships.
-# Lazy loads are often suboptimal, but this makes them less so!
-baked.bake_lazy_loaders()
 
-bakery = baked.bakery(size=1024)
+bakery = baked.bakery()
 
 
 query_counts = weakref.WeakKeyDictionary()
