@@ -8,7 +8,6 @@ from sqlalchemy import (Column, String, ForeignKey, Text, Boolean, Integer,
 from sqlalchemy.orm import relationship, backref, validates, reconstructor
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.dialects.mysql import LONGTEXT
-from sqlalchemy.ext.associationproxy import association_proxy
 
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, BigJSON, MutableList
 from inbox.models.base import MailSyncBase
@@ -341,8 +340,6 @@ class RecurringEvent(Event):
     exdate = Column(Text)  # There can be a lot of exception dates
     until = Column(FlexibleDateTime, nullable=True)
     start_timezone = Column(String(35))
-
-    override_uids = association_proxy('overrides', 'uid')
 
     def __init__(self, **kwargs):
         self.start_timezone = kwargs.pop('original_start_tz', None)

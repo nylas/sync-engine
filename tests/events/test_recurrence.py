@@ -140,10 +140,9 @@ def test_link_events_from_master(db, default_account, calendar):
     override = recurring_override_instance(db, master, original_start,
                                            master.start, master.end)
     assert isinstance(master, RecurringEvent)
-    o = link_events(db.session, master)
-    assert len(o) == 1
+    assert len(link_events(db.session, master)) == 1
     assert override in master.overrides
-    assert override.uid in master.override_uids
+    assert override.uid in [o.uid for o in master.overrides]
 
 
 def test_link_events_from_master_diff_calendars(db, default_account, calendar,
