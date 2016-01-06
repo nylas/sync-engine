@@ -59,7 +59,7 @@ def start(port, start_syncback):
     if start_syncback:
         # start actions service
         from inbox.transactions.actions import SyncbackService
-        syncback = SyncbackService()
+        syncback = SyncbackService(0, 1)
         syncback.start()
 
     nylas_logger = get_logger()

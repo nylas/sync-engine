@@ -9,18 +9,18 @@ talking to the same database backend things could go really badly.
 """
 from collections import defaultdict
 from datetime import datetime
-import platform
+
 import gevent
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm import contains_eager
 
-from inbox.util.concurrency import retry_with_logging
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 logger = get_logger()
-from inbox.models.session import session_scope, global_session_scope
+from inbox.ignition import engine_manager
+from inbox.util.concurrency import retry_with_logging
+from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import ActionLog, Namespace, Account
-from inbox.util.file import Lock
 from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 save_draft, update_draft, delete_draft,
@@ -29,12 +29,6 @@ from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 delete_label)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
-
-# Global lock to ensure that only one instance of the syncback service is
-# running at once. Otherwise different instances might execute the same action
-# twice.
-syncback_lock = Lock('/var/lock/inbox_syncback/global.lock', block=True)
-
 
 ACTION_FUNCTION_MAP = {
     'mark_unread': mark_unread,
@@ -63,11 +57,12 @@ ACTION_MAX_NR_OF_RETRIES = 20
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, poll_interval=1, retry_interval=30):
-        self.log = logger.new(component='syncback')
-        self.keep_running = True
+    def __init__(self, cpu_id, total_cpus, poll_interval=1, retry_interval=30):
+        self.cpu_id = cpu_id
+        self.total_cpus = total_cpus
         self.poll_interval = poll_interval
         self.retry_interval = retry_interval
+        self.keep_running = True
         self.workers = gevent.pool.Group()
         # Dictionary account_id -> semaphore to serialize action syncback for
         # any particular account.
@@ -76,49 +71,58 @@ class SyncbackService(gevent.Greenlet):
         # serialized by using an IMAP connection pool of size 1, so it doesn't
         # matter too much.
         self.account_semaphores = defaultdict(lambda: BoundedSemaphore(1))
+        # This SyncbackService performs syncback for only and all the accounts
+        # on shards it is reponsible for; shards are divided up between
+        # running SyncbackServices.
+        self.keys = [key for key in engine_manager.engines if
+                     (key % self.total_cpus) == self.cpu_id]
+
+        self.log = logger.new(component='syncback')
         gevent.Greenlet.__init__(self)
 
     def _process_log(self):
-        with global_session_scope() as db_session:
-            # Only actions on accounts associated with this sync-engine
-            query = db_session.query(ActionLog).join(Namespace).join(Account).\
-                filter(ActionLog.discriminator == 'actionlog',
-                       ActionLog.status == 'pending',
-                       Account.sync_host == platform.node(),
-                       Account.sync_should_run).\
-                order_by(ActionLog.id).\
-                options(contains_eager(ActionLog.namespace, Namespace.account))
+        for key in self.keys:
+            with session_scope_by_shard_id(key) as db_session:
+                query = db_session.query(ActionLog).join(Namespace).\
+                    join(Account).\
+                    filter(ActionLog.discriminator == 'actionlog',
+                           ActionLog.status == 'pending',
+                           Account.sync_should_run).\
+                    order_by(ActionLog.id).\
+                    options(contains_eager(ActionLog.namespace,
+                                           Namespace.account))
 
-            running_action_ids = [worker.action_log_id for worker in
-                                  self.workers]
-            if running_action_ids:
-                query = query.filter(~ActionLog.id.in_(running_action_ids))
-            for log_entry in query:
-                namespace = log_entry.namespace
-                self.log.info('delegating action',
-                              action_id=log_entry.id,
-                              msg=log_entry.action)
-                semaphore = self.account_semaphores[namespace.account_id]
-                worker = SyncbackWorker(action_name=log_entry.action,
-                                        semaphore=semaphore,
-                                        action_log_id=log_entry.id,
-                                        record_id=log_entry.record_id,
-                                        account_id=namespace.account_id,
-                                        provider=namespace.account.verbose_provider,
-                                        retry_interval=self.retry_interval,
-                                        extra_args=log_entry.extra_args)
-                self.workers.add(worker)
-                worker.start()
+                running_action_ids = [worker.action_log_id for worker in
+                                      self.workers]
+                if running_action_ids:
+                    query = query.filter(~ActionLog.id.in_(running_action_ids))
+
+                for log_entry in query:
+                    namespace = log_entry.namespace
+                    self.log.info('delegating action',
+                                  action_id=log_entry.id,
+                                  msg=log_entry.action)
+                    semaphore = self.account_semaphores[namespace.account_id]
+                    worker = SyncbackWorker(action_name=log_entry.action,
+                                            semaphore=semaphore,
+                                            action_log_id=log_entry.id,
+                                            record_id=log_entry.record_id,
+                                            account_id=namespace.account_id,
+                                            provider=namespace.account.verbose_provider,
+                                            retry_interval=self.retry_interval,
+                                            extra_args=log_entry.extra_args)
+                    self.workers.add(worker)
+                    worker.start()
 
     def _run_impl(self):
-        syncback_lock.acquire()
-        self.log.info('Starting action service')
+        self.log.info('Starting syncback service',
+                      process_num=self.cpu_id, total_processes=self.total_cpus,
+                      keys=self.keys)
         while self.keep_running:
             self._process_log()
             gevent.sleep(self.poll_interval)
 
     def stop(self):
-        syncback_lock.release()
         self.keep_running = False
 
     def _run(self):

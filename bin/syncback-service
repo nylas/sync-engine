@@ -5,13 +5,13 @@ API under something like gunicorn. (For convenience, the bin/inbox-api script
 also starts up the syncback service.)
 
 """
-import os
-from setproctitle import setproctitle
-setproctitle('inbox_syncback_service')
-
-import click
 from gevent import monkey
 monkey.patch_all()
+
+import os
+from setproctitle import setproctitle
+
+import click
 
 from nylas.logging import configure_logging
 
@@ -26,26 +26,34 @@ from inbox.util.startup import preflight, load_overrides
                    'non-production features.')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
-def main(prod, config):
+@click.option('--process_num', default=0,
+              help="This process's number in the process group: a unique "
+                   "number satisfying 0 <= process_num < total_processes.")
+def main(prod, config, process_num):
     """ Launch the actions syncback service. """
+    setproctitle('syncback-{}'.format(process_num))
+
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
     configure_logging(log_level=inbox_config.get('LOGLEVEL'))
     os.environ["SENTRY_DSN"] = inbox_config.get("SENTRY_DSN", "")
+
+    total_processes = int(os.environ.get('SYNCBACK_PROCESSES', 1))
+
+    def start():
+        # Start the syncback service, and just hang out forever
+        syncback = SyncbackService(process_num, total_processes)
+        syncback.start()
+        syncback.join()
+
     if prod:
-        start()
+        start(process_num, total_processes)
     else:
         preflight()
         from werkzeug.serving import run_with_reloader
         run_with_reloader(start)
 
-
-def start():
-    # Start the syncback service, and just hang out forever
-    syncback = SyncbackService()
-    syncback.start()
-    syncback.join()
 
 if __name__ == '__main__':
     main()

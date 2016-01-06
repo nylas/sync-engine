@@ -2,9 +2,11 @@ import json
 import os
 import uuid
 from datetime import datetime, timedelta
-from flanker import mime
-from inbox.util.testutils import setup_test_db
+
 from pytest import fixture, yield_fixture
+from flanker import mime
+
+from inbox.util.testutils import setup_test_db
 
 
 def absolute_path(path):
@@ -103,16 +105,6 @@ def patch_network_functions(monkeypatch):
                                 lambda *args, **kwargs: None)
 
 
-@yield_fixture(scope='function')
-def syncback_service():
-    from inbox.transactions.actions import SyncbackService
-    s = SyncbackService(poll_interval=0, retry_interval=0)
-    s.start()
-    yield s
-    s.stop()
-    s.join()
-
-
 def make_default_account(db, config):
     import platform
     from inbox.models.backends.gmail import GmailAccount
@@ -145,6 +137,20 @@ def make_default_account(db, config):
     return account
 
 
+def make_imap_account(db_session, email_address):
+    import platform
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    account = GenericAccount(email_address=email_address,
+                             sync_host=platform.node(),
+                             provider='custom')
+    account.password = 'bananagrams'
+    account.namespace = Namespace()
+    db_session.add(account)
+    db_session.commit()
+    return account
+
+
 @fixture(scope='function')
 def default_account(db, config):
     return make_default_account(db, config)
@@ -157,20 +163,7 @@ def default_namespace(db, default_account):
 
 @fixture(scope='function')
 def generic_account(db):
-    import platform
-    from inbox.models.backends.generic import GenericAccount
-    from inbox.models import Namespace
-    ns = Namespace()
-    account = GenericAccount(
-        email_address='inboxapptest@example.com',
-        sync_host=platform.node(),
-        provider='custom')
-    account.namespace = ns
-    account.create_emailed_events_calendar()
-    account.password = 'bananagrams'
-    db.session.add(account)
-    db.session.commit()
-    return account
+    return make_imap_account(db.session, 'inboxapptest@example.com')
 
 
 @fixture(scope='function')
