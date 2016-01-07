@@ -48,7 +48,7 @@ def main(prod, config, process_num):
         syncback.join()
 
     if prod:
-        start(process_num, total_processes)
+        start()
     else:
         preflight()
         from werkzeug.serving import run_with_reloader
