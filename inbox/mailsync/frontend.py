@@ -32,6 +32,17 @@ class HTTPFrontend(object):
     def _create_app(self):
         app = Flask(__name__)
 
+        @app.route('/unassign', methods=['POST'])
+        def unassign_account():
+            account_id = request.json['account_id']
+            with session_scope(account_id) as db_session:
+                account = db_session.query(Account).get(account_id)
+                if account.sync_host != self.process_identifier:
+                    return 'Account is not being synced by this process', 409
+                account.sync_host = None
+                db_session.commit()
+                return 'OK'
+
         @app.route('/profile')
         def profile():
             if self.profiler is None:
