@@ -121,4 +121,4 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
     for i, service in enumerate(services):
         assert len(service.workers) == 1
         assert list(service.workers)[0].action_log_id == actionlogs[i]
-        gevent.killall(list(service.workers))
+        gevent.joinall(list(service.workers))
