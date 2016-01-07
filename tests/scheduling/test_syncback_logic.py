@@ -89,9 +89,7 @@ def test_actions_are_claimed(purge_accounts_and_actions, patched_worker):
         schedule_test_action(db_session, account)
 
     service = SyncbackService(cpu_id=1, total_cpus=2)
-    service.start()
-    gevent.sleep(2)
-    service.kill()
+    service._process_log()
 
     with session_scope_by_shard_id(0) as db_session:
         q = db_session.query(ActionLog)
@@ -117,12 +115,10 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
     for cpu_id in (0, 1):
         service = SyncbackService(cpu_id=cpu_id, total_cpus=2)
         service.workers = set()
-        service.start()
+        service._process_log()
         services.append(service)
-        gevent.sleep(2)
 
     for i, service in enumerate(services):
         assert len(service.workers) == 1
         assert list(service.workers)[0].action_log_id == actionlogs[i]
-
-    gevent.killall(services)
+        gevent.killall(list(service.workers))
