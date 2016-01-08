@@ -61,9 +61,6 @@ class Folder(MailSyncBase):
     def find_or_create(cls, session, account, name, role=None):
         q = session.query(cls).filter(cls.account_id == account.id)
 
-        if role is not None:
-            q = q.filter(cls.canonical_name == role)
-
         # Remove trailing whitespace, truncate to max folder name length.
         # Not ideal but necessary to work around MySQL limitations.
         name = name.rstrip()
@@ -85,6 +82,9 @@ class Folder(MailSyncBase):
             log.info('Duplicate folder rows for name {}, account_id {}'
                      .format(name, account.id))
             raise
+
+        if obj.canonical_name is None:
+            obj.canonical_name = role
 
         return obj
 
