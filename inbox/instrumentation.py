@@ -102,7 +102,6 @@ class GreenletTracer(object):
         self.cpu_avgs = {1: 0, 5: 0, 15: 0}
         self.hostname = socket.gethostname().replace(".", "-")
         self.process_name = str(config.get("PROCESS_NAME", "unknown"))
-        self.log = get_logger()
         # We need a new client instance here because this runs in its own
         # thread.
         self.statsd_client = get_statsd_client()
@@ -198,6 +197,8 @@ class GreenletTracer(object):
             self.statsd_client.gauge(path, v)
 
     def _monitoring_thread(self):
+        # Logger needs to be instantiated in new thread.
+        self.log = get_logger()
         last_logged_stats = time.time()
         last_checked_blocking = time.time()
         try:
