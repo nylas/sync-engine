@@ -98,8 +98,9 @@ class EngineManager(object):
         self.engines = {}
         keys = set()
         schema_names = set()
+        use_proxysql = config.get('USE_PROXYSQL', False)
         for database in databases:
-            hostname = database['HOSTNAME']
+            hostname = '127.0.0.1' if use_proxysql else database['HOSTNAME']
             port = database['PORT']
             username = users[hostname]['USER']
             password = users[hostname]['PASSWORD']
