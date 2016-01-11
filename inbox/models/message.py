@@ -485,7 +485,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     @property
     def versioned_relationships(self):
-        return ['parts']
+        return ['parts', 'messagecategories']
 
     @property
     def propagated_attributes(self):

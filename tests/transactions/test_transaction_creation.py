@@ -7,7 +7,8 @@ from inbox.models import Transaction, Calendar
 from inbox.models.mixins import HasRevisions
 from inbox.models.util import transaction_objects
 
-from tests.util.base import add_fake_message, add_fake_thread, add_fake_event
+from tests.util.base import (add_fake_message, add_fake_thread, add_fake_event,
+                             add_fake_category)
 
 
 def get_latest_transaction(db_session, object_type, record_id, namespace_id):
@@ -83,6 +84,26 @@ def test_message_updates_create_thread_transaction(db, default_namespace):
         same_transaction = get_latest_transaction(db.session, 'thread', thr.id,
                                                   default_namespace.id)
         assert same_transaction.id == new_transaction.id
+
+
+def test_message_category_updates_create_transaction(db, default_namespace):
+    with db.session.no_autoflush:
+        thr = add_fake_thread(db.session, default_namespace.id)
+        msg = add_fake_message(db.session, default_namespace.id, thr)
+        cat = add_fake_category(db.session, default_namespace.id, 'category')
+        thread_trx_before_category_change = get_latest_transaction(
+            db.session, 'thread', thr.id, default_namespace.id)
+
+        msg.categories = [cat]
+        db.session.commit()
+        latest_message_trx = get_latest_transaction(
+            db.session, 'message', msg.id, default_namespace.id)
+        thread_trx_after_category_change = get_latest_transaction(
+            db.session, 'thread', thr.id, default_namespace.id)
+
+        assert latest_message_trx.command == 'update'
+        assert thread_trx_before_category_change.id != \
+            thread_trx_after_category_change.id
 
 
 def test_object_type_distinguishes_messages_and_drafts(db, default_namespace):
