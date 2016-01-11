@@ -4,12 +4,14 @@
 import click
 import sys
 from inbox.models import (Account, Message, Namespace, Thread, Event,
-                          Calendar, Transaction)
+                          Calendar, Transaction, Part, Block)
 from inbox.models.session import global_session_scope
 
 cls_for_type = dict(
     account=Account,
     message=Message,
+    block=Block,
+    part=Part,
     namespace=Namespace,
     thread=Thread,
     event=Event,

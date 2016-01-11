@@ -5,13 +5,15 @@ import click
 import sys
 import IPython
 from inbox.models import (Account, Message, Namespace, Thread, Event,
-                          Calendar, Transaction)
+                          Calendar, Transaction, Block, Part)
 from inbox.models.session import global_session_scope
 
 cls_for_type = dict(
     account=Account,
     message=Message,
     namespace=Namespace,
+    block=Block,
+    part=Part,
     thread=Thread,
     event=Event,
     calendar=Calendar,
