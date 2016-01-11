@@ -20,7 +20,7 @@ setup(
         "html2text>=2014.9.8",
         "pyinstrument>=0.12",
         "PyMySQL>=0.6.2",
-        "mysqlclient==1.3.6",
+        "mysqlclient==1.3.7",
         "setproctitle>=1.1.8",
         "pymongo>=2.5.2",
         "python-dateutil>=2.4",
