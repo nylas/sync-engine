@@ -4,10 +4,9 @@
 import click
 import sys
 import IPython
-import base64
 from inbox.models import (Account, Message, Namespace, Thread, Event,
                           Calendar, Transaction)
-from inbox.models.session import session_scope
+from inbox.models.session import global_session_scope
 
 cls_for_type = dict(
     account=Account,
@@ -37,7 +36,7 @@ def main(type, id, public_id, readwrite):
         print "Error: you should specify an id or public id to query."
         sys.exit(-1)
 
-    with session_scope() as db_session:
+    with global_session_scope() as db_session:
         with db_session.no_autoflush:
             if public_id:
                 obj = db_session.query(cls).filter(cls.public_id == public_id)\
