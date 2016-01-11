@@ -30,7 +30,6 @@ setup(
         "simplejson>=3.6.0",
         "icalendar>=3.8.2",
         "simplejson>=3.6.0",
-        "imapclient==0.13",
         "Flask>=0.10.1",
         "Flask-RESTful==0.3.2",
         "pynacl>=0.2.3",
@@ -42,7 +41,11 @@ setup(
         "arrow==0.5.4",
         "statsd>=3.1",
         "boto3>=1.1.4",
-        "Pympler==0.4.2"
+        "Pympler==0.4.2",
+        "pyopenssl>=0.15.1",
+        "gevent_openssl==1.2",
+        "backports.ssl>=0.0.9",
+        "imapclient==1.0.1",
     ],
     dependency_links=[],
 
@@ -88,9 +91,9 @@ setup(
     # https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
     # https://pythonhosted.org/setuptools/pkg_resources.html#entry-points
     entry_points={
-        # See https://pythonhosted.org/setuptools/setuptools.html#automatic-script-creation
+        # See https://pythonhosted.org/setuptools/setuptools.html#automatic-script-creation # noqa
         # 'console_scripts': [
-        #     'inbox-consistency-check = inbox.util.consistency_check.__main__:main',
+        #     'inbox-consistency-check = inbox.util.consistency_check.__main__:main',  # noqa
         # ],
 
         # See inbox/util/consistency_check/__main__.py

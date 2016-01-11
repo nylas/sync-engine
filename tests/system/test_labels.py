@@ -37,7 +37,8 @@ def test_gmail_labels(client):
         account = db_session.query(Account).filter_by(
             email_address=client.email_address).one()
 
-        with writable_connection_pool(account.id, pool_size=1).get() as crispin_client:
+        connection_pool = writable_connection_pool(account.id, pool_size=1)
+        with connection_pool.get() as crispin_client:
             labelname = "custom-label" + datetime.now().strftime("%s.%f")
             print "Label: %s" % labelname
 
@@ -45,16 +46,16 @@ def test_gmail_labels(client):
             crispin_client.select_folder(folder_name, uidvalidity_cb)
 
             print "Subject : %s" % thread.subject
-            uids = crispin_client.search_uids(['SUBJECT "%s"' % thread.subject])
+            uids = crispin_client.search_uids(['SUBJECT', thread.subject])
             g_thrid = crispin_client.g_metadata(uids).items()[0][1].thrid
 
             crispin_client.add_label(g_thrid, labelname)
             wait_for_tag(client, thread.id, labelname)
 
-            draft = client.drafts.create(to=[{'name': 'Inbox SelfSend',
-                                          'email': client.email_address}],
-                                          body="Blah, replying to message",
-                                          subject=thread.subject)
+            draft = client.drafts.create(
+                to=[{'name': 'Inbox SelfSend', 'email': client.email_address}],
+                body="Blah, replying to message",
+                subject=thread.subject)
             draft.send()
 
             crispin_client.remove_label(g_thrid, labelname)

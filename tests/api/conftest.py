@@ -3,3 +3,6 @@
 # attribute 'poll'" errors when tests import socket, then monkeypatch.
 from gevent import monkey
 monkey.patch_all(aggressive=False)
+
+import gevent_openssl
+gevent_openssl.monkey_patch()
