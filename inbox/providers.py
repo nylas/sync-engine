@@ -251,6 +251,7 @@ get_default_providers = lambda: {
             "exchange.mit.edu",
             "savills-studley.com",
             "clearpoolgroup.com",
+            "stsci.edu",
         ],
         "mx_servers": [
             # Office365
