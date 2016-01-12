@@ -141,6 +141,7 @@ class FolderSyncEngine(Greenlet):
         self.state = None
         self.provider_name = provider_name
         self.last_fast_refresh = None
+        self.flags_fetch_responses = {}
         self.conn_pool = connection_pool(self.account_id)
 
         self.state_handlers = {
@@ -691,12 +692,22 @@ class FolderSyncEngine(Greenlet):
                                            limit=max_uids)
 
         flags = crispin_client.flags(local_uids)
+        if (max_uids in self.flags_fetch_responses and
+                self.flags_fetch_responses[max_uids] == flags):
+            # If the flags fetch response is exactly the same as the last one
+            # we got, then we don't need to persist any changes.
+            log.debug('Unchanged flags refresh response, '
+                      'not persisting changes', max_uids=max_uids)
+            return
+        log.debug('Changed flags refresh response, persisting changes',
+                  max_uids=max_uids)
         expunged_uids = set(local_uids).difference(flags.keys())
         common.remove_deleted_uids(self.account_id, self.folder_id,
                                    expunged_uids)
         with session_scope(self.namespace_id) as db_session:
             common.update_metadata(self.account_id, self.folder_id,
                                    self.folder_role, flags, db_session)
+        self.flags_fetch_responses[max_uids] = flags
 
     def check_uid_changes(self, crispin_client):
         self.get_new_uids(crispin_client)
