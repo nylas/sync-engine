@@ -633,7 +633,7 @@ def generate_rsvp(event, participant, account):
 
 
 def send_rsvp(ical_data, event, body_text, status, account):
-    from inbox.sendmail.base import get_sendmail_client
+    from inbox.sendmail.base import get_sendmail_client, SendMailException
 
     ical_file = ical_data["cal"]
     rsvp_to = ical_data["organizer_email"]
