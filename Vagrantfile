@@ -50,10 +50,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # This will share any folder in the parent directory that
   # has the name share-*
   # It mounts it at the root without the 'share-' prefix
+  here = File.dirname(__FILE__)
   share_prefix = "share-"
-  Dir['../*/'].each do |fname|
-    basename = File.basename(fname)
-    if basename.start_with?(share_prefix)
+  Dir['%s/../%s*' % [here, share_prefix]].each do |fname|
+    fname = File.absolute_path(fname)
+    if File.directory?(fname)
+      basename = File.basename(fname)
       mount_path = "/" + basename[share_prefix.length..-1]
       puts "Mounting share for #{fname} at #{mount_path}"
       config.vm.synced_folder fname, mount_path
