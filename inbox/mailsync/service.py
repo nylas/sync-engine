@@ -57,16 +57,14 @@ class SyncService(object):
         self.event_sync_monitors = {}
         self.poll_interval = poll_interval
 
-        self.stealing_enabled = config.get('SYNC_STEAL_ACCOUNTS', True)
-        self.sync_hosts_for_shards = {}
-        for database in config['DATABASE_HOSTS']:
-            for shard in database['SHARDS']:
-                # If no sync hosts are explicitly configured for the shard,
-                # then try to steal from it. That way if you turn up a new
-                # shard without properly allocating sync hosts to it, accounts
-                # on it will still be started.
-                self.sync_hosts_for_shards[shard['ID']] = shard.get(
-                    'SYNC_HOSTS') or [self.host]
+        stealing_enabled = config.get('SYNC_STEAL_ACCOUNTS', True)
+        self.shards_to_steal_from = set()
+        if stealing_enabled:
+            zone = config.get('ZONE')
+            for database in config['DATABASE_HOSTS']:
+                if zone is None or database.get('ZONE') == zone:
+                    for shard in database['SHARDS']:
+                        self.shards_to_steal_from.add(shard['ID'])
 
     def run(self):
         if config.get('DEBUG_CONSOLE_ON'):
@@ -91,8 +89,7 @@ class SyncService(object):
         accounts = set()
         for key in engine_manager.engines:
             with session_scope_by_shard_id(key) as db_session:
-                if (self.stealing_enabled and
-                        self.host in self.sync_hosts_for_shards[key]):
+                if key in self.shards_to_steal_from:
                     q = db_session.query(Account).filter(
                         Account.sync_host.is_(None),
                         Account.sync_should_run)
