@@ -1,6 +1,7 @@
 import pytest
 from hashlib import sha256
 from gevent.lock import BoundedSemaphore
+from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.models import Folder, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
                                         ImapFolderInfo)
@@ -114,6 +115,36 @@ def test_condstore_flags_refresh(db, default_account, all_mail_folder,
 
     assert folder_sync_engine.highestmodseq == mock_imapclient.folder_status(
         all_mail_folder.name, ['HIGHESTMODSEQ'])['HIGHESTMODSEQ']
+
+
+def test_generic_flags_refresh_expunges_transient_uids(
+        db, generic_account, inbox_folder, mock_imapclient, monkeypatch):
+    # Check that we delete UIDs which are synced but quickly deleted, so never
+    # show up in flags refresh.
+    uid_dict = uids.example()
+    mock_imapclient.add_folder_data(inbox_folder.name, uid_dict)
+    inbox_folder.imapfolderinfo = ImapFolderInfo(account=generic_account,
+                                                 uidvalidity=1,
+                                                 uidnext=1)
+    db.session.commit()
+    folder_sync_engine = FolderSyncEngine(generic_account.id,
+                                          generic_account.namespace.id,
+                                          inbox_folder.name,
+                                          generic_account.email_address,
+                                          'custom',
+                                          BoundedSemaphore(1))
+    folder_sync_engine.initial_sync()
+    folder_sync_engine.poll_impl()
+    msg = db.session.query(Message).filter_by(
+        namespace_id=generic_account.namespace.id).first()
+    transient_uid = ImapUid(folder=inbox_folder, account=generic_account,
+                            message=msg, msg_uid=max(uid_dict) + 1)
+    db.session.add(transient_uid)
+    db.session.commit()
+    folder_sync_engine.last_slow_refresh = None
+    folder_sync_engine.poll_impl()
+    with pytest.raises(ObjectDeletedError):
+        transient_uid.id
 
 
 def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
