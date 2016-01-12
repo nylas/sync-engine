@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-
 import pytest
 import arrow
-from datetime import datetime
-from flanker import mime
-from inbox.models import Message
 from inbox.models.event import Event, RecurringEvent
 from inbox.events.util import MalformedEventError
 from inbox.events.ical import events_from_ics, import_attached_events
@@ -72,28 +68,6 @@ def test_iphone_through_exchange(db, default_account):
     assert ev.end == arrow.get(2014, 12, 27, 16, 0)
 
 
-@pytest.mark.parametrize('from_value', [[], [["", ""]], [[""]]])
-def test_invalid_sender(from_value, db, default_account):
-    # Check that messages with an invalid from field get discarded.
-    data = None
-    event_count = db.session.query(Event).count()
-
-    with open(absolute_path(FIXTURES + 'iphone_through_exchange.ics')) as fd:
-        data = fd.read()
-
-    msg = add_fake_msg_with_calendar_part(db.session, default_account,
-                                          data)
-    msg.from_addr = from_value
-    db.session.add(msg)
-    db.session.commit()
-
-    import_attached_events(db.session, default_account, msg)
-    db.session.commit()
-
-    event_count2 = db.session.query(Event).count()
-    assert event_count == event_count2, "The event shouldn't have been added"
-
-
 def test_event_update(db, default_account, message):
     add_fake_calendar(db.session, default_account.namespace.id,
                       name="Emailed events", read_only=True)
@@ -127,6 +101,69 @@ def test_event_update(db, default_account, message):
 
     assert ev.location == (u"Le Zenith, 211 Avenue Jean Jaures, "
                             "75019 Paris, France")
+
+
+# This test checks that:
+# 1. we're processing invites we've sent to ourselves.
+# 2. update only update events in the "emailed events" calendar.
+@pytest.mark.only
+def test_self_sent_update(db, default_account, message):
+
+    # Create the calendars
+    add_fake_calendar(db.session, default_account.namespace.id,
+                      name="Emailed events", read_only=True)
+
+    default_calendar = add_fake_calendar(db.session,
+                                         default_account.namespace.id,
+                                         name="Calendar", read_only=False)
+
+    # Import the self-sent event.
+    with open(absolute_path(FIXTURES + 'self_sent_v1.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(db.session, default_account,
+                                          ics_data)
+    msg.from_addr = [(default_account.name, default_account.email_address)]
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    evs = db.session.query(Event).filter(
+        Event.uid == "burgos@google.com").all()
+
+    assert len(evs) == 1
+    ev = evs[0]
+    assert ev.location == ("Olympia Hall, 28 Boulevard des Capucines, "
+                           "75009 Paris, France")
+
+    # Create a copy of the event, and store it in the default calendar.
+    event_copy = Event()
+    event_copy.update(ev)
+    event_copy.calendar = default_calendar
+    db.session.add(event_copy)
+    db.session.commit()
+
+    with open(absolute_path(FIXTURES + 'self_sent_v2.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    evs = db.session.query(Event).filter(
+        Event.uid == "burgos@google.com").all()
+
+    # Check that the event in the default calendar didn't get updated.
+    assert len(evs) == 2
+    for ev in evs:
+        db.session.refresh(ev)
+        if ev.calendar_id == default_calendar.id:
+            assert ev.location == ("Olympia Hall, 28 Boulevard des Capucines, "
+                                   "75009 Paris, France")
+        else:
+            assert ev.location == (u"Le Zenith, 211 Avenue Jean Jaures, "
+                                    "75019 Paris, France")
 
 
 def test_recurring_ical(db, default_account):

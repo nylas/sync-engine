@@ -16,7 +16,7 @@ from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
 from inbox.models.message import Message
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
-from inbox.events.util import parse_rrule_datetime
+from email.utils import parseaddr
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -286,6 +286,19 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         return []
 
     @property
+    def organizer_email(self):
+        # For historical reasons, the event organizer field is stored as
+        # "Owner Name <owner@email.com>".
+        parsed_owner = parseaddr(self.owner)
+        if len(parsed_owner) == 0:
+            return None
+
+        if parsed_owner[1] == '':
+            return None
+
+        return parsed_owner[1]
+
+    @property
     def is_recurring(self):
         return self.recurrence is not None
 
@@ -368,6 +381,7 @@ class RecurringEvent(Event):
         return [InflatedEvent(self, o) for o in occurrences]
 
     def unwrap_rrule(self):
+        from inbox.events.util import parse_rrule_datetime
         # Unwraps the RRULE list of strings into RecurringEvent properties.
         for item in self.recurring:
             if item.startswith('RRULE'):

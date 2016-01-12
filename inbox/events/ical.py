@@ -14,6 +14,7 @@ from inbox.models.event import Event, EVENT_STATUSES
 from inbox.events.util import MalformedEventError
 from inbox.util.addr import canonicalize_address
 from inbox.models.action_log import schedule_action
+from inbox.sendmail.base import SendMailException
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -159,21 +160,9 @@ def events_from_ics(namespace, calendar, ics_str):
             organizer_name = None
             organizer_email = None
             if organizer:
-                # Here's the problem. Gmail and Exchange define the organizer
-                # field like this:
-                #
-                # ORGANIZER;CN="User";EMAIL="user@email.com":mailto:user@email.com
-                # but iCloud does it like this:
-                # ORGANIZER;CN=User;EMAIL=user@icloud.com:mailto:
-                # random_alphanumeric_string@imip.me.com
-                # so what we first try to get the EMAIL field, and only if
-                # it's not present we use the MAILTO: link.
-                if 'EMAIL' in organizer.params:
-                    organizer_email = organizer.params['EMAIL']
-                else:
-                    organizer_email = unicode(organizer)
-                    if organizer_email.lower().startswith('mailto:'):
-                        organizer_email = organizer_email[7:]
+                organizer_email = unicode(organizer)
+                if organizer_email.lower().startswith('mailto:'):
+                    organizer_email = organizer_email[7:]
 
                 if 'CN' in organizer.params:
                     organizer_name = organizer.params['CN']
@@ -385,23 +374,7 @@ def process_nylas_rsvps(db_session, message, account, rsvps):
 
 def import_attached_events(db_session, account, message):
     """Import events from a file into the 'Emailed events' calendar."""
-
     assert account is not None
-    # FIXME @karim - Don't import iCalendar events from messages we've sent.
-
-    # This is only a stopgap measure -- what we need to have instead is
-    # smarter event merging (i.e: looking at whether the sender is the
-    # event organizer or not, and if the sequence number got incremented).
-    if message.from_addr is not None:
-        if len(message.from_addr) == 0 or len(message.from_addr[0]) == 1:
-            # We got a message without a from address --- this is either
-            # a message which hasn't been sent or a bogus message. Don't
-            # process it.
-            return
-
-        from_addr = message.from_addr[0][1]
-        if from_addr == account.email_address or from_addr == '':
-            return
 
     for part in message.attached_event_files:
         part_data = ''
@@ -681,19 +654,17 @@ def send_rsvp(ical_data, event, body_text, status, account):
     msg.headers['Reply-To'] = account.email_address
     msg.headers['From'] = account.email_address
 
-    # We actually send the reply to the invite's From:
-    # address, because it works for most providers.
-    # However, iCloud sends invites from noreply@icloud.com so we detect
-    # this and send RSVPs to the organizer's email. Frustratingly, iCloud
-    # doesn't seem to handle RSVPs at all, but at least the reply ends up
-    # in the organizer's mailbox.
-    assert event.message.from_addr is not None
-    assert len(event.message.from_addr) == 1
-    from_addr = event.message.from_addr[0][1]
-    if from_addr != 'noreply@insideicloud.icloud.com':
-        msg.headers['To'] = from_addr
+    # Send the reply to the invite organizer. If it's not defined,
+    # default to the invite from field.
+    if event.organizer_email is not None:
+        msg.headers['To'] = event.organizer_email
     else:
-        msg.headers['To'] = rsvp_to
+        if event.message.from_addr is not None and len(event.message.from_addr) == 1:
+            from_addr = event.message.from_addr[0][1]
+            msg.headers['To'] = from_addr
+        else:
+            # Couldn't find an organizer. Bailing out.
+            raise SendMailException("Couldn't find an event organizer to RSVP to.")
 
     assert status in ['yes', 'no', 'maybe']
 
