@@ -11,7 +11,7 @@ from inbox.models import Folder, Category, Account, Message
 from inbox.models.session import session_scope
 from imaplib import IMAP4
 from inbox.sendmail.base import generate_attachments
-from inbox.sendmail.message import create_email
+from inbox.sendmail.message import create_email, generate_message_id_header
 from inbox.util.misc import imap_folder_path
 
 log = get_logger()
@@ -180,6 +180,7 @@ def remote_save_draft(account_id, message_id):
 def remote_update_draft(account_id, message_id):
     with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
+        from_email_addr = account.email_address
         message = db_session.query(Message).get(message_id)
         message_id_header = message.message_id_header
         message_public_id = message.public_id
@@ -204,8 +205,9 @@ def remote_update_draft(account_id, message_id):
         # Check for an older version and delete it. (We can stop once we find
         # one, to reduce the latency of this operation.)
         for old_version in reversed(range(0, version)):
-            message_id_header = '<{}-{}@mailer.nylas.com>'.format(
-                message_public_id, old_version)
+            message_id_header = generate_message_id_header(
+                '{}-{}'.format(message_public_id, old_version),
+                from_email_addr)
             old_version_deleted = crispin_client.delete_draft(
                 message_id_header)
             if old_version_deleted:

@@ -2,6 +2,7 @@
 import mock
 import pytest
 from flanker import mime
+from flanker.addresslib import address
 from inbox.actions.base import (change_labels, save_draft, update_draft,
                                 delete_draft, create_folder, update_folder,
                                 delete_folder, create_label, update_label,
@@ -57,8 +58,9 @@ def test_draft_updates(db, default_account, mock_imapclient):
         assert len(all_uids) == 1
         data = conn.uids(all_uids)[0]
         parsed = mime.from_string(data.body)
-        expected_message_id = '<{}-{}@mailer.nylas.com>'.format(
-            draft.public_id, draft.version)
+        expected_hostname = address.parse(parsed.headers['From']).hostname
+        expected_message_id = '<{}-{}@{}>'.format(
+            draft.public_id, draft.version, expected_hostname)
         assert parsed.headers.get('Message-Id') == expected_message_id
 
     delete_draft(default_account.id, draft.id,

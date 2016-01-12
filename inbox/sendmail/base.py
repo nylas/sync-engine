@@ -1,6 +1,8 @@
 import pkg_resources
 from datetime import datetime
 
+from flanker.addresslib import address
+
 from inbox.api.validation import (
     get_recipients, get_attachments, get_thread, get_message)
 from inbox.api.err import InputError
@@ -8,6 +10,7 @@ from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
+from inbox.sendmail.message import generate_message_id_header
 
 
 VERSION = pkg_resources.get_distribution('inbox-sync').version
@@ -49,9 +52,12 @@ def get_sendmail_client(account):
 
 def create_draft_from_mime(account, raw_mime, db_session):
     our_uid = generate_public_id()  # base-36 encoded string
-    new_headers = ('X-INBOX-ID: {0}-0\r\n'
-                   'Message-Id: <{0}-0@mailer.nylas.com>\r\n'
-                   'User-Agent: NylasMailer/{1}\r\n').format(our_uid, VERSION)
+    message_id = generate_message_id_header(
+        "{}-0".format(our_uid), account.email_address)
+    new_headers = ('X-INBOX-ID: {uid}-0\r\n'
+                   'Message-Id: {message_id}\r\n'
+                   'User-Agent: NylasMailer/{ver}\r\n').format(
+                       uid=our_uid, ver=VERSION, message_id=message_id)
     new_body = new_headers + raw_mime
 
     with db_session.no_autoflush:

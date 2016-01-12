@@ -134,7 +134,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         from inbox.sendmail.message import generate_message_id_header
         self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
-        self.message_id_header = generate_message_id_header(self.inbox_uid)
+        self.message_id_header = generate_message_id_header(
+            self.inbox_uid, self.from_addr[0][1])
 
     categories = association_proxy(
         'messagecategories', 'category',
