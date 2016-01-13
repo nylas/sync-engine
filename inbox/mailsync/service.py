@@ -124,7 +124,7 @@ class SyncService(object):
             # Determine which accounts need to be started
             start_accounts = self.accounts_to_start()
             statsd_client.gauge(
-                'accounts.{}.{}.count'.format(self.host, self.cpu_id),
+                'accounts.{}.mailsync-{}.count'.format(self.host, self.cpu_id),
                 len(start_accounts))
 
             # Perform the appropriate action on each account
