@@ -13,6 +13,7 @@ from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.rdb import break_to_interpreter
+from inbox.util.stats import statsd_client
 
 from inbox.mailsync.backends import module_registry
 
@@ -122,6 +123,9 @@ class SyncService(object):
         while self.keep_running:
             # Determine which accounts need to be started
             start_accounts = self.accounts_to_start()
+            statsd_client.gauge(
+                'accounts.{}.{}.count'.format(self.host, self.cpu_id),
+                len(start_accounts))
 
             # Perform the appropriate action on each account
             for account_id in start_accounts:
