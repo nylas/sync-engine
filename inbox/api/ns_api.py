@@ -1402,12 +1402,14 @@ def stream_changes():
     # duration.
     g.db_session.expunge(g.namespace)
     g.db_session.close()
+
+    poll_interval = config.get('STREAMING_API_POLL_INTERVAL', 1)
     # TODO make transaction log support the `expand` feature
     generator = delta_sync.streaming_change_generator(
         g.namespace, transaction_pointer=transaction_pointer,
-        poll_interval=1, timeout=timeout, exclude_types=exclude_types,
-        include_types=include_types, exclude_folders=exclude_folders,
-        expand=expand)
+        poll_interval=poll_interval, timeout=timeout,
+        exclude_types=exclude_types, include_types=include_types,
+        exclude_folders=exclude_folders, expand=expand)
     return Response(stream_with_context(generator),
                     mimetype='text/event-stream')
 
