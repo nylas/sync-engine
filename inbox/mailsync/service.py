@@ -2,12 +2,14 @@ import platform
 
 import gevent
 from setproctitle import setproctitle
+from sqlalchemy.exc import OperationalError
 
 from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync, GoogleEventSync
 from nylas.logging import get_logger
+from nylas.logging.sentry import log_uncaught_errors
 from inbox.ignition import engine_manager
 from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import Account
@@ -96,44 +98,49 @@ class SyncService(object):
     def accounts_to_start(self):
         accounts = set()
         for key in engine_manager.engines:
-            with session_scope_by_shard_id(key) as db_session:
-                start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
-                                                            self.total_cpus)
-                if (self.stealing_enabled and
-                        self.host in self.sync_hosts_for_shards[key]):
-                    q = db_session.query(Account).filter(
-                        Account.sync_host.is_(None),
-                        Account.sync_should_run,
-                        start_on_this_cpu)
-                    unscheduled_accounts_exist = db_session.query(
-                        q.exists()).scalar()
-                    if unscheduled_accounts_exist:
-                        # Atomically claim unscheduled syncs by setting
-                        # sync_host.
-                        q.update({'sync_host': self.process_identifier},
-                                 synchronize_session=False)
-                        db_session.commit()
+            try:
+                with session_scope_by_shard_id(key) as db_session:
+                    start_on_this_cpu = self.account_cpu_filter(
+                        self.cpu_id, self.total_cpus)
+                    if (self.stealing_enabled and
+                            self.host in self.sync_hosts_for_shards[key]):
+                        q = db_session.query(Account).filter(
+                            Account.sync_host.is_(None),
+                            Account.sync_should_run,
+                            start_on_this_cpu)
+                        unscheduled_accounts_exist = db_session.query(
+                            q.exists()).scalar()
+                        if unscheduled_accounts_exist:
+                            # Atomically claim unscheduled syncs by setting
+                            # sync_host.
+                            q.update({'sync_host': self.process_identifier},
+                                     synchronize_session=False)
+                            db_session.commit()
 
-                accounts.update(id_ for id_, in
-                                 db_session.query(Account.id).filter(
-                                     Account.sync_should_run,
-                                     Account.sync_host == self.host,
-                                     start_on_this_cpu))
+                    accounts.update(id_ for id_, in
+                                     db_session.query(Account.id).filter(
+                                         Account.sync_should_run,
+                                         Account.sync_host == self.host,
+                                         start_on_this_cpu))
 
-                # Also start accounts for which a process identifier has been
-                # explicitly recorded, e.g. 'sync-10-77-22-22:13'. This is
-                # messy for now as we transition to this more granular
-                # scheduling method.
-                accounts.update(
-                    id_ for id_, in db_session.query(Account.id).filter(
-                        Account.sync_should_run,
-                        Account.sync_host == self.process_identifier))
+                    # Also start accounts for which a process identifier has
+                    # been explicitly recorded, e.g. 'sync-10-77-22-22:13'.
+                    # This is messy for now as we transition to this more
+                    # granular scheduling method.
+                    accounts.update(
+                        id_ for id_, in db_session.query(Account.id).filter(
+                            Account.sync_should_run,
+                            Account.sync_host == self.process_identifier))
 
-                # Close the underlying connection rather than returning it to
-                # the pool. This allows this query to run against all shards
-                # without potentially acquiring a poorly-utilized, persistent
-                # connection from each sync host to each shard.
-                db_session.invalidate()
+                    # Close the underlying connection rather than returning it
+                    # to the pool. This allows this query to run against all
+                    # shards without potentially acquiring a poorly-utilized,
+                    # persistent connection from each sync host to each shard.
+                    db_session.invalidate()
+            except OperationalError:
+                self.log.error('Database error getting accounts to start',
+                               exc_info=True)
+                log_uncaught_errors()
         return accounts
 
     def _run_impl(self):
