@@ -298,7 +298,7 @@ class SMTPClient(object):
                         # exception so that we fail to client.
                         raise SendMailException(
                             'Sending to at least one recipent failed',
-                            http_code=402,
+                            http_code=200,
                             failures=failures)
             except smtplib.SMTPException as err:
                 self.log.error('Error sending', error=err, exc_info=True)
