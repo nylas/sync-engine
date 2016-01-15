@@ -25,20 +25,21 @@ class SyncService(object):
     """
     Parameters
     ----------
-    process_identifier: string
-        Unique string identifying this sync process (currently
-        "<sync_host><cpu_id>").
     cpu_id : int
         If a system has 4 cores, value from 0-3. (Each sync service on the
         system should get a different value.)
+    total_cpus : int
+        Total CPUs on the system.
     poll_interval : int
         Seconds between polls for account changes.
     """
-    def __init__(self, process_identifier, cpu_id, poll_interval=10):
+    def __init__(self, process_identifier, cpu_id, total_cpus,
+                 poll_interval=10):
         self.keep_running = True
         self.host = platform.node()
         self.cpu_id = cpu_id
         self.process_identifier = process_identifier
+        self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
             if hasattr(mod, 'SYNC_MONITOR_CLS')}
@@ -88,15 +89,22 @@ class SyncService(object):
             gevent.kill(v)
         self.keep_running = False
 
+    @staticmethod
+    def account_cpu_filter(cpu_id, total_cpus):
+        return (Account.id % total_cpus == cpu_id)
+
     def accounts_to_start(self):
         accounts = set()
         for key in engine_manager.engines:
             with session_scope_by_shard_id(key) as db_session:
+                start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
+                                                            self.total_cpus)
                 if (self.stealing_enabled and
                         self.host in self.sync_hosts_for_shards[key]):
                     q = db_session.query(Account).filter(
                         Account.sync_host.is_(None),
-                        Account.sync_should_run)
+                        Account.sync_should_run,
+                        start_on_this_cpu)
                     unscheduled_accounts_exist = db_session.query(
                         q.exists()).scalar()
                     if unscheduled_accounts_exist:
@@ -106,6 +114,16 @@ class SyncService(object):
                                  synchronize_session=False)
                         db_session.commit()
 
+                accounts.update(id_ for id_, in
+                                 db_session.query(Account.id).filter(
+                                     Account.sync_should_run,
+                                     Account.sync_host == self.host,
+                                     start_on_this_cpu))
+
+                # Also start accounts for which a process identifier has been
+                # explicitly recorded, e.g. 'sync-10-77-22-22:13'. This is
+                # messy for now as we transition to this more granular
+                # scheduling method.
                 accounts.update(
                     id_ for id_, in db_session.query(Account.id).filter(
                         Account.sync_should_run,
@@ -242,7 +260,8 @@ class SyncService(object):
                 self.log.error('No such account', account_id=account_id)
             elif acc.sync_host is None:
                 self.log.info('Sync not enabled', account_id=account_id)
-            elif acc.sync_host != self.process_identifier:
+            elif (acc.sync_host != self.host and acc.sync_host !=
+                  self.process_identifier):
                 self.log.error('Sync Host Mismatch',
                                sync_host=acc.sync_host,
                                account_id=account_id)

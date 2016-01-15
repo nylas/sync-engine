@@ -87,7 +87,8 @@ def main(prod, enable_tracer, config, process_num):
                                  enable_profiler)
     http_frontend.start()
 
-    sync_service = SyncService(process_identifier, process_num)
+    sync_service = SyncService(process_identifier, process_num,
+                               total_processes)
     sync_service.run()
 
     print >>sys.stderr, "\033[94mInbox exiting...\033[0m"
