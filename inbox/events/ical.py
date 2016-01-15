@@ -4,6 +4,7 @@ import arrow
 import traceback
 import icalendar
 from icalendar import Calendar as iCalendar
+from email.utils import formataddr
 from datetime import datetime, date
 
 from flanker import mime
@@ -166,13 +167,14 @@ def events_from_ics(namespace, calendar, ics_str):
                 if 'CN' in organizer.params:
                     organizer_name = organizer.params['CN']
 
-            owner = u"{} <{}>".format(organizer_name, organizer_email)
-
-            if (namespace.account.email_address ==
-                    canonicalize_address(organizer_email)):
-                is_owner = True
+                owner = formataddr([organizer_name, organizer_email])
             else:
-                is_owner = False
+                owner = None
+
+            is_owner = False
+            if owner is not None and (namespace.account.email_address ==
+                                      canonicalize_address(organizer_email)):
+                is_owner = True
 
             attendees = component.get('attendee', [])
 
@@ -584,10 +586,8 @@ def _generate_rsvp(status, account, event):
     icalevent = icalendar.Event()
     icalevent['uid'] = event.uid
 
-    # For ahem, 'historic reasons', we're saving the owner field
-    # as "Organizer <organizer@nylas.com>".
-    organizer_name, organizer_email = event.owner.split('<')
-    organizer_email = organizer_email[:-1]
+    if event.organizer_email is not None:
+        icalevent['organizer'] = event.organizer_email
 
     icalevent['sequence'] = event.sequence_number
     icalevent['X-MICROSOFT-CDO-APPT-SEQUENCE'] = icalevent['sequence']
@@ -621,7 +621,6 @@ def _generate_rsvp(status, account, event):
 
     ret = {}
     ret["cal"] = cal
-    ret["organizer_email"] = organizer_email
 
     return ret
 
@@ -632,12 +631,37 @@ def generate_rsvp(event, participant, account):
     return _generate_rsvp(status, account, event)
 
 
+# Get the email address we should be RSVPing to.
+# We try to find the organizer address from the iCal file.
+# If it's not defined, we try to return the invite sender's
+# email address.
+def rsvp_recipient(event):
+    if event is None:
+        return None
+
+    # A stupid bug made us create some db entries of the
+    # form "None <None>".
+    if event.organizer_email not in [None, 'None']:
+        return event.organizer_email
+
+    if event.message is not None:
+        if event.message.from_addr is not None and len(event.message.from_addr) == 1:
+            from_addr = event.message.from_addr[0][1]
+            if from_addr is not None and from_addr != '':
+                return from_addr
+
+    return None
+
+
 def send_rsvp(ical_data, event, body_text, status, account):
     from inbox.sendmail.base import get_sendmail_client, SendMailException
 
     ical_file = ical_data["cal"]
-    rsvp_to = ical_data["organizer_email"]
     ical_txt = ical_file.to_ical()
+    rsvp_to = rsvp_recipient(event)
+
+    if rsvp_to is None:
+        raise SendMailException("Couldn't find an organizer to RSVP to.")
 
     sendmail_client = get_sendmail_client(account)
 
@@ -652,18 +676,7 @@ def send_rsvp(ical_data, event, body_text, status, account):
 
     msg.headers['Reply-To'] = account.email_address
     msg.headers['From'] = account.email_address
-
-    # Send the reply to the invite organizer. If it's not defined,
-    # default to the invite from field.
-    if event.organizer_email is not None:
-        msg.headers['To'] = event.organizer_email
-    else:
-        if event.message.from_addr is not None and len(event.message.from_addr) == 1:
-            from_addr = event.message.from_addr[0][1]
-            msg.headers['To'] = from_addr
-        else:
-            # Couldn't find an organizer. Bailing out.
-            raise SendMailException("Couldn't find an event organizer to RSVP to.")
+    msg.headers['To'] = rsvp_to
 
     assert status in ['yes', 'no', 'maybe']
 

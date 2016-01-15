@@ -289,6 +289,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     def organizer_email(self):
         # For historical reasons, the event organizer field is stored as
         # "Owner Name <owner@email.com>".
+
         parsed_owner = parseaddr(self.owner)
         if len(parsed_owner) == 0:
             return None
@@ -297,6 +298,17 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             return None
 
         return parsed_owner[1]
+
+    def organizer_name(self):
+        parsed_owner = parseaddr(self.owner)
+
+        if len(parsed_owner) == 0:
+            return None
+
+        if parsed_owner[0] == '':
+            return None
+
+        return parsed_owner[0]
 
     @property
     def is_recurring(self):
