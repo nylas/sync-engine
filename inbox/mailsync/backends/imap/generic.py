@@ -458,7 +458,6 @@ class FolderSyncEngine(Greenlet):
                 .total_seconds() * 1000
             metrics = [
                 '.'.join(['accounts', 'overall', 'message_latency']),
-                '.'.join(['accounts', str(acct.id), 'message_latency']),
                 '.'.join(['providers', self.provider_name, 'message_latency']),
             ]
             for metric in metrics:
