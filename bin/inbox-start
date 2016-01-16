@@ -11,6 +11,7 @@ import platform
 import sys
 
 import click
+import setproctitle
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable
@@ -58,6 +59,8 @@ def main(prod, enable_tracer, config, process_num):
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 
+    setproctitle.setproctitle('inbox-sync-{}'.format(process_num))
+
     log = get_logger()
     log.info('start',
              components=['mail sync', 'contact sync'],
@@ -83,12 +86,11 @@ def main(prod, enable_tracer, config, process_num):
     port = 16384 + process_num
     enable_profiler = inbox_config.get('DEBUG_PROFILING_ON')
     process_identifier = '{}:{}'.format(platform.node(), process_num)
-    http_frontend = HTTPFrontend(process_identifier, port, enable_tracer,
+    sync_service = SyncService(process_identifier, process_num)
+    http_frontend = HTTPFrontend(sync_service, port, enable_tracer,
                                  enable_profiler)
     http_frontend.start()
 
-    sync_service = SyncService(process_identifier, process_num,
-                               total_processes)
     sync_service.run()
 
     print >>sys.stderr, "\033[94mInbox exiting...\033[0m"

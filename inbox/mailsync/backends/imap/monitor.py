@@ -8,7 +8,6 @@ from inbox.models import Account, Folder, Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
-from inbox.mailsync.backends.base import thread_polling
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.gc import DeleteHandler
 log = get_logger()
@@ -131,7 +130,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                 self.provider_name,
                                                 self.syncmanager_lock)
                 self.folder_monitors.start(thread)
-            while not thread_polling(thread) and not thread.ready():
+            while not thread.state == 'polling' and not thread.ready():
                 sleep(self.heartbeat)
 
             if thread.ready():

@@ -84,7 +84,6 @@ from inbox.models import Folder, Account, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
                                         ImapUid, ImapFolderInfo)
 from inbox.models.session import session_scope
-from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (MailsyncDone, MailsyncError,
                                           THROTTLE_COUNT, THROTTLE_WAIT)
@@ -795,6 +794,11 @@ class FolderSyncEngine(Greenlet):
                                                 selected_uidvalidity,
                                                 self.uidvalidity))
         return select_info
+
+
+class UidInvalid(Exception):
+    """Raised when a folder's UIDVALIDITY changes, requiring a resync."""
+    pass
 
 
 # This version is elsewhere in the codebase, so keep it for now

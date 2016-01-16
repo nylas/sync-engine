@@ -1,3 +1,4 @@
+import pytest
 import platform
 from inbox.ignition import engine_manager
 from inbox.mailsync.service import SyncService
