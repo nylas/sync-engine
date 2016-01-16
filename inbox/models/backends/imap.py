@@ -352,11 +352,6 @@ class ImapFolderSyncStatus(MailSyncBase, HasRunState):
         self._metrics['run_state'] = 'stopped'
         self._metrics['sync_end_time'] = datetime.utcnow()
 
-    def kill_sync(self, error=None):
-        self._metrics['run_state'] = 'killed'
-        self._metrics['sync_end_time'] = datetime.utcnow()
-        self._metrics['sync_error'] = error
-
     @property
     def is_killed(self):
         return self._metrics.get('run_state') == 'killed'

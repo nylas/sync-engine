@@ -1,20 +1,20 @@
 import platform
 
 import gevent
-from setproctitle import setproctitle
+from gevent.lock import BoundedSemaphore
 from sqlalchemy.exc import OperationalError
 
 from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync, GoogleEventSync
+from inbox.heartbeat.status import clear_heartbeat_status
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 from inbox.ignition import engine_manager
 from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
-from inbox.util.rdb import break_to_interpreter
 from inbox.util.stats import statsd_client
 
 from inbox.mailsync.backends import module_registry
@@ -37,7 +37,6 @@ class SyncService(object):
     """
     def __init__(self, process_identifier, cpu_id, total_cpus,
                  poll_interval=10):
-        self.keep_running = True
         self.host = platform.node()
         self.cpu_id = cpu_id
         self.process_identifier = process_identifier
@@ -60,6 +59,7 @@ class SyncService(object):
         self.contact_sync_monitors = {}
         self.event_sync_monitors = {}
         self.poll_interval = poll_interval
+        self.semaphore = BoundedSemaphore(1)
 
         self.stealing_enabled = config.get('SYNC_STEAL_ACCOUNTS', True)
         self.sync_hosts_for_shards = {}
@@ -73,23 +73,7 @@ class SyncService(object):
                     'SYNC_HOSTS') or [self.host]
 
     def run(self):
-        if config.get('DEBUG_CONSOLE_ON'):
-            # Enable the debugging console if this flag is set. Connect to
-            # localhost on the port shown in the logs to get access to a REPL
-            port = None
-            start_port = config.get('DEBUG_START_PORT')
-            if start_port:
-                port = start_port + self.cpu_id
-
-            gevent.spawn(break_to_interpreter, port=port)
-
-        setproctitle('inbox-sync-{}'.format(self.cpu_id))
         retry_with_logging(self._run_impl, self.log)
-
-    def stop(self):
-        for k, v in self.email_sync_monitors.iteritems():
-            gevent.kill(v)
-        self.keep_running = False
 
     @staticmethod
     def account_cpu_filter(cpu_id, total_cpus):
@@ -148,7 +132,7 @@ class SyncService(object):
         Polls for newly registered accounts and checks for start/stop commands.
 
         """
-        while self.keep_running:
+        while True:
             # Determine which accounts need to be started
             start_accounts = self.accounts_to_start()
             statsd_client.gauge(
@@ -159,8 +143,6 @@ class SyncService(object):
             for account_id in start_accounts:
                 if account_id not in self.syncing_accounts:
                     self.start_sync(account_id)
-                # If the account's sync was killed due to an exception, its
-                # monitor sticks around; to restart, manually stop and start it
 
             stop_accounts = self.syncing_accounts - set(start_accounts)
             for account_id in stop_accounts:
@@ -175,7 +157,7 @@ class SyncService(object):
         If that account doesn't exist, does nothing.
 
         """
-        with session_scope(account_id) as db_session:
+        with self.semaphore, session_scope(account_id) as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
                 self.log.error('no such account', account_id=account_id)
@@ -240,39 +222,42 @@ class SyncService(object):
 
         """
 
-        # Send the shutdown command to local monitors
-        self.log.info('Stopping monitors', account_id=account_id)
+        with self.semaphore:
+            # Send the shutdown command to local monitors
+            self.log.info('Stopping monitors', account_id=account_id)
+            if account_id in self.email_sync_monitors:
+                self.email_sync_monitors[account_id].kill()
+                del self.email_sync_monitors[account_id]
 
-        # XXX Can processing this command fail in some way?
-        if account_id in self.email_sync_monitors:
-            self.email_sync_monitors[account_id].shutdown.set()
-            del self.email_sync_monitors[account_id]
+            # Stop contacts sync if necessary
+            if account_id in self.contact_sync_monitors:
+                self.contact_sync_monitors[account_id].kill()
+                del self.contact_sync_monitors[account_id]
 
-        # Stop contacts sync if necessary
-        if account_id in self.contact_sync_monitors:
-            self.contact_sync_monitors[account_id].shutdown.set()
-            del self.contact_sync_monitors[account_id]
+            # Stop events sync if necessary
+            if account_id in self.event_sync_monitors:
+                self.event_sync_monitors[account_id].kill()
+                del self.event_sync_monitors[account_id]
 
-        # Stop events sync if necessary
-        if account_id in self.event_sync_monitors:
-            self.event_sync_monitors[account_id].shutdown.set()
-            del self.event_sync_monitors[account_id]
+            self.syncing_accounts.discard(account_id)
 
-        self.syncing_accounts.remove(account_id)
-
-        # Update the state in the database (if necessary)
-        with session_scope(account_id) as db_session:
-            acc = db_session.query(Account).get(account_id)
-            if acc is None:
-                self.log.error('No such account', account_id=account_id)
-            elif acc.sync_host is None:
-                self.log.info('Sync not enabled', account_id=account_id)
-            elif (acc.sync_host != self.host and acc.sync_host !=
-                  self.process_identifier):
-                self.log.error('Sync Host Mismatch',
-                               sync_host=acc.sync_host,
-                               account_id=account_id)
-            else:
+            # Update the state in the database (if necessary)
+            with session_scope(account_id) as db_session:
+                acc = db_session.query(Account).get(account_id)
+                if acc is None:
+                    self.log.error('No such account', account_id=account_id)
+                    return False
+                if acc.sync_host is None:
+                    self.log.info('Sync not enabled', account_id=account_id)
+                    return False
+                if acc.sync_host != self.process_identifier:
+                    self.log.error('Sync Host Mismatch',
+                                   sync_host=acc.sync_host,
+                                   account_id=account_id)
+                    return False
+                if not acc.sync_should_run:
+                    clear_heartbeat_status(acc.id)
                 self.log.info('sync stopped', account_id=account_id)
                 acc.sync_stopped()
                 db_session.commit()
+                return True

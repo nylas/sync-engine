@@ -1,11 +1,13 @@
 import json
 import pytest
 from inbox.mailsync.frontend import HTTPFrontend
+from inbox.mailsync.service import SyncService
 
 
 @pytest.yield_fixture
 def mailsync_frontend():
-    frontend = HTTPFrontend('localhost:0', 16384, False, False)
+    s = SyncService('localhost:0', 0)
+    frontend = HTTPFrontend(s, 16384, False, False)
     app = frontend._create_app()
     app.config['TESTING'] = True
     with app.test_client() as c:

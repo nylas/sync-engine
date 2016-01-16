@@ -238,12 +238,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
-    def kill_sync(self, error=None):
-        # Don't disable sync: syncs are not killed on purpose.
-        self.sync_state = 'killed'
-        self._sync_status['sync_end_time'] = datetime.utcnow()
-        self._sync_status['sync_error'] = error
-
     @classmethod
     def get(cls, id_, session):
         q = bakery(lambda session: session.query(cls))

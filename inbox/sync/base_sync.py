@@ -51,15 +51,8 @@ class BaseSyncMonitor(Greenlet):
                                   provider=self.provider_name, logger=self.log)
 
     def _run_impl(self):
-        # Return true/false based on whether the greenlet succeeds or throws
-        # and error. Note this is not how the mailsync monitor works
         try:
             while True:
-                # Check to see if this greenlet should exit
-                if self.shutdown.is_set():
-                    self._cleanup()
-                    return False
-
                 try:
                     self.sync()
                     self.heartbeat_status.publish(state='poll')
@@ -68,24 +61,16 @@ class BaseSyncMonitor(Greenlet):
                 # 2x poll frequency.
                 except ConnectionError:
                     self.log.error('Error while polling', exc_info=True)
-                    self.heartbeat_status.publish(state='poll error')
                     sleep(self.poll_frequency)
                 sleep(self.poll_frequency)
         except ValidationError:
             # Bad account credentials; exit.
-            self.log.error('Error while establishing the connection',
-                           account_id=self.account_id,
+            self.log.error('Credential validation error; exiting',
                            exc_info=True, logstash_tag='mark_invalid')
-            self._cleanup()
             with session_scope(self.namespace_id) as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid(scope=self.scope)
 
-            return False
-
     def sync(self):
         """ Subclasses should override this to do work """
         raise NotImplementedError
-
-    def _cleanup(self):
-        self.heartbeat_status.clear()

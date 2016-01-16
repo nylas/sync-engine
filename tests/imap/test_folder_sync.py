@@ -5,9 +5,8 @@ from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.models import Folder, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
                                         ImapFolderInfo)
-from inbox.mailsync.backends.imap.generic import FolderSyncEngine
+from inbox.mailsync.backends.imap.generic import (FolderSyncEngine, UidInvalid)
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
-from inbox.mailsync.exc import UidInvalid
 from tests.imap.data import uids, uid_data, mock_imapclient  # noqa
 
 
