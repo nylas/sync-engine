@@ -97,6 +97,8 @@ apt-get -y install git \
                    curl \
                    tnef \
                    stow \
+                   lua5.2 \
+                   liblua5.2-dev \
 
 # Switch to a temporary directory to install dependencies, since the source
 # directory might be mounted from a VM host with weird permissions.

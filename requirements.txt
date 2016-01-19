@@ -46,6 +46,7 @@ redis==2.10.3
 hiredis==0.1.5
 mock==1.3.0
 mockredispy==2.9.0.10
+lunatic-python-bugfix==1.1.1  # For Redis mocking in tests
 vobject==0.8.1c
 lxml==3.4.2
 arrow==0.5.4

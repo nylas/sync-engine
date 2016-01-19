@@ -84,7 +84,9 @@ setup(
              'bin/contact-search-service',
              'bin/contact-search-backfill',
              'bin/contact-search-delete-index',
-             'bin/update-sync-host-format'
+             'bin/update-sync-host-format',
+             'bin/populate-sync-queue',
+             'bin/backpopulate-sync-assignments'
              ],
 
     # See:
