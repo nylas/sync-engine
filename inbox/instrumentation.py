@@ -10,6 +10,7 @@ import gevent._threading  # This is a clone of the *real* threading module
 import greenlet
 import psutil
 from inbox.config import config
+from inbox.util.concurrency import retry_with_logging
 from inbox.util.stats import get_statsd_client
 from nylas.logging import get_logger
 
@@ -95,6 +96,8 @@ class GreenletTracer(object):
         self._active_greenlet = None
         self._main_thread_id = gevent._threading.get_ident()
         self._hub = gevent.hub.get_hub()
+        self.last_logged_stats = time.time()
+        self.last_checked_blocking = time.time()
 
         self.total_cpu_time = 0
         self.process = psutil.Process()
@@ -132,7 +135,7 @@ class GreenletTracer(object):
         formatted_times = {k: round(v, 2) for k, v in
                            greenlets_by_cost[:max_stats]}
         self.log.info('greenlet stats',
-                      times=formatted_times,
+                      times=str(formatted_times),
                       total_switches=self.total_switches,
                       total_time=total_time,
                       pending_avgs=self.pending_avgs)
@@ -199,19 +202,20 @@ class GreenletTracer(object):
     def _monitoring_thread(self):
         # Logger needs to be instantiated in new thread.
         self.log = get_logger()
-        last_logged_stats = time.time()
-        last_checked_blocking = time.time()
+        retry_with_logging(self._run_impl, self.log)
+
+    def _run_impl(self):
         try:
             while True:
                 self._calculate_pending_avgs()
                 self._calculate_cpu_avgs()
                 now = time.time()
-                if now - last_checked_blocking > self.max_blocking_time:
+                if now - self.last_checked_blocking > self.max_blocking_time:
                     self._check_blocking()
-                    last_checked_blocking = now
-                if now - last_logged_stats > self.logging_interval:
+                    self.last_checked_blocking = now
+                if now - self.last_logged_stats > self.logging_interval:
                     self.log_stats()
-                    last_logged_stats = now
+                    self.last_logged_stats = now
                 gevent.sleep(self.sampling_interval)
         # Swallow exceptions raised during interpreter shutdown.
         except Exception:
