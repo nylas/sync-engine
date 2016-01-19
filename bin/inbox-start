@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import gevent
 from gevent import monkey
 monkey.patch_all()
 
@@ -27,6 +28,7 @@ from inbox.util.startup import preflight
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 from inbox.mailsync.frontend import HTTPFrontend
+from inbox.scheduling.queue import QueuePopulator
 
 # Set a default timeout for sockets.
 SOCKET_TIMEOUT = 2 * 60
@@ -56,6 +58,9 @@ def main(prod, enable_tracer, config, process_num):
 
     if not prod:
         preflight()
+        # Start the queue populator agent for development ease.
+        populator = QueuePopulator(None)
+        gevent.spawn(populator.run)
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 
