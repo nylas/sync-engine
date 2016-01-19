@@ -55,6 +55,7 @@ class BaseMailSyncMonitor(Greenlet):
                                       logger=self.log)
         except GreenletExit:
             self._cleanup()
+            raise
 
     def _run_impl(self):
         self.sync = Greenlet(retry_with_logging, self.sync,
