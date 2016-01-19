@@ -1,12 +1,37 @@
+import json
+import mockredis
+import mock
 import pytest
 import platform
 from inbox.ignition import engine_manager
+from inbox.mailsync.frontend import HTTPFrontend
 from inbox.mailsync.service import SyncService
-from inbox.models import Account, Namespace
-from inbox.models.session import session_scope_by_shard_id, session_scope
+from inbox.models import Account
+from inbox.models.session import session_scope_by_shard_id
+from inbox.scheduling.queue import QueueClient, QueuePopulator
+from tests.util.base import add_fake_account
 
 
 host = platform.node()
+
+
+@pytest.fixture(scope='function')
+def mock_queue_client(monkeypatch):
+    # Stop mockredis from trying to run Lua imports that aren't really needed.
+    monkeypatch.setattr('mockredis.script.Script._import_lua_dependencies',
+                        staticmethod(lambda *args, **kwargs: None))
+    cl = QueueClient(zone='testzone')
+    cl.redis = mockredis.MockRedis()
+    return cl
+
+
+def patched_sync_service(mock_queue_client, host=host, cpu_id=0):
+    s = SyncService(process_identifier='{}:{}'.format(host, cpu_id),
+                    cpu_id=cpu_id)
+    s.queue_client = mock_queue_client
+    s.start_sync = mock.Mock(
+        side_effect=lambda aid: s.syncing_accounts.add(aid))
+    return s
 
 
 def purge_other_accounts(default_account=None):
@@ -19,201 +44,137 @@ def purge_other_accounts(default_account=None):
             db_session.commit()
 
 
-def test_start_already_assigned_accounts(db, default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = platform.node()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id % 2),
-        cpu_id=default_account.id % 2,
-        total_cpus=2)
-    assert ss.accounts_to_start() == {default_account.id}
+def test_accounts_started_when_process_previously_assigned(
+        default_account, config, mock_queue_client):
+    config['SYNC_STEAL_ACCOUNTS'] = False
+    mock_queue_client.enqueue(default_account.id)
+    mock_queue_client.claim_next('{}:{}'.format(host, 0))
+    s = patched_sync_service(mock_queue_client, host=host, cpu_id=0)
+    assert s.accounts_to_sync() == {default_account.id}
 
 
-def test_dont_start_accounts_for_other_cpus(db, default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = platform.node()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id + 1),
-        cpu_id=default_account.id + 1, total_cpus=2**22)
-    assert ss.accounts_to_start() == set()
-
-
-def test_dont_start_accounts_on_other_host(db, default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = 'other-host'
-    db.session.commit()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 1),
-        cpu_id=1, total_cpus=2)
-    assert ss.accounts_to_start() == set()
-
-
-def test_accounts_started_when_process_assigned(db, default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = '{}:{}'.format(platform.node(), 0)
-    db.session.commit()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 0),
-        cpu_id=0, total_cpus=2)
-    assert ss.accounts_to_start() == {default_account.id}
-
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 1),
-        cpu_id=1, total_cpus=2)
-    assert ss.accounts_to_start() == set()
-
-
-def test_start_new_accounts_when_stealing_enabled(db, default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = None
-    db.session.commit()
-    process_identifier = '{}:{}'.format(host, default_account.id % 2)
-    ss = SyncService(
-        process_identifier=process_identifier,
-        cpu_id=default_account.id % 2, total_cpus=2)
-    assert ss.accounts_to_start() == {default_account.id}
-    db.session.expire_all()
-    assert default_account.sync_host == process_identifier
+def test_start_new_accounts_when_stealing_enabled(default_account,
+                                                  config,
+                                                  mock_queue_client):
+    config['SYNC_STEAL_ACCOUNTS'] = True
+    mock_queue_client.enqueue(default_account.id)
+    s = patched_sync_service(mock_queue_client)
+    s.poll()
+    assert s.start_sync.call_count == 1
+    assert s.start_sync.call_args == mock.call(default_account.id)
 
 
 def test_dont_start_new_accounts_when_stealing_disabled(db, config,
-                                                        default_account):
-    purge_other_accounts(default_account)
-    default_account.sync_host = None
-    db.session.commit()
+                                                        default_account,
+                                                        mock_queue_client):
     config['SYNC_STEAL_ACCOUNTS'] = False
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id % 2),
-        cpu_id=default_account.id % 2, total_cpus=2)
-    assert ss.accounts_to_start() == set()
-    assert default_account.sync_host is None
+    s = patched_sync_service(mock_queue_client)
+    s.poll()
+    assert s.start_sync.call_count == 0
 
 
-def test_dont_start_disabled_accounts(db, config, default_account):
-    purge_other_accounts(default_account)
+def test_concurrent_syncs(db, default_account, config, mock_queue_client):
     config['SYNC_STEAL_ACCOUNTS'] = True
-    default_account.sync_host = None
-    default_account.disable_sync(reason='testing')
-    db.session.commit()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 0),
-        cpu_id=0, total_cpus=1)
-    assert ss.accounts_to_start() == set()
-    assert default_account.sync_host is None
-    assert default_account.sync_should_run is False
-
-    default_account.sync_host = platform.node()
-    default_account.disable_sync('testing')
-    db.session.commit()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 0),
-        cpu_id=0, total_cpus=1)
-    assert ss.accounts_to_start() == set()
-    assert default_account.sync_should_run is False
-
-    # Invalid Credentials
-    default_account.mark_invalid()
-    default_account.sync_host = None
-    db.session.commit()
-
-    # Don't steal invalid accounts
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 0),
-        cpu_id=0, total_cpus=1)
-    assert ss.accounts_to_start() == set()
-
-    # Don't explicitly start invalid accounts
-    default_account.sync_host = platform.node()
-    db.session.commit()
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, 0),
-        cpu_id=0, total_cpus=1)
-    assert ss.accounts_to_start() == set()
-
-
-def test_concurrent_syncs(db, default_account, config):
-    purge_other_accounts(default_account)
-    ss1 = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id % 2),
-        cpu_id=default_account.id % 2, total_cpus=2)
-    ss2 = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id % 2),
-        cpu_id=default_account.id % 2, total_cpus=2)
-    ss2.host = 'other-host'
+    mock_queue_client.enqueue(default_account.id)
+    s1 = patched_sync_service(mock_queue_client, cpu_id=0)
+    s2 = patched_sync_service(mock_queue_client, cpu_id=2)
+    s1.poll()
+    s2.poll()
     # Check that only one SyncService instance claims the account.
-    assert ss1.accounts_to_start() == {default_account.id}
-    assert ss2.accounts_to_start() == set()
+    assert s1.start_sync.call_count == 1
+    assert s1.start_sync.call_args == mock.call(default_account.id)
+    assert s2.start_sync.call_count == 0
 
 
-def test_sync_transitions(db, default_account, config):
+def test_twice_queued_accounts_started_once(default_account,
+                                            mock_queue_client):
+    mock_queue_client.enqueue(default_account.id)
+    mock_queue_client.enqueue(default_account.id)
+    s = patched_sync_service(mock_queue_client)
+    s.poll()
+    s.poll()
+    assert s.start_sync.call_count == 1
+
+
+def test_queue_population(db, default_account, mock_queue_client):
     purge_other_accounts(default_account)
-    ss = SyncService(
-        process_identifier='{}:{}'.format(host, default_account.id % 2),
-        cpu_id=default_account.id % 2, total_cpus=2)
-    default_account.enable_sync()
-    db.session.commit()
-    assert ss.accounts_to_start() == {default_account.id}
+    qp = QueuePopulator(zone='testzone')
+    qp.queue_client = mock_queue_client
+    s = patched_sync_service(mock_queue_client)
 
-    default_account.disable_sync('manual')
-    db.session.commit()
-    assert ss.accounts_to_start() == set()
-    assert default_account.sync_should_run is False
-    assert default_account._sync_status['sync_disabled_reason'] == 'manual'
+    s.poll()
+    assert s.start_sync.call_count == 0
 
-    default_account.mark_invalid()
-    db.session.commit()
-    assert ss.accounts_to_start() == set()
-    assert default_account.sync_state == 'invalid'
-    assert default_account._sync_status['sync_disabled_reason'] == \
-        'invalid credentials'
-    assert default_account.sync_should_run is False
+    qp.enqueue_new_accounts()
+    s.poll()
+    assert s.start_sync.call_count == 1
 
 
-def test_accounts_started_on_all_shards(db, default_account, config):
-    config['SYNC_STEAL_ACCOUNTS'] = True
+def test_queue_population_limited_by_zone(db, default_account,
+                                          mock_queue_client):
     purge_other_accounts(default_account)
-    default_account.sync_host = None
-    db.session.commit()
-    process_identifier = '{}:{}'.format(host, 0)
-    ss = SyncService(
-        process_identifier=process_identifier,
-        cpu_id=0, total_cpus=1)
-    account_ids = {default_account.id}
-    for key in (0, 1):
-        with session_scope_by_shard_id(key) as db_session:
-            acc = Account()
-            acc.namespace = Namespace()
-            db_session.add(acc)
-            db_session.commit()
-            account_ids.add(acc.id)
-
-    assert len(account_ids) == 3
-    assert set(ss.accounts_to_start()) == account_ids
-    for id_ in account_ids:
-        with session_scope(id_) as db_session:
-            acc = db_session.query(Account).get(id_)
-            assert acc.sync_host == process_identifier
+    qp = QueuePopulator(zone='otherzone')
+    qp.queue_client = mock_queue_client
+    s = patched_sync_service(mock_queue_client)
+    qp.enqueue_new_accounts()
+    s.poll()
+    assert s.start_sync.call_count == 0
 
 
-def test_stealing_limited_by_host(db, config):
-    host = platform.node()
-    config['DATABASE_HOSTS'][0]['SHARDS'][0]['SYNC_HOSTS'] = [host]
-    config['DATABASE_HOSTS'][0]['SHARDS'][1]['SYNC_HOSTS'] = ['otherhost']
+def test_external_sync_disabling(db, mock_queue_client):
     purge_other_accounts()
-    process_identifier = '{}:{}'.format(host, 0)
-    ss = SyncService(process_identifier=process_identifier, cpu_id=0,
-                     total_cpus=1)
-    for key in (0, 1):
-        with session_scope_by_shard_id(key) as db_session:
-            acc = Account()
-            acc.namespace = Namespace()
-            db_session.add(acc)
-            db_session.commit()
+    account = add_fake_account(db.session, email_address='test@example.com')
+    other_account = add_fake_account(db.session,
+                                     email_address='test2@example.com')
+    qp = QueuePopulator(zone='testzone')
+    qp.queue_client = mock_queue_client
+    s = patched_sync_service(mock_queue_client)
 
-    ss.accounts_to_start()
-    with session_scope_by_shard_id(0) as db_session:
-        acc = db_session.query(Account).first()
-        assert acc.sync_host == process_identifier
-    with session_scope_by_shard_id(1) as db_session:
-        acc = db_session.query(Account).first()
-        assert acc.sync_host is None
+    qp.enqueue_new_accounts()
+    s.poll()
+    s.poll()
+    assert len(s.syncing_accounts) == 2
+
+    account.mark_deleted()
+    db.session.commit()
+    assert account.sync_should_run is False
+    assert account._sync_status['sync_disabled_reason'] == 'account deleted'
+
+    account.mark_invalid()
+    db.session.commit()
+    assert account.sync_should_run is False
+    assert account.sync_state == 'invalid'
+    assert account._sync_status['sync_disabled_reason'] == \
+        'invalid credentials'
+
+    qp.unassign_disabled_accounts()
+    s.poll()
+    assert s.syncing_accounts == {other_account.id}
+
+
+def test_http_unassignment(db, default_account, mock_queue_client):
+    purge_other_accounts(default_account)
+    qp = QueuePopulator(zone='testzone')
+    qp.queue_client = mock_queue_client
+    qp.enqueue_new_accounts()
+    s = patched_sync_service(mock_queue_client)
+    s.poll()
+
+    frontend = HTTPFrontend(s, 16384, False, False)
+    app = frontend._create_app()
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        resp = c.post(
+            '/unassign', data=json.dumps({'account_id': default_account.id}),
+            content_type='application/json')
+        assert resp.status_code == 200
+    db.session.expire_all()
+    assert default_account.sync_host is None
+
+    # Check that 409 is returned if account is not actually assigned to
+    # process.
+    with app.test_client() as c:
+        resp = c.post(
+            '/unassign', data=json.dumps({'account_id': default_account.id}),
+            content_type='application/json')
+        assert resp.status_code == 409
