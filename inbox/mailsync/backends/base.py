@@ -1,12 +1,10 @@
-from gevent import Greenlet, sleep, GreenletExit, event
+from gevent import Greenlet, GreenletExit, event
 
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.util.debug import bind_context
 from inbox.util.concurrency import retry_with_logging
-from inbox.util.itert import partition
 from inbox.models.session import session_scope
-from inbox.heartbeat.status import clear_heartbeat_status
 
 THROTTLE_COUNT = 200
 THROTTLE_WAIT = 60
