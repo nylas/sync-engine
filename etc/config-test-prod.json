@@ -2,6 +2,7 @@
 "DATABASE_HOSTS": [
     {
         "HOSTNAME": "localhost",
+        "ZONE": "testzone",
         "PORT": 3306,
         "SHARDS": [
             {
