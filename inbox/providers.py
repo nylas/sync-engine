@@ -252,6 +252,7 @@ get_default_providers = lambda: {
             "savills-studley.com",
             "clearpoolgroup.com",
             "stsci.edu",
+            "kms-technology.com",
         ],
         "mx_servers": [
             # Office365
