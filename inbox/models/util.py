@@ -91,6 +91,9 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
     # so this is okay.
     engine = engine_manager.get_for_id(namespace_id)
 
+    # Disable foreign key checks
+    engine.execute("SET @@foreign_key_checks = 0;")
+
     # Chunk delete for tables that might have a large concurrent write volume
     # to prevent those transactions from blocking.
     # NOTE: ImapFolderInfo does not fall into this category but we include it
@@ -151,6 +154,9 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
         if dry_run is False:
             db_session.delete(account)
             db_session.commit()
+
+    # Enable foreign key checks
+    engine.execute("SET @@foreign_key_checks = 1;")
 
 
 def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):

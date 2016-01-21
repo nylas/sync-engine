@@ -30,7 +30,8 @@ from inbox.heartbeat.status import clear_heartbeat_status
 @click.command()
 @click.argument('account_id', type=int)
 @click.option('--dry-run', is_flag=True)
-def delete_account_data(account_id, dry_run):
+@click.option('--yes', is_flag=True)
+def delete_account_data(account_id, dry_run, yes):
     with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
 
@@ -46,15 +47,16 @@ def delete_account_data(account_id, dry_run):
                   'Will NOT delete, goodbye.'.format(account_id)
             return -1
 
-    question = 'Are you sure you want to delete all data for account with '\
-               'id: {}, email_address: {} and namespace_id: {}? [yes / no]'.\
-               format(account_id, email_address, namespace_id)
+    if not yes:
+        question = 'Are you sure you want to delete all data for account with '\
+                   'id: {}, email_address: {} and namespace_id: {}? [yes / no]'.\
+                   format(account_id, email_address, namespace_id)
 
-    answer = raw_input(question).strip().lower()
+        answer = raw_input(question).strip().lower()
 
-    if answer != 'yes':
-        print 'Will NOT delete, goodbye.'
-        return 0
+        if answer != 'yes':
+            print 'Will NOT delete, goodbye.'
+            return 0
 
     print 'Deleting account with id: {}...'.format(account_id)
     start = time.time()
