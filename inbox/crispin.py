@@ -721,7 +721,7 @@ class CrispinClient(object):
     def condstore_changed_flags(self, modseq):
         data = self.conn.fetch('1:*', ['FLAGS'],
                                modifiers=['CHANGEDSINCE {}'.format(modseq)])
-        return {uid: Flags(ret['FLAGS'], ret['MODSEQ'][0])
+        return {uid: Flags(ret['FLAGS'], ret['MODSEQ'][0] if 'MODSEQ' in ret else None)
                 for uid, ret in data.items()}
 
 
@@ -773,7 +773,7 @@ class GmailCrispinClient(CrispinClient):
         uid_set = set(uids)
         return {uid: GmailFlags(ret['FLAGS'],
                                 self._decode_labels(ret['X-GM-LABELS']),
-                                ret['MODSEQ'][0])
+                                ret['MODSEQ'][0] if 'MODSEQ' in ret else None)
                 for uid, ret in data.items() if uid in uid_set}
 
     def condstore_changed_flags(self, modseq):

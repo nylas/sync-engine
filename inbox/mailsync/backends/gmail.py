@@ -29,12 +29,14 @@ from inbox.util.itert import chunk
 from inbox.util.debug import bind_context
 
 from nylas.logging import get_logger
+from gevent.lock import Semaphore
 from inbox.models import Message, Folder, Namespace, Account, Label, Category
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
+from inbox.mailsync.gc import LabelRenameHandler
 from inbox.mailsync.backends.base import THROTTLE_COUNT, THROTTLE_WAIT
 log = get_logger()
 
@@ -52,6 +54,71 @@ class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, *args, **kwargs):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
+
+        # We start a label refresh whenever we find a new labels
+        # However, this is a pretty expensive operation, so we
+        # use a semaphore to make sure we're not running multiple
+        # LabelRenameHandlers for a single account.
+        # This is a conservative choice which should be okay most
+        # of the time.
+        # We could have used something like a table to not start
+        # a LabelRenameHandler for a label when another one is
+        # already running, but in some cases it gives us better consistency
+        # (e.g: I have a label A -> I rename to B, then to C but add some
+        #       labels back into A).
+        # This is unlikely but worth getting right.
+        # - karim
+        self.label_rename_semaphore = Semaphore(value=1)
+
+    def handle_raw_folder_change(self, db_session, account, raw_folder):
+        folder = db_session.query(Folder).filter(
+            Folder.account_id == account.id,
+            Folder.canonical_name == raw_folder.role).first()
+        if folder:
+            if folder.name != raw_folder.display_name:
+                log.info('Folder name changed on remote',
+                         account_id=self.account_id,
+                         role=raw_folder.role,
+                         new_name=raw_folder.display_name,
+                         name=folder.name)
+                folder.name = raw_folder.display_name
+
+            if folder.category:
+                if folder.category.display_name != \
+                        raw_folder.display_name:
+                    folder.category.display_name = raw_folder.display_name  # noqa
+            else:
+                log.info('Creating category for folder',
+                         account_id=self.account_id,
+                         folder_name=folder.name)
+                folder.category = Category.find_or_create(
+                    db_session, namespace_id=account.namespace.id,
+                    name=raw_folder.role,
+                    display_name=raw_folder.display_name,
+                    type_='folder')
+        else:
+            Folder.find_or_create(db_session, account,
+                                  raw_folder.display_name,
+                                  raw_folder.role)
+
+    def set_sync_should_run_bit(self, account):
+        # Ensure sync_should_run is True for the folders we want to sync (for
+        # Gmail, that's just all folders, since we created them above if
+        # they didn't exist.)
+        for folder in account.folders:
+            if folder.imapsyncstatus:
+                folder.imapsyncstatus.sync_should_run = True
+
+    def mark_deleted_labels(self, db_session, deleted_labels):
+        # Go through the labels which have been "deleted" (i.e: they don't
+        # show up when running LIST) and mark them as such.
+        # We can't delete labels directly because Gmail allows users to hide
+        # folders --- we need to check that there's no messages still
+        # associated with the label.
+        for deleted_label in deleted_labels:
+            deleted_label.deleted_at = datetime.now()
+            cat = deleted_label.category
+            cat.deleted_at = datetime.now()
 
     def save_folder_names(self, db_session, raw_folders):
         """
@@ -74,11 +141,16 @@ class GmailSyncMonitor(ImapSyncMonitor):
         """
         account = db_session.query(Account).get(self.account_id)
 
+        current_labels = set()
         old_labels = {label for label in db_session.query(Label).filter(
             Label.account_id == self.account_id,
             Label.deleted_at == None)}  # noqa
 
-        new_labels = set()
+        # Is it the first time we've been syncing folders?
+        # It's important to know this because we don't want to
+        # be refreshing the labels for every message at the very
+        # beginning of the initial sync.
+        first_time_syncing_folders = len(old_labels) == 0
 
         # Create new labels, folders
         for raw_folder in raw_folders:
@@ -87,11 +159,12 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 # (we set Message.is_starred from the '\\Flagged' flag)
                 continue
 
+            if raw_folder.role in ('all', 'spam', 'trash'):
+                self.handle_raw_folder_change(db_session, account, raw_folder)
+
             label = Label.find_or_create(db_session, account,
                                          raw_folder.display_name,
                                          raw_folder.role)
-            new_labels.add(label)
-
             if label.deleted_at is not None:
                 # This is a label which was previously marked as deleted
                 # but which mysteriously reappeared. Unmark it.
@@ -100,54 +173,29 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 label.deleted_at = None
                 label.category.deleted_at = None
 
-            if raw_folder.role in ('all', 'spam', 'trash'):
-                folder = db_session.query(Folder).filter(
-                    Folder.account_id == account.id,
-                    Folder.canonical_name == raw_folder.role).first()
-                if folder:
-                    if folder.name != raw_folder.display_name:
-                        log.info('Folder name changed on remote',
-                                 account_id=self.account_id,
-                                 role=raw_folder.role,
-                                 new_name=raw_folder.display_name,
-                                 name=folder.name)
-                        folder.name = raw_folder.display_name
+            current_labels.add(label)
 
-                    if folder.category:
-                        if folder.category.display_name != \
-                                raw_folder.display_name:
-                            folder.category.display_name = raw_folder.display_name  # noqa
-                    else:
-                        log.info('Creating category for folder',
-                                 account_id=self.account_id,
-                                 folder_name=folder.name)
-                        folder.category = Category.find_or_create(
-                            db_session, namespace_id=account.namespace.id,
-                            name=raw_folder.role,
-                            display_name=raw_folder.display_name,
-                            type_='folder')
-                else:
-                    Folder.find_or_create(db_session, account,
-                                          raw_folder.display_name,
-                                          raw_folder.role)
+        new_labels = current_labels - old_labels
+        db_session.commit()
 
-        # Ensure sync_should_run is True for the folders we want to sync (for
-        # Gmail, that's just all folders, since we created them above if
-        # they didn't exist.)
-        for folder in account.folders:
-            if folder.imapsyncstatus:
-                folder.imapsyncstatus.sync_should_run = True
+        if not first_time_syncing_folders:
+            # Try to see if a label has been renamed.
+            for label in new_labels:
+                db_session.refresh(label)
+                db_session.expunge(label)
 
-        # Go through the labels which have been "deleted" (i.e: they don't
-        # show up when running LIST) and mark them as such.
-        # We can't delete labels directly because Gmail allows users to hide
-        # folders --- we need to check that there's no messages still
-        # associated with the label.
-        deleted_labels = old_labels - new_labels
-        for deleted_label in deleted_labels:
-            deleted_label.deleted_at = datetime.now()
-            cat = deleted_label.category
-            cat.deleted_at = datetime.now()
+                rename_handler = LabelRenameHandler(
+                     account_id=self.account_id,
+                     namespace_id=self.namespace_id,
+                     label_name=label.name,
+                     semaphore=self.label_rename_semaphore)
+
+                rename_handler.start()
+
+        self.set_sync_should_run_bit(account)
+
+        deleted_labels = old_labels - current_labels
+        self.mark_deleted_labels(db_session, deleted_labels)
 
         db_session.commit()
 
