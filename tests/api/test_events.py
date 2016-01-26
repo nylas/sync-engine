@@ -1,8 +1,7 @@
 import json
-import pytest
 
 from inbox.sqlalchemy_ext.util import generate_public_id
-from inbox.models import Event
+from inbox.models import Event, Calendar
 from tests.util.base import db, calendar, add_fake_event
 from tests.api.base import api_client
 
@@ -212,44 +211,41 @@ def test_api_update_read_only(db, api_client, calendar, default_namespace):
     assert e_put_resp.status_code != 200
 
 
-# TODO(emfree) setup expected test data
-@pytest.mark.xfail
-def test_api_filter(db, api_client, calendar):
-    # Events in database:
-    # description: data1
-    # read_only: True
-    # namespace_id: 3q4vzllntcsea53vxz4erbnxr
-    # object: event
-    # when: {u'start_time': 1, u'object': u'timespan', u'end_time':
-    #        2678401}
-    # participants: []
-    # location: InboxHeadquarters
-    # calendar_id: 167wjlgf89za2cdhy17p9bsu8
-    # id: 6n5fi3kwousrq3m6wl89tidx9
-    # title: desc1
+def test_api_filter(db, api_client, calendar, default_namespace):
+    cal = Calendar(namespace_id=default_namespace.id,
+                   uid='uid',
+                   provider_name='Nylas',
+                   name='Climbing Schedule')
+    db.session.add(cal)
+    db.session.commit()
+    cal_id = cal.public_id
 
-    # description: data2
-    # read_only: True
-    # namespace_id: 3q4vzllntcsea53vxz4erbnxr
-    # object: event
-    # when: {u'object': u'time', u'time': 1}
-    # participants: []
-    # location: InboxHeadquarters
-    # calendar_id: 167wjlgf89za2bz6fytbzn0zk
-    # id: crezzdqaizqv2gt7uomkzu9l6
-    # title: desc2
+    e1_data = {'calendar_id': cal_id,
+               'title': 'Normal Party',
+               'description': 'Everyone Eats Cake',
+               'when': {'time': 1},
+               'location': 'Normal Town'}
+    post_1 = api_client.post_data('/events', e1_data)
+    assert post_1.status_code == 200
 
-    # description: data3
-    # read_only: False
-    # namespace_id: 3q4vzllntcsea53vxz4erbnxr
-    # object: event
-    # when: {u'start_time': 2678401, u'object': u'timespan',
-    #        u'end_time': 5097601}
-    # participants: []
-    # location: InboxHeadquarters
-    # calendar_id: 167wjlgf89za2cdhy17p9bsu8
-    # id: crezzdqaizqv2gk4tabx3ddze
-    # title: desc5
+    e2_data = {'calendar_id': cal_id,
+               'title': 'Hipster Party',
+               'description': 'Everyone Eats Kale',
+               'when': {'time': 3},
+               'location': 'Hipster Town'}
+    post_2 = api_client.post_data('/events', e2_data)
+    assert post_2.status_code == 200
+
+    # This event exists to test for unicode handling.
+    e3_data = {'calendar_id': cal_id,
+               'title': u'Unicode Party \U0001F389',
+               'description': u'Everyone Eats Unicode Tests \u2713',
+               'when': {'start_time': 2678401,
+                        'end_time': 5097601},
+               'location': u'Unicode Castle \U0001F3F0'}
+    event_3 = api_client.post_data('/events', e3_data)
+    assert event_3.status_code == 200
+    e3_id = json.loads(event_3.data)['id']
 
     events = api_client.get_data('/events?offset=%s' % '1')
     assert len(events) == 2
@@ -257,41 +253,58 @@ def test_api_filter(db, api_client, calendar):
     events = api_client.get_data('/events?limit=%s' % '1')
     assert len(events) == 1
 
-    events = api_client.get_data('/events?description=%s' % 'data')
+    # Test description queries: all, some, unicode, none
+    events = api_client.get_data('/events?description=%s' % 'Everyone Eats')
     assert len(events) == 3
 
-    events = api_client.get_data('/events?description=%s' % 'data1')
+    events = api_client.get_data('/events?description=%s' % 'Cake')
+    assert len(events) == 1
+
+    events = api_client.get_data('/events?description=%s' % u'\u2713')
     assert len(events) == 1
 
     events = api_client.get_data('/events?description=%s' % 'bad')
     assert len(events) == 0
 
-    events = api_client.get_data('/events?title=%s' % 'desc')
+    # Test title queries: all, some, unicode, none
+    events = api_client.get_data('/events?title=%s' % 'Party')
     assert len(events) == 3
 
-    events = api_client.get_data('/events?title=%s' % 'desc5')
+    events = api_client.get_data('/events?title=%s' % 'Hipster')
+    assert len(events) == 1
+
+    events = api_client.get_data('/events?title=%s' % u'\U0001F389')
     assert len(events) == 1
 
     events = api_client.get_data('/events?title=%s' % 'bad')
     assert len(events) == 0
 
-    events = api_client.get_data('/events?location=%s' % 'Inbox')
+    # Test location queries: all, some, unicode, none
+    events = api_client.get_data('/events?location=%s' % 'o')
     assert len(events) == 3
+
+    events = api_client.get_data('/events?location=%s' % 'Town')
+    assert len(events) == 2
+
+    events = api_client.get_data('/events?location=%s' % u'\U0001F3F0')
+    assert len(events) == 1
 
     events = api_client.get_data('/events?location=%s' % 'bad')
     assert len(events) == 0
 
-    _filter = 'event_id=%s' % 'crezzdqaizqv2gk4tabx3ddze'
+    # Test ID queries
+    _filter = 'event_id={}'.format(e3_id)
     events = api_client.get_data('/events?' + _filter)
     assert len(events) == 1
 
+    # Test time queries
     _filter = 'starts_before=2'
     events = api_client.get_data('/events?' + _filter)
-    assert len(events) == 2
+    assert len(events) == 1
 
     _filter = 'starts_after=2'
     events = api_client.get_data('/events?' + _filter)
-    assert len(events) == 1
+    assert len(events) == 2
 
     _filter = 'ends_before=2700000'
     events = api_client.get_data('/events?' + _filter)
@@ -301,9 +314,10 @@ def test_api_filter(db, api_client, calendar):
     events = api_client.get_data('/events?' + _filter)
     assert len(events) == 1
 
-    _filter = 'calendar_id=167wjlgf89za2cdhy17p9bsu8'
+    # Test calendar queries
+    _filter = 'calendar_id={}'.format(cal_id)
     events = api_client.get_data('/events?' + _filter)
-    assert len(events) == 2
+    assert len(events) == 3
 
     _filter = 'calendar_id=0000000000000000000000000'
     events = api_client.get_data('/events?' + _filter)

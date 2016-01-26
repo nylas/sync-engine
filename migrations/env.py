@@ -72,6 +72,8 @@ def run_migrations_online():
 
     engine = engine_manager.engines[shard_id]
     connection = engine.connect()
+    # Set sane lock wait timeout value.
+    connection.execute('SET @@lock_wait_timeout=15')
     context.configure(
         connection=connection,
         target_metadata=target_metadata

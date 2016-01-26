@@ -386,14 +386,14 @@ def filter_event_query(query, event_cls, namespace_id, event_public_id,
                    Calendar.namespace_id == namespace_id)
 
     if title is not None:
-        query = query.filter(event_cls.title.like('%{}%'.format(title)))
+        query = query.filter(event_cls.title.like(u'%{}%'.format(title)))
 
     if description is not None:
-        query = query.filter(event_cls.description.like('%{}%'
+        query = query.filter(event_cls.description.like(u'%{}%'
                                                         .format(description)))
 
     if location is not None:
-        query = query.filter(event_cls.location.like('%{}%'.format(location)))
+        query = query.filter(event_cls.location.like(u'%{}%'.format(location)))
 
     if busy is not None:
         query = query.filter(event_cls.busy == busy)
