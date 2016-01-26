@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from inbox.models.thread import Thread
+from inbox.models.message import Message
 from sqlalchemy import desc
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import load_only, outerjoin
 from inbox.util.misc import cleanup_subject
 
 
@@ -15,13 +16,23 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
     # to a message always has a similar subject. This is only
     # right 95% of the time.
     clean_subject = cleanup_subject(message.subject)
+
+    # this creates a "virtual table" used in the join below,
+    # containing only the messages we care about
+    sub = db_session.query(Message). \
+             filter(Message.namespace_id == namespace_id). \
+             options(load_only('thread_id', 'from_addr',
+                               'to_addr', 'bcc_addr', 'cc_addr')). \
+             subquery()
+
+    # query for all the possible threads this message could go into,
+    # joining on the subquery above to populate the threads' message field
     threads = db_session.query(Thread). \
+        select_from(outerjoin(Thread, sub, Thread.id == sub.c.thread_id)). \
         filter(Thread.namespace_id == namespace_id,
                Thread._cleaned_subject == clean_subject). \
         order_by(desc(Thread.id)). \
-        options(load_only('id', 'discriminator'),
-                joinedload(Thread.messages).load_only(
-                    'from_addr', 'to_addr', 'bcc_addr', 'cc_addr'))
+        options(load_only('id', 'discriminator'))
 
     for thread in threads:
         for match in thread.messages:

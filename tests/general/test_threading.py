@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
+import datetime
+import random
+import string
+from inbox.models.message import Message
 from inbox.util.threading import fetch_corresponding_thread
 from inbox.util.misc import cleanup_subject
 from tests.util.base import (add_fake_message, add_fake_thread,
@@ -69,6 +73,33 @@ def test_self_send(db, default_namespace):
     matched_thread = fetch_corresponding_thread(db.session,
                                                 default_namespace.id, msg2)
     assert matched_thread is first_thread, "Should match on self-send"
+
+
+def test_threading_performance(db, default_namespace):
+    # Add a bajillion (+/- 10%) messages,
+    # test how long it takes to determine threads for all of them
+    msgs = []
+    subject = ''.join([random.choice(string.letters) for _ in range(20)])
+    for _ in range(10000):
+        msgs.append(add_fake_message(db.session, default_namespace.id, thread=None,
+                                     subject=subject,
+                                     from_addr=[('Some random dude',
+                                                 'random@pobox.com')],
+                                     to_addr=[('Karim Hamidou', 'karim@nilas.com')]))
+
+    # a commit runs inside add_fake_message, so this is probably unnecessary
+    db.session.commit()
+
+    start = datetime.datetime.now()
+    for msg in msgs:
+        fetch_corresponding_thread(db.session, default_namespace.id, msg)
+
+    time = datetime.datetime.now() - start
+
+    assert time < datetime.timedelta(seconds=60), "Shouldn't take over 60s to thread messages"
+
+    # print("")
+    # print(time)
 
 
 if __name__ == '__main__':
