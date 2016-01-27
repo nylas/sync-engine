@@ -2,7 +2,7 @@ import time
 import math
 from collections import OrderedDict
 
-from inbox.models import Account, Namespace
+from inbox.models import Account
 from inbox.models.session import session_scope
 from nylas.logging.sentry import log_uncaught_errors
 from inbox.heartbeat.status import clear_heartbeat_status
@@ -67,7 +67,7 @@ def transaction_objects():
 
     """
     from inbox.models import (Calendar, Contact, Message, Event, Block,
-                              Category, Thread, Account)
+                              Category, Thread)
 
     return {
         'calendar': Calendar,
