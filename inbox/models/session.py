@@ -163,8 +163,10 @@ def session_scope(id_, versioned=True):
 @contextmanager
 def session_scope_by_shard_id(shard_id, versioned=True):
     key = shard_id << 48
+
     with session_scope(key, versioned) as db_session:
         yield db_session
+
 
 # GLOBAL (cross-shard) queries. USE WITH CAUTION.
 

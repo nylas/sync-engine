@@ -223,9 +223,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
     def mark_deleted(self):
         """
-        Soft-delete the account.
+        Mark account for deletion
         """
         self.disable_sync('account deleted')
+        self.sync_state = 'stopped'
 
     def sync_stopped(self, reason=None):
         """

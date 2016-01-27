@@ -50,6 +50,55 @@ def add_completely_fake_account(db, email='test@nylas.com'):
     return fake_account
 
 
+def test_bulk_namespace_deletion(db):
+    from inbox.models import Account
+    from inbox.models.util import delete_marked_accounts
+
+    old_account_count = len(db.session.query(Account.id).all())
+
+    account_1 = add_completely_fake_account(db)
+    account_1_id = account_1.id
+
+    account_2 = add_completely_fake_account(db, "test2@nylas.com")
+    account_2_id = account_2.id
+
+    account_3 = add_completely_fake_account(db, "test3@nylas.com")
+    account_3_id = account_3.id
+
+    account_4 = add_completely_fake_account(db, "test4@nylas.com")
+    account_4_id = account_4.id
+
+    add_completely_fake_account(db, "test5@nylas.com")
+
+    # Ensure all of the accounts have been created successfully
+    assert len(db.session.query(Account.id).all()) - old_account_count == 5
+
+    # run delete_marked_accounts with no accounts marked as deleted
+    delete_marked_accounts(0)
+    assert len(db.session.query(Account.id).all()) - old_account_count == 5
+
+    account_1.mark_deleted()
+    db.session.commit()
+    delete_marked_accounts(0)
+
+    alive_accounts = db.session.query(Account.id).all()
+    assert len(alive_accounts) - old_account_count == 4
+    assert account_1_id not in alive_accounts
+
+    account_2.mark_deleted()
+    account_3.mark_deleted()
+    account_4.mark_deleted()
+    db.session.commit()
+
+    delete_marked_accounts(0)
+
+    alive_accounts = db.session.query(Account.id).all()
+    assert len(alive_accounts) - old_account_count == 1
+    assert account_4_id not in alive_accounts
+    assert account_3_id not in alive_accounts
+    assert account_2_id not in alive_accounts
+
+
 def test_namespace_deletion(db, default_account):
     from inbox.models import (Account, Thread, Message, Block,
                               Contact, Event, Transaction)

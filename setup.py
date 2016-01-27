@@ -86,7 +86,8 @@ setup(
              'bin/contact-search-delete-index',
              'bin/update-sync-host-format',
              'bin/populate-sync-queue',
-             'bin/backpopulate-sync-assignments'
+             'bin/backpopulate-sync-assignments',
+             'bin/delete-marked-accounts'
              ],
 
     # See:

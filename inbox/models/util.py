@@ -2,7 +2,17 @@ import time
 import math
 from collections import OrderedDict
 
+from inbox.models import Account
+from inbox.models.session import session_scope
+from nylas.logging.sentry import log_uncaught_errors
+from inbox.heartbeat.status import clear_heartbeat_status
+from inbox.models.session import session_scope_by_shard_id
+
+from nylas.logging import get_logger
+
 CHUNK_SIZE = 1000
+
+log = get_logger()
 
 
 def reconcile_message(new_message, session):
@@ -57,7 +67,7 @@ def transaction_objects():
 
     """
     from inbox.models import (Calendar, Contact, Message, Event, Block,
-                              Category, Thread, Account)
+                              Category, Thread)
 
     return {
         'calendar': Calendar,
@@ -73,6 +83,51 @@ def transaction_objects():
     }
 
 
+def delete_marked_accounts(shard_id, dry_run=False):
+    start = time.time()
+    deleted_count = 0
+    ids_to_delete = []
+    with session_scope_by_shard_id(shard_id) as db_session:
+        ids_to_delete = [(acc.id, acc.namespace.id) for acc
+                         in db_session.query(Account) if acc.is_deleted]
+
+    for account_id, namespace_id in ids_to_delete:
+        try:
+            with session_scope(namespace_id) as db_session:
+                account = db_session.query(Account).get(account_id)
+                if not account:
+                    log.critical('Account with does not exist',
+                                 account_id=account_id)
+                    continue
+
+                if account.sync_should_run or not account.is_deleted:
+                    log.warn('Account NOT marked for deletion. '
+                             'Will not delete', account_id=account_id)
+                    continue
+
+            log.info('Deleting account', account_id=account_id)
+
+            # Delete data in database
+            try:
+                log.info('Deleting database data', account_id=account_id)
+                delete_namespace(account_id, namespace_id, dry_run=dry_run)
+            except Exception as e:
+                log.critical('Database data deletion failed', error=e,
+                             account_id=account_id)
+                continue
+
+            # Delete liveness data
+            log.debug('Deleting liveness data', account_id=account_id)
+            clear_heartbeat_status(account_id)
+            deleted_count += 1
+        except Exception:
+            log_uncaught_errors(log, account_id=account_id)
+
+    end = time.time()
+    log.info('All data deleted successfully', shard_id=shard_id,
+             time=end - start, count=deleted_count)
+
+
 def delete_namespace(account_id, namespace_id, dry_run=False):
     """
     Delete all the data associated with a namespace from the database.
@@ -82,8 +137,6 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
     It prints to stdout.
 
     """
-    from inbox.models.session import session_scope
-    from inbox.models import Account
     from inbox.ignition import engine_manager
 
     # Bypass the ORM for performant bulk deletion;
