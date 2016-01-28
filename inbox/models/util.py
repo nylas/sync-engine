@@ -188,17 +188,16 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
     filters['namespace'] = ('id', namespace_id)
 
     for table, (column, id_) in filters.iteritems():
-        print 'Performing bulk deletion for table: {}'.format(table)
+        log.info('Performing bulk deletion', table=table)
         start = time.time()
 
         if not dry_run:
             engine.execute(query.format(table, column, id_))
         else:
-            print query.format(table, column, id_)
+            log.debug(query.format(table, column, id_))
 
         end = time.time()
-        print 'Completed bulk deletion for table: {}, time taken: {}'.\
-            format(table, end - start)
+        log.info('Completed bulk deletion', table=table, time=end - start)
 
     # Delete the account object manually to get rid of the various objects
     # associated with it (e.g: secrets, tokens, etc.)
@@ -219,22 +218,22 @@ def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
         scalar()
 
     if count == 0:
-        print 'Completed batch deletion for table: {}'.format(table)
+        log.info('Completed batch deletion', table=table)
         return
 
     batches = int(math.ceil(float(count) / CHUNK_SIZE))
 
-    print 'Starting batch deletion for table: {}, rows: {} number of batches: {}'.\
-          format(table, count, batches)
+    log.info('Starting batch deletion', table=table, count=count,
+             batches=batches)
     start = time.time()
 
     query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
 
     for i in range(0, batches):
-        print query
         if dry_run is False:
             engine.execute(query)
+        else:
+            log.debug(query)
 
     end = time.time()
-    print 'Completed batch deletion for table: {}, time taken: {}'.\
-        format(table, end - start)
+    log.info('Completed batch deletion', time=end - start, table=table)
