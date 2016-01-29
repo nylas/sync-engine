@@ -116,10 +116,11 @@ def _transform_ssl_error(strerror):
 
 class SMTPConnection(object):
 
-    def __init__(self, account_id, email_address, auth_type,
-                 auth_token, smtp_endpoint, log):
+    def __init__(self, account_id, email_address, smtp_username,
+                 auth_type, auth_token, smtp_endpoint, log):
         self.account_id = account_id
         self.email_address = email_address
+        self.smtp_username = smtp_username
         self.auth_type = auth_type
         self.auth_token = auth_token
         self.smtp_endpoint = smtp_endpoint
@@ -218,7 +219,7 @@ class SMTPConnection(object):
         c = self.connection
 
         try:
-            c.login(self.email_address, self.auth_token)
+            c.login(self.smtp_username, self.auth_token)
         except smtplib.SMTPAuthenticationError as e:
             self.log.error('SMTP login refused', exc=e)
             raise SendMailException(
@@ -252,6 +253,11 @@ class SMTPClient(object):
         self.account_id = account.id
         self.log = get_logger()
         self.log.bind(account_id=account.id)
+        try:
+            self.smtp_username = account.smtp_username
+        except AttributeError:
+            # non-generic accounts have no smtp username
+            self.smtp_username = account.email_address
         self.email_address = account.email_address
         self.provider_name = account.provider
         self.sender_name = account.name
@@ -267,7 +273,11 @@ class SMTPClient(object):
                     'Could not authenticate with the SMTP server.', 403)
         else:
             assert self.auth_type == 'password'
-            self.auth_token = account.password
+            # some accounts have smtp-specific passwords
+            try:
+                self.auth_token = account.smtp_password
+            except AttributeError:
+                self.auth_token = account.password
 
     def _send(self, recipients, msg):
         """Send the email message. Retries up to SMTP_MAX_RETRIES times if the
@@ -413,6 +423,7 @@ class SMTPClient(object):
     def _get_connection(self):
         smtp_connection = SMTPConnection(account_id=self.account_id,
                                          email_address=self.email_address,
+                                         smtp_username=self.smtp_username,
                                          auth_type=self.auth_type,
                                          auth_token=self.auth_token,
                                          smtp_endpoint=self.smtp_endpoint,

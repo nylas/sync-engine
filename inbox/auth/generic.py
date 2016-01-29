@@ -36,13 +36,23 @@ class GenericAuthHandler(AuthHandler):
         # (redwood auth versus get_account())
         namespace = Namespace()
         account = GenericAccount(namespace=namespace)
+
+        # Verification for legacy auth account creation attempts.
+        for username in ['imap_username', 'smtp_username']:
+            if username not in response:
+                response[username] = email_address
+        for password in ['imap_password', 'smtp_password']:
+            if password not in response:
+                response[password] = response['password']
+
         return self.update_account(account, response)
 
     def update_account(self, account, response):
         account.email_address = response['email']
-        if response.get('name'):
-            account.name = response['name']
-        account.password = response['password']
+        for attribute in ['name', 'imap_username', 'imap_password',
+                          'smtp_username', 'smtp_password']:
+            if response.get(attribute):
+                setattr(account, attribute, response[attribute])
         account.date = datetime.datetime.utcnow()
         account.provider = self.provider_name
         if self.provider_name == 'custom':
@@ -77,9 +87,8 @@ class GenericAuthHandler(AuthHandler):
                       port=port,
                       error=exc)
             raise
-
         try:
-            conn.login(account.email_address, account.password)
+            conn.login(account.imap_username, account.imap_password)
         except IMAPClient.Error as exc:
             if _auth_is_invalid(exc):
                 log.error('IMAP login failed',
@@ -178,22 +187,32 @@ class GenericAuthHandler(AuthHandler):
         return True
 
     def interactive_auth(self, email_address):
-        password_message = 'Password for {0} (hidden): '
-        pw = ''
-        while not pw:
-            pw = getpass.getpass(password_message.format(email_address))
 
-        response = dict(email=email_address, password=pw)
+        response = dict(email=email_address)
 
         if self.provider_name == 'custom':
             imap_server_host = raw_input('IMAP server host: ').strip()
             imap_server_port = raw_input('IMAP server port: ').strip() or 993
+            imap_um = 'IMAP username (empty for same as email address): '
+            imap_user = raw_input(imap_um).strip() or email_address
+            imap_pwm = 'IMAP password for {0}: '
+            imap_pw = getpass.getpass(imap_pwm.format(email_address))
+
             smtp_server_host = raw_input('SMTP server host: ').strip()
             smtp_server_port = raw_input('SMTP server port: ').strip() or 587
+            smtp_um = 'SMTP username (empty for same as email address): '
+            smtp_user = raw_input(smtp_um).strip() or email_address
+            smtp_pwm = 'SMTP password for {0} (empty for same as IMAP): '
+            smtp_pw = getpass.getpass(smtp_pwm.format(email_address)) or imap_pw
+
             response.update(imap_server_host=imap_server_host,
                             imap_server_port=imap_server_port,
+                            imap_username=imap_user,
+                            imap_password=imap_pw,
                             smtp_server_host=smtp_server_host,
-                            smtp_server_port=smtp_server_port)
+                            smtp_server_port=smtp_server_port,
+                            smtp_username=smtp_user,
+                            smtp_password=smtp_pw)
 
         return response
 
