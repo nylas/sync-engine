@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import re
+import click
+from inbox.models.backends.gmail import GmailAccount
+from inbox.models.label import Label
+from inbox.models.session import session_scope, global_session_scope
+
+@click.command()
+@click.option('--min-id', type=int, default=None)
+@click.option('--max-id', type=int, default=None)
+def main(min_id, max_id):
+    gmail_accounts = []
+    affected_accounts = []
+
+    with global_session_scope() as db_session:
+        gmail_accounts = db_session.query(GmailAccount).filter(
+            GmailAccount.sync_state == 'running')
+
+        if min_id is not None:
+            gmail_accounts = gmail_accounts.filter(
+                GmailAccount.id > min_id)
+
+        if max_id is not None:
+            gmail_accounts = gmail_accounts.filter(
+                GmailAccount.id <= max_id)
+
+        gmail_accounts = gmail_accounts.all()
+        db_session.expunge_all()
+
+    for account in gmail_accounts:
+        with session_scope(account.id) as db_session:
+            badly_encoded_labels = False
+            affected_labels = db_session.query(Label).filter(
+                Label.account_id == account.id, Label.name.like('%&%-%'))
+
+            for label in affected_labels:
+                if re.match('.*&[a-zA-Z0-9]*\-', label.name):
+                    print label.name, label.id
+                    badly_encoded_labels = True
+
+            if badly_encoded_labels:
+                affected_accounts.append(account.id)
+
+    print affected_accounts
+
+if __name__ == '__main__':
+    main()
