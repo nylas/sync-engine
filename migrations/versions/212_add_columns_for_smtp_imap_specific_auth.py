@@ -29,12 +29,12 @@ def upgrade():
     conn.execute(text("ALTER TABLE genericaccount ADD CONSTRAINT smtp_password_id_ifbk FOREIGN KEY "
                       "(`smtp_password_id`) REFERENCES `secret` (`id`)"))
     # Copy appropriate table values.
-    conn.execute(text("UPDATE genericaccount SET genericaccount.imap_username = (SELECT account._canonicalized_address "
+    conn.execute(text("UPDATE genericaccount SET genericaccount.imap_username = (SELECT account._raw_address "
                       "FROM account WHERE genericaccount.id = account.id)"))
-    conn.execute(text("UPDATE genericaccount SET genericaccount.smtp_username = (SELECT account._canonicalized_address "
+    conn.execute(text("UPDATE genericaccount SET genericaccount.smtp_username = (SELECT account._raw_address "
                       "FROM account WHERE genericaccount.id = account.id)"))
     conn.execute(text("UPDATE genericaccount SET imap_password_id = password_id"))
-    conn.execute(text("UPDATE genericaccount SET imap_password_id = password_id"))
+    conn.execute(text("UPDATE genericaccount SET smtp_password_id = password_id"))
 
 
 def downgrade():
