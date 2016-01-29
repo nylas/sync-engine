@@ -21,20 +21,20 @@ def upgrade():
     # Add new columns.
     conn.execute(text("ALTER TABLE genericaccount ADD COLUMN imap_username CHAR(255) DEFAULT NULL"))
     conn.execute(text("ALTER TABLE genericaccount ADD COLUMN smtp_username CHAR(255) DEFAULT NULL"))
-    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN imap_password_id INT(11) DEFAULT NULL"))
-    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN smtp_password_id INT(11) DEFAULT NULL"))
+    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN imap_password_id BIGINT(20)"))
+    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN smtp_password_id BIGINT(20)"))
     # Add ForeignKey constraints.
     conn.execute(text("ALTER TABLE genericaccount ADD CONSTRAINT imap_password_id_ifbk FOREIGN KEY "
                       "(`imap_password_id`) REFERENCES `secret` (`id`)"))
     conn.execute(text("ALTER TABLE genericaccount ADD CONSTRAINT smtp_password_id_ifbk FOREIGN KEY "
                       "(`smtp_password_id`) REFERENCES `secret` (`id`)"))
     # Copy appropriate table values.
-    conn.execute(text("UPDATE TABLE genericaccount SET imap_username = account._canonicalized_address"
-                      "FROM account WHERE genericaccount.id = account.id"))
-    conn.execute(text("UPDATE TABLE genericaccount SET smtp_username = account._canonicalized_address"
-                      "FROM account WHERE genericaccount.id = account.id"))
-    conn.execute(text("UPDATE TABLE genericaccount SET imap_password_id = password_id"))
-    conn.execute(text("UPDATE TABLE genericaccount SET imap_password_id = password_id"))
+    conn.execute(text("UPDATE genericaccount SET genericaccount.imap_username = (SELECT account._canonicalized_address "
+                      "FROM account WHERE genericaccount.id = account.id)"))
+    conn.execute(text("UPDATE genericaccount SET genericaccount.smtp_username = (SELECT account._canonicalized_address "
+                      "FROM account WHERE genericaccount.id = account.id)"))
+    conn.execute(text("UPDATE genericaccount SET imap_password_id = password_id"))
+    conn.execute(text("UPDATE genericaccount SET imap_password_id = password_id"))
 
 
 def downgrade():
