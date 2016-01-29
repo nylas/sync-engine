@@ -87,7 +87,9 @@ setup(
              'bin/update-sync-host-format',
              'bin/populate-sync-queue',
              'bin/backpopulate-sync-assignments',
-             'bin/delete-marked-accounts'
+             'bin/delete-marked-accounts',
+             'bin/detect-utf7-folders',
+             'bin/backfix-utf7-folders',
              ],
 
     # See:
