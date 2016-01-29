@@ -18,7 +18,7 @@ def load_models():
     from inbox.models.search import ContactSearchIndexCursor
     from inbox.models.secret import Secret
     from inbox.models.thread import Thread
-    from inbox.models.transaction import Transaction
+    from inbox.models.transaction import Transaction, AccountTransaction
     from inbox.models.when import When, Time, TimeSpan, Date, DateSpan
     from inbox.models.label import Label
     from inbox.models.category import Category
@@ -28,5 +28,5 @@ def load_models():
                DataProcessingCache, Event, Folder,
                Message, Namespace, ContactSearchIndexCursor, Secret,
                Thread, Transaction, When, Time, TimeSpan, Date, DateSpan,
-               Label, Category, MessageCategory, Metadata]
+               Label, Category, MessageCategory, Metadata, AccountTransaction]
     return exports

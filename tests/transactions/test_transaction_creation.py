@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import desc
 from flanker import mime
 
-from inbox.models import Transaction, Calendar
+from inbox.models import Transaction, AccountTransaction, Calendar
 from inbox.models.mixins import HasRevisions
 from inbox.models.util import transaction_objects
 
@@ -16,6 +16,12 @@ def get_latest_transaction(db_session, object_type, record_id, namespace_id):
         Transaction.namespace_id == namespace_id,
         Transaction.object_type == object_type,
         Transaction.record_id == record_id). \
+        order_by(desc(Transaction.id)).first()
+
+
+def get_latest_transaction_any(db_session, namespace_id):
+    return db_session.query(Transaction).filter(
+        Transaction.namespace_id == namespace_id).\
         order_by(desc(Transaction.id)).first()
 
 
@@ -274,3 +280,64 @@ def test_transaction_objects_mapped_for_all_models(db, default_namespace):
     """
     assert set(HasRevisions.__subclasses__()).issubset(
         transaction_objects().values())
+
+
+def test_accounttransactions(db, default_namespace):
+    account = default_namespace.account
+
+    transaction = get_latest_transaction(db.session, 'account',
+                                         default_namespace.account.id,
+                                         default_namespace.id)
+    assert transaction.command == 'insert'
+    transaction_id = transaction.id
+
+    # Verify an AccountTransaction is created
+    accounttransactions = db.session.query(AccountTransaction).filter(
+        AccountTransaction.namespace_id == default_namespace.id).all()
+    assert len(accounttransactions) == 1
+    accounttransaction = accounttransactions[0]
+    assert accounttransaction.namespace_id == default_namespace.id
+    assert accounttransaction.command == 'insert'
+    assert accounttransaction.object_type == 'account'
+    assert accounttransaction.record_id == default_namespace.account.id
+    accounttransaction_id = accounttransaction.id
+
+    with db.session.no_autoflush:
+        # No Transaction or AccountTransaction records created
+
+        account.last_synced_events = datetime.utcnow()
+        db.session.commit()
+        transaction = get_latest_transaction(db.session, 'account',
+                                             default_namespace.account.id,
+                                             default_namespace.id)
+        assert transaction.id == transaction_id
+        accounttransactions = db.session.query(AccountTransaction).filter(
+            AccountTransaction.namespace_id == default_namespace.id).all()
+        assert len(accounttransactions) == 1
+        assert accounttransactions[0].id == accounttransaction_id
+
+        # Only Transaction record created
+
+        thread = add_fake_thread(db.session, default_namespace.id)
+        transaction = get_latest_transaction(db.session, 'thread', thread.id,
+                                             default_namespace.id)
+        assert transaction.id > transaction_id
+        accounttransactions = db.session.query(AccountTransaction).filter(
+            AccountTransaction.namespace_id == default_namespace.id).all()
+        assert len(accounttransactions) == 1
+        assert accounttransactions[0].id == accounttransaction_id
+
+        # Both Transaction or AccountTransaction records created
+
+        account.sync_state = 'invalid'
+        db.session.commit()
+        transaction = get_latest_transaction(db.session, 'account',
+                                             default_namespace.account.id,
+                                             default_namespace.id)
+        assert transaction.id > transaction_id
+        assert transaction.command == 'update'
+        accounttransactions = db.session.query(AccountTransaction).filter(
+            AccountTransaction.namespace_id == default_namespace.id).all()
+        assert len(accounttransactions) == 2
+        assert accounttransactions[1].id != accounttransaction_id
+        assert accounttransactions[1].command == 'update'

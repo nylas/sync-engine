@@ -27,6 +27,24 @@ Index('namespace_id_created_at', Transaction.namespace_id,
       Transaction.created_at)
 
 
+class AccountTransaction(MailSyncBase, HasPublicID):
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
+                          nullable=False)
+    namespace = relationship(Namespace)
+
+    object_type = Column(String(20), nullable=False)
+    record_id = Column(BigInteger, nullable=False, index=True)
+    object_public_id = Column(String(191), nullable=False, index=True)
+    command = Column(Enum('insert', 'update', 'delete'), nullable=False)
+
+Index('ix_accounttransaction_table_name', Transaction.object_type)
+Index('ix_accounttransaction_command', Transaction.command)
+Index('ix_accounttransaction_object_type_record_id',
+      AccountTransaction.object_type, AccountTransaction.record_id)
+Index('ix_accounttransaction_namespace_id_created_at',
+      AccountTransaction.namespace_id, AccountTransaction.created_at)
+
+
 def is_dirty(session, obj):
     if obj in session.dirty and obj.has_versioned_changes():
         return True
@@ -56,11 +74,24 @@ def create_revisions(session):
 
 def create_revision(obj, session, revision_type):
     assert revision_type in ('insert', 'update', 'delete')
+
+    # Always create a Transaction record -- this maintains a total ordering over
+    # all events for an account.
     revision = Transaction(command=revision_type, record_id=obj.id,
                            object_type=obj.API_OBJECT_NAME,
                            object_public_id=obj.public_id,
                            namespace_id=obj.namespace.id)
     session.add(revision)
+
+    # Additionally, record account-level events in the AccountTransaction --
+    # this is an optimization needed so these sparse events can be still be
+    # retrieved efficiently for webhooks etc.
+    if obj.API_OBJECT_NAME == 'account':
+        revision = AccountTransaction(command=revision_type, record_id=obj.id,
+                                      object_type=obj.API_OBJECT_NAME,
+                                      object_public_id=obj.public_id,
+                                      namespace_id=obj.namespace.id)
+        session.add(revision)
 
 
 def propagate_changes(session):
