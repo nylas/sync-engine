@@ -53,6 +53,12 @@ class GenericAuthHandler(AuthHandler):
                           'smtp_username', 'smtp_password']:
             if response.get(attribute):
                 setattr(account, attribute, response[attribute])
+
+        # shim until the password_id field is gone
+        # TODO[logan]: remove this once changeover is successful
+        if response.get('imap_password'):
+            account.password = response['imap_password']
+
         account.date = datetime.datetime.utcnow()
         account.provider = self.provider_name
         if self.provider_name == 'custom':
@@ -213,6 +219,12 @@ class GenericAuthHandler(AuthHandler):
                             smtp_server_port=smtp_server_port,
                             smtp_username=smtp_user,
                             smtp_password=smtp_pw)
+        else:
+            password_message = 'Password for {0} (hidden): '
+            pw = ''
+            while not pw:
+                pw = getpass.getpass(password_message.format(email_address))
+            response.update(password=pw)
 
         return response
 

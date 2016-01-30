@@ -19,17 +19,27 @@ class GenericAccount(ImapAccount):
     # IMAP Secret
     imap_password_id = Column(ForeignKey(Secret.id),
                               nullable=False)
-    imap_secret = relationship('Secret',
+    # Cascade on delete would break things if one of these
+    # passwords, but not the other, was deleted.
+    imap_secret = relationship('Secret', cascade='save-update, merge, refresh-expire, expunge',
                                single_parent=True, uselist=False,
                                lazy='joined',
                                foreign_keys=[imap_password_id])
     # SMTP Secret
     smtp_password_id = Column(ForeignKey(Secret.id),
                               nullable=False)
-    smtp_secret = relationship('Secret',
+    smtp_secret = relationship('Secret', cascade='save-update, merge, refresh-expire, expunge',
                                single_parent=True, uselist=False,
                                lazy='joined',
                                foreign_keys=[smtp_password_id])
+    # Old Secret
+    # TODO[logan]: delete once IMAP and SMTP secret are in production.
+    password_id = Column(ForeignKey(Secret.id, ondelete='CASCADE'),
+                         nullable=True)
+    old_secret = relationship('Secret', cascade='all, delete-orphan',
+                              single_parent=True, uselist=False,
+                              lazy='joined',
+                              foreign_keys=[password_id])
 
     __mapper_args__ = {'polymorphic_identity': 'genericaccount'}
 
@@ -69,7 +79,6 @@ class GenericAccount(ImapAccount):
     @property
     def smtp_password(self):
         return self.smtp_secret.secret
-        # TODO: what about pre-update accounts with only IMAP passwords?
 
     @smtp_password.setter
     def smtp_password(self, value):
@@ -78,6 +87,20 @@ class GenericAccount(ImapAccount):
             self.smtp_secret = Secret()
         self.smtp_secret.secret = value
         self.smtp_secret.type = 'password'
+
+    # The password property is used for legacy reasons.
+    # TODO[logan]: Remove once changeover to IMAP/SMTP auth is complete.
+    @property
+    def password(self):
+        return self.old_secret.secret
+
+    @password.setter
+    def password(self, value):
+        value = self.valid_password(value)
+        if not self.old_secret:
+            self.old_secret = Secret()
+        self.old_secret.secret = value
+        self.old_secret.type = 'password'
 
     @property
     def category_type(self):
