@@ -15,7 +15,7 @@ import gevent.monkey
 import gevent.pool
 
 from inbox.mailsync.backends.imap import common
-from inbox.crispin import connection_pool
+from inbox.crispin import connection_pool, FolderMissingError
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 
 from nylas.logging import get_logger, configure_logging
@@ -57,7 +57,11 @@ def refresh_label(label_id):
     with connection_pool(account.id).get() as crispin_client:
         for folder in folders:
             log.info('Selecting folder', folder=folder.name)
-            crispin_client.select_folder(folder.name, uidvalidity_cb)
+            try:
+                crispin_client.select_folder(folder.name, uidvalidity_cb)
+            except FolderMissingError:
+                continue
+
             log.info('Getting uids', account_id=account.id, folder=folder.name)
 
             for chnk in chunk(affected_messages, 50):
