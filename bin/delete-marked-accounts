@@ -10,8 +10,10 @@ Includes:
 """
 import time
 import click
+import gevent
 import logging
 
+from inbox.ignition import engine_manager
 from inbox.models.util import delete_marked_accounts
 
 from nylas.logging import get_logger, configure_logging
@@ -21,13 +23,23 @@ log = get_logger()
 
 
 @click.command()
-@click.argument('shard_id', type=int)
 @click.option('--dry-run', is_flag=True)
+def run(dry_run):
+    pool = []
+
+    for key in engine_manager.engines:
+        log.info("Spawning delete process for shard",
+                 shard_id=key)
+        pool.append(gevent.spawn(delete_account_data, key, dry_run))
+
+    gevent.joinall(pool)
+
+
 def delete_account_data(shard_id, dry_run):
     while True:
         delete_marked_accounts(shard_id, dry_run)
-        time.sleep(600)
+        gevent.sleep(600)
 
 
 if __name__ == '__main__':
-    delete_account_data()
+    run()
