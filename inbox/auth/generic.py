@@ -202,23 +202,23 @@ class GenericAuthHandler(AuthHandler):
             imap_um = 'IMAP username (empty for same as email address): '
             imap_user = raw_input(imap_um).strip() or email_address
             imap_pwm = 'IMAP password for {0}: '
-            imap_pw = getpass.getpass(imap_pwm.format(email_address))
+            imap_p = getpass.getpass(imap_pwm.format(email_address))
 
             smtp_server_host = raw_input('SMTP server host: ').strip()
             smtp_server_port = raw_input('SMTP server port: ').strip() or 587
             smtp_um = 'SMTP username (empty for same as email address): '
             smtp_user = raw_input(smtp_um).strip() or email_address
             smtp_pwm = 'SMTP password for {0} (empty for same as IMAP): '
-            smtp_pw = getpass.getpass(smtp_pwm.format(email_address)) or imap_pw
+            smtp_p = getpass.getpass(smtp_pwm.format(email_address)) or imap_p
 
             response.update(imap_server_host=imap_server_host,
                             imap_server_port=imap_server_port,
                             imap_username=imap_user,
-                            imap_password=imap_pw,
+                            imap_password=imap_p,
                             smtp_server_host=smtp_server_host,
                             smtp_server_port=smtp_server_port,
                             smtp_username=smtp_user,
-                            smtp_password=smtp_pw)
+                            smtp_password=smtp_p)
         else:
             password_message = 'Password for {0} (hidden): '
             pw = ''

@@ -21,14 +21,16 @@ class GenericAccount(ImapAccount):
                               nullable=False)
     # Cascade on delete would break things if one of these
     # passwords, but not the other, was deleted.
-    imap_secret = relationship('Secret', cascade='save-update, merge, refresh-expire, expunge',
+    imap_secret = relationship('Secret', cascade='save-update, merge, '
+                                                 'refresh-expire, expunge',
                                single_parent=True, uselist=False,
                                lazy='joined',
                                foreign_keys=[imap_password_id])
     # SMTP Secret
     smtp_password_id = Column(ForeignKey(Secret.id),
                               nullable=False)
-    smtp_secret = relationship('Secret', cascade='save-update, merge, refresh-expire, expunge',
+    smtp_secret = relationship('Secret', cascade='save-update, merge, '
+                                                 'refresh-expire, expunge',
                                single_parent=True, uselist=False,
                                lazy='joined',
                                foreign_keys=[smtp_password_id])
