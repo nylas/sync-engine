@@ -6,15 +6,10 @@ from inbox.models import Message, Folder, Account, Thread
 from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 
-import re
 from sqlalchemy import desc
 from imaplib import IMAP4
 
 PROVIDER = 'imap'
-
-
-def format_key(match):
-    return "{} ".format(match.group(0).strip()[:-1].upper())
 
 
 class IMAPSearchClient(object):
@@ -90,41 +85,34 @@ class IMAPSearchClient(object):
 
     def _search(self, db_session, search_query):
         self._open_crispin_connection(db_session)
-        if ':' not in search_query:
-            try:
-                query = search_query.encode('ascii')
-                criteria = 'TEXT {}'.format(query)
-            except UnicodeEncodeError:
-                criteria = u'TEXT {}'.format(search_query)
-        else:
-            criteria = re.sub('(\w+:[ ]?)', format_key, search_query)
+
+        try:
+            criteria = ['TEXT', search_query.encode('ascii')]
+            charset = None
+        except UnicodeEncodeError:
+            criteria = [u'TEXT', search_query]
+            charset = 'UTF-8'
 
         folders = db_session.query(Folder).filter(
             Folder.account_id == self.account_id).all()
 
         imap_uids = set()
-
         for folder in folders:
-            imap_uids.update(self._search_folder(db_session,
-                                                 folder, criteria))
+            imap_uids.update(self._search_folder(folder,
+                                                 criteria,
+                                                 charset))
         self._close_crispin_connection()
         return imap_uids
 
-    def _search_folder(self, db_session, folder, criteria):
+    def _search_folder(self, folder, criteria, charset):
         self.crispin_client.select_folder(folder.name, uidvalidity_cb)
         try:
-            if isinstance(criteria, unicode):
-                matching_uids = self.crispin_client.conn. \
-                    search(criteria=criteria, charset="UTF-8")
-            else:
-                matching_uids = self.crispin_client.conn. \
-                    search(criteria=criteria)
+            uids = self.crispin_client.conn.search(criteria, charset=charset)
         except IMAP4.error as e:
             self.log.warn('Search error', error=e)
             raise
 
-        self.log.debug('Search found message for folder',
+        self.log.debug('Search found messages for folder',
                        folder_name=folder.name,
-                       matching_uids=len(matching_uids))
-
-        return matching_uids
+                       uids=len(uids))
+        return uids

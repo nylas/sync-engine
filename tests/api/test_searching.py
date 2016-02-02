@@ -4,7 +4,6 @@ import json
 import mock
 import requests
 from pytest import fixture
-from inbox.models import Folder
 from inbox.search.base import get_search_client
 from inbox.search.backends.gmail import GmailSearchClient
 from inbox.search.backends.imap import IMAPSearchClient
@@ -144,21 +143,31 @@ def sorted_imap_messages(db, generic_account, sorted_imap_threads, folder):
     return [message1, message2, message3]
 
 
-class MockConnection(object):
-    def search(self, *args, **kwargs):
-        criteria = kwargs['criteria']
-        assert criteria == 'TEXT blah blah blah'
-        return [2000, 2001, 2002]
+class MockImapConnection(object):
+    def __init__(self):
+        self.search_args = None
+
+    def select_folder(self, name, **_):
+        return {'UIDVALIDITY': 123}
 
     def logout(self):
         pass
 
+    def search(self, criteria, charset=None):
+        self.search_args = (criteria, charset)
+        return [2000, 2001, 2002]
+
+    def assert_search(self, criteria, charset=None):
+        assert self.search_args == (criteria, charset)
+
 
 @fixture
-def patch_crispin_client(monkeypatch):
+def imap_connection(monkeypatch):
+    conn = MockImapConnection()
     monkeypatch.setattr(
         'inbox.auth.generic.GenericAuthHandler.connect_account',
-        lambda *args, **kwargs: MockConnection())
+        lambda *_, **__: conn)
+    return conn
 
 
 @fixture
@@ -188,73 +197,77 @@ def test_gmail_message_search(api_client, default_account,
 
     messages = api_client.get_data('/messages/search?q=blah%20blah%20blah')
 
-    for sorted_message, result_message in zip(sorted_gmail_messages, messages):
-        assert sorted_message.public_id == result_message['id']
+    assert_search_result(sorted_gmail_messages, messages)
 
 
-def test_gmail_thread_search(api_client, test_gmail_thread, default_account,
+def test_gmail_thread_search(api_client, test_gmail_thread,
+                             default_account,
                              patch_token_manager,
                              patch_gmail_search_response,
+                             sorted_gmail_messages,
                              sorted_gmail_threads):
     search_client = get_search_client(default_account)
     assert isinstance(search_client, GmailSearchClient)
 
     threads = api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
-    for sorted_thread, result_thread in zip(sorted_gmail_threads, threads):
-        assert sorted_thread.public_id == result_thread['id']
+    assert_search_result(sorted_gmail_threads, threads)
 
 
 def test_imap_message_search(imap_api_client, generic_account,
-                              patch_crispin_client,
-                              sorted_imap_messages):
+                             imap_folder, imap_connection,
+                             sorted_imap_messages):
     search_client = get_search_client(generic_account)
     assert isinstance(search_client, IMAPSearchClient)
 
     messages = imap_api_client.get_data('/messages/search?'
                                         'q=blah%20blah%20blah')
 
-    for sorted_message, result_message in zip(sorted_imap_messages, messages):
-        assert sorted_message.public_id == result_message['id']
+    imap_connection.assert_search(["TEXT", "blah blah blah"])
+    assert_search_result(sorted_imap_messages, messages)
 
 
 def test_imap_thread_search(imap_api_client, generic_account,
-                             patch_crispin_client,
-                             sorted_imap_threads):
+                            imap_folder, imap_connection,
+                            sorted_imap_messages,
+                            sorted_imap_threads):
     search_client = get_search_client(generic_account)
     assert isinstance(search_client, IMAPSearchClient)
 
     threads = imap_api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
-    for sorted_thread, result_thread in zip(sorted_imap_threads, threads):
-        assert sorted_thread.public_id == result_thread['id']
+    imap_connection.assert_search(["TEXT", "blah blah blah"])
+    assert_search_result(sorted_imap_threads, threads)
 
 
-def test_imap_search_unicode(db, imap_api_client, generic_account,
-                             patch_crispin_client,
-                             sorted_imap_threads):
-    Folder.find_or_create(db.session, generic_account,
-                          '存档', '存档')
+def test_imap_thread_search_unicode(db, imap_api_client, generic_account,
+                                    imap_folder, imap_connection,
+                                    sorted_imap_messages,
+                                    sorted_imap_threads):
     search_client = get_search_client(generic_account)
     assert isinstance(search_client, IMAPSearchClient)
 
     threads = imap_api_client.get_data('/threads/search?q=存档')
 
-    for sorted_thread, result_thread in zip(sorted_imap_threads, threads):
-        assert sorted_thread.public_id == result_thread['id']
+    imap_connection.assert_search([u"TEXT", u"\u5b58\u6863"], "UTF-8")
+    assert_search_result(sorted_imap_threads, threads)
 
 
 def test_gmail_search_unicode(db, api_client, test_gmail_thread,
                               patch_token_manager,
                               patch_gmail_search_response,
                               default_account,
+                              sorted_gmail_messages,
                               sorted_gmail_threads):
-    Folder.find_or_create(db.session, default_account,
-                          '存档', '存档')
     search_client = get_search_client(default_account)
     assert isinstance(search_client, GmailSearchClient)
 
     threads = api_client.get_data('/threads/search?q=存档')
 
-    for sorted_thread, result_thread in zip(sorted_gmail_threads, threads):
-        assert sorted_thread.public_id == result_thread['id']
+    assert_search_result(sorted_gmail_threads, threads)
+
+
+def assert_search_result(expected, actual):
+    assert len(expected) == len(actual)
+    for expected_item, actual_item in zip(expected, actual):
+        assert expected_item.public_id == actual_item['id']
