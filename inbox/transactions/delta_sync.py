@@ -87,6 +87,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                                       result_limit, exclude_types=None,
                                       include_types=None,
                                       exclude_folders=True,
+                                      exclude_metadata=True,
                                       expand=False):
     """
     Return a pair (deltas, new_pointer), where deltas is a list of change
@@ -124,6 +125,13 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
     if exclude_folders is True:
         exclude_types.update(('folder', 'label'))
     # End backwards-compatibility shim.
+
+    # Metadata is excluded by default, and can only be included by setting the
+    # exclude_metadata flag to False. If listed in include_types, remove it.
+    if exclude_metadata is True:
+        exclude_types.add('metadata')
+    if include_types is not None and 'metadata' in include_types:
+        include_types.remove('metadata')
 
     last_trx = _get_last_trx_id_for_namespace(namespace.id, db_session)
     if last_trx == pointer:
@@ -219,7 +227,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
 def streaming_change_generator(namespace, poll_interval, timeout,
                                transaction_pointer, exclude_types=None,
                                include_types=None, exclude_folders=True,
-                               expand=False):
+                               exclude_metadata=True, expand=False):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
@@ -243,7 +251,7 @@ def streaming_change_generator(namespace, poll_interval, timeout,
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
                 exclude_types, include_types, exclude_folders,
-                expand=expand)
+                exclude_metadata, expand=expand)
 
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer

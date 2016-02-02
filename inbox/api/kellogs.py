@@ -5,7 +5,8 @@ from json import JSONEncoder, dumps
 from flask import Response
 
 from inbox.models import (Message, Contact, Calendar, Event, When,
-                          Thread, Namespace, Block, Category, Account)
+                          Thread, Namespace, Block, Category, Account,
+                          Metadata)
 from inbox.models.event import (RecurringEvent, RecurringEventOverride,
                                 InflatedEvent)
 from nylas.logging import get_logger
@@ -324,6 +325,20 @@ def _encode(obj, namespace_public_id=None, expand=False):
             'name': obj.name,
             'display_name': obj.api_display_name
         }
+        return resp
+
+    elif isinstance(obj, Metadata):
+        resp = {
+            'id': obj.public_id,
+            'account_id': _get_namespace_public_id(obj),
+            'application_id': obj.app_client_id,
+            'object_type': obj.object_type,
+            'object_id': obj.object_public_id,
+            'version': obj.version
+        }
+        if expand:
+            resp['value'] = obj.value
+
         return resp
 
 

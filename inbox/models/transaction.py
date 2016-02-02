@@ -70,7 +70,6 @@ def propagate_changes(session):
 
     For example, when a message's `is_read`, `is_starred` or `categories`
     changes, the message.thread is marked as dirty.
-
     """
     from inbox.models.message import Message
     for obj in session.dirty:
@@ -83,7 +82,11 @@ def propagate_changes(session):
 
 def increment_versions(session):
     from inbox.models.thread import Thread
+    from inbox.models.metadata import Metadata
     for obj in session:
         if isinstance(obj, Thread) and is_dirty(session, obj):
             # This issues SQL for an atomic increment.
             obj.version = Thread.version + 1
+        if isinstance(obj, Metadata) and is_dirty(session, obj):
+            # This issues SQL for an atomic increment.
+            obj.version = Metadata.version + 1  # TODO what's going on here?

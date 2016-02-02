@@ -4,7 +4,8 @@ from inbox.api.err import InputError
 from inbox.api.validation import valid_public_id
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread,
-                          Block, Part, MessageCategory, Category)
+                          Block, Part, MessageCategory, Category,
+                          Metadata)
 from inbox.models.event import RecurringEvent
 from inbox.sqlalchemy_ext.util import bakery
 
@@ -539,5 +540,34 @@ def messages_for_contact_scores(db_session, namespace_id, starts_after=None):
 
     if starts_after:
         query = query.filter(Message.received_date > starts_after)
+
+    return query.all()
+
+
+def metadata(namespace_id, app_id, view, limit, offset,
+             db_session):
+
+    if view == 'count':
+        query = db_session.query(func.count(Metadata.id))
+    elif view == 'ids':
+        query = db_session.query(Metadata.object_public_id)
+    else:
+        query = db_session.query(Metadata)
+
+    filters = [Metadata.namespace_id == namespace_id]
+    if app_id is not None:
+        filters.append(Metadata.app_id == app_id)
+
+    query = query.filter(*filters)
+    if view == 'count':
+        return {"count": query.scalar()}
+
+    query = query.order_by(desc(Metadata.id)).limit(limit)
+
+    if offset:
+        query = query.offset(offset)
+
+    if view == 'ids':
+        return [x[0] for x in query.all()]
 
     return query.all()
