@@ -629,7 +629,8 @@ class CrispinClient(object):
             'Must select sent folder first ({0})'.\
             format(self.selected_folder_name)
 
-        return self.conn.append(self.selected_folder_name, message, [], date)
+        return self.conn.append(self.selected_folder_name, message, ['\\Seen'],
+                                date)
 
     def fetch_headers(self, uids):
         """
