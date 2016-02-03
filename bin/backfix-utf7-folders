@@ -57,10 +57,16 @@ def refresh_label(label_id):
     with connection_pool(account.id).get() as crispin_client:
         for folder in folders:
             log.info('Selecting folder', folder=folder.name)
+
+            if folder.name is None or folder.name == '':
+                continue
+
             try:
                 crispin_client.select_folder(folder.name, uidvalidity_cb)
             except FolderMissingError:
                 continue
+            except:
+                import pdb ; pdb.set_trace()
 
             log.info('Getting uids', account_id=account.id, folder=folder.name)
 
