@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey, Boolean
-from sqlalchemy.orm import relationship, validates
+from sqlalchemy.orm import relationship
 
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.secret import Secret
@@ -51,8 +51,7 @@ class GenericAccount(ImapAccount):
             return 'imap'
         return self.provider
 
-    @validates('imap_secret', 'smtp_secret', 'old_secret')
-    def valid_password(self, key, value):
+    def valid_password(self, value):
         # Must be a valid UTF-8 byte sequence without NULL bytes.
         if isinstance(value, unicode):
             value = value.encode('utf-8')
@@ -73,6 +72,7 @@ class GenericAccount(ImapAccount):
 
     @imap_password.setter
     def imap_password(self, value):
+        value = self.valid_password(value)
         if not self.imap_secret:
             self.imap_secret = Secret()
         self.imap_secret.secret = value
@@ -84,6 +84,7 @@ class GenericAccount(ImapAccount):
 
     @smtp_password.setter
     def smtp_password(self, value):
+        value = self.valid_password(value)
         if not self.smtp_secret:
             self.smtp_secret = Secret()
         self.smtp_secret.secret = value
@@ -97,6 +98,7 @@ class GenericAccount(ImapAccount):
 
     @password.setter
     def password(self, value):
+        value = self.valid_password(value)
         if not self.old_secret:
             self.old_secret = Secret()
         self.old_secret.secret = value
