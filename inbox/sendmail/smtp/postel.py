@@ -12,6 +12,7 @@ from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import token_manager as default_token_manager
 from inbox.models.backends.gmail import g_token_manager
+from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.base import generate_attachments, SendMailException
 from inbox.sendmail.message import create_email
 from inbox.basicauth import OAuthError
@@ -253,9 +254,9 @@ class SMTPClient(object):
         self.account_id = account.id
         self.log = get_logger()
         self.log.bind(account_id=account.id)
-        try:
+        if isinstance(account, GenericAccount):
             self.smtp_username = account.smtp_username
-        except AttributeError:
+        else:
             # non-generic accounts have no smtp username
             self.smtp_username = account.email_address
         self.email_address = account.email_address
@@ -273,10 +274,10 @@ class SMTPClient(object):
                     'Could not authenticate with the SMTP server.', 403)
         else:
             assert self.auth_type == 'password'
-            # some accounts have smtp-specific passwords
-            try:
+            if isinstance(account, GenericAccount):
                 self.auth_token = account.smtp_password
-            except AttributeError:
+            else:
+                # non-generic accounts have no smtp password
                 self.auth_token = account.password
 
     def _send(self, recipients, msg):
