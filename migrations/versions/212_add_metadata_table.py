@@ -10,7 +10,7 @@ Create Date: 2016-01-26 06:01:15.339018
 revision = 'bc1119471fe'
 down_revision = '31aae1ecb374'
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 
@@ -37,8 +37,6 @@ def upgrade():
                                 ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_metadata_app_public_id'), 'metadata',
-                    ['app_public_id'], unique=False)
     op.create_index(op.f('ix_metadata_created_at'), 'metadata',
                     ['created_at'], unique=False)
     op.create_index(op.f('ix_metadata_deleted_at'), 'metadata',
@@ -53,6 +51,11 @@ def upgrade():
                     ['updated_at'], unique=False)
     op.create_index('ix_obj_public_id_app_id', 'metadata',
                     ['object_public_id', 'app_id'], unique=True)
+
+    shard_id = int(context.get_x_argument(as_dictionary=True).get('shard_id'))
+    conn = op.get_bind()
+    increment = (shard_id << 48) + 1
+    conn.execute('ALTER TABLE metadata AUTO_INCREMENT={}'.format(increment))
 
 
 def downgrade():

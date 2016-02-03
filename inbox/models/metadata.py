@@ -32,7 +32,7 @@ class Metadata(MailSyncBase, HasPublicID, HasRevisions):
     #                  included here so it appears in deltas.
     # - app_type: 'plugin' or 'app', for future use to filter deltas
     app_id = Column(Integer)
-    app_client_id = Column(Base36UID, nullable=False, index=True)
+    app_client_id = Column(Base36UID, nullable=False)
     app_type = Column(String(20), nullable=False)
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
