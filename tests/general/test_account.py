@@ -8,7 +8,9 @@ def add_fake_imap_account(db_session, provider, email_address, password):
     from inbox.models.backends.generic import GenericAccount
     namespace = Namespace()
     account = GenericAccount(namespace=namespace, provider=provider,
-                             email_address=email_address, password=password)
+                             email_address=email_address,
+                             imap_password=password,
+                             smtp_password=password)
     db_session.add(account)
     db_session.commit()
     return account

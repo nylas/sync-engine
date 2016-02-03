@@ -11,6 +11,7 @@ def test_use_smtp_over_ssl():
     SMTPConnection.smtp_password = mock.Mock()
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
+                          smtp_username='inboxapptest@gmail.com',
                           auth_type='password',
                           auth_token='secret_password',
                           smtp_endpoint=('smtp.gmail.com', 465),
@@ -21,6 +22,7 @@ def test_use_smtp_over_ssl():
 def test_use_starttls():
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
+                          smtp_username='inboxapptest@gmail.com',
                           auth_type='password',
                           auth_token='secret_password',
                           smtp_endpoint=('smtp.gmail.com', 587),
@@ -36,6 +38,7 @@ def test_handle_disconnect(monkeypatch, smtp_port):
     monkeypatch.setattr('smtplib.SMTP.mail', lambda *args: (550, 'NOPE'))
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
+                          smtp_username='inboxapptest@gmail.com',
                           auth_type='password',
                           auth_token='secret_password',
                           smtp_endpoint=('smtp.gmail.com', smtp_port),
