@@ -148,7 +148,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     is_reply = Column(Boolean)
 
     reply_to_message_id = Column(ForeignKey('message.id'), nullable=True)
-    reply_to_message = relationship('Message', uselist=False)
+    reply_to_message = relationship('Message', remote_side=lambda: Message.id)
 
     def mark_for_deletion(self):
         """
