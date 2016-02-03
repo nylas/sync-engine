@@ -1,4 +1,4 @@
-""" IMAPClient wrapper for the Nilas Sync Engine. """
+""" IMAPClient wrapper for the Nylas Sync Engine. """
 import contextlib
 import re
 import time
@@ -205,7 +205,7 @@ class CrispinConnectionPool(object):
                     self.account_id)
             else:
                 account = db_session.query(GenericAccount).options(
-                    joinedload(GenericAccount.secret)).get(self.account_id)
+                    joinedload(GenericAccount.imap_secret)).get(self.account_id)
             db_session.expunge(account)
 
         return self.auth_handler.connect_account(account)

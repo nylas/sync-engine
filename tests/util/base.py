@@ -144,7 +144,8 @@ def make_imap_account(db_session, email_address):
     account = GenericAccount(email_address=email_address,
                              sync_host=platform.node(),
                              provider='custom')
-    account.password = 'bananagrams'
+    account.imap_password = 'bananagrams'
+    account.smtp_password = 'bananagrams'
     account.namespace = Namespace()
     db_session.add(account)
     db_session.commit()
