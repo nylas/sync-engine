@@ -66,5 +66,8 @@
 "ENCRYPT_SECRETS": false,
 "DEBUG_CONSOLE_ON": true,
 
-"FEATURE_FLAGS": "ical_autoimport"
+"FEATURE_FLAGS": "ical_autoimport",
+
+"THROTTLE_DELETION": false,
+"UMPIRE_BASE_URL": "127.0.0.1"
 }

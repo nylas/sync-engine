@@ -10,6 +10,7 @@ dnspython==1.11.1
 boto==2.10.0
 ipython==1.0.0
 Flask==0.10.1
+freezegun==0.3.6
 gevent==1.0.1
 gevent-socketio==0.3.5-rc2
 gunicorn==19.0.0

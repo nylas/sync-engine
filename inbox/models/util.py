@@ -1,7 +1,11 @@
 import time
 import math
+import gevent
+import requests
+import datetime
 from collections import OrderedDict
 
+from inbox.config import config
 from inbox.models import Account
 from inbox.models.session import session_scope
 from nylas.logging.sentry import log_uncaught_errors
@@ -83,15 +87,19 @@ def transaction_objects():
     }
 
 
-def delete_marked_accounts(shard_id, dry_run=False):
+def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
     start = time.time()
     deleted_count = 0
     ids_to_delete = []
+
     with session_scope_by_shard_id(shard_id) as db_session:
         ids_to_delete = [(acc.id, acc.namespace.id) for acc
                          in db_session.query(Account) if acc.is_deleted]
 
     for account_id, namespace_id in ids_to_delete:
+        if throttle and check_throttle():
+            log.info("Throttling deletion")
+            gevent.sleep(60)
         try:
             with session_scope(namespace_id) as db_session:
                 account = db_session.query(Account).get(account_id)
@@ -237,3 +245,20 @@ def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
 
     end = time.time()
     log.info('Completed batch deletion', time=end - start, table=table)
+
+
+def check_throttle():
+    # Ensure replica lag is not spiking
+    base_url = config["UMPIRE_BASE_URL"]
+    url = ("https://{}/check?metric=maxSeries(servers.prod.sync-mysql-node.*.mysql."
+           "Seconds_Behind_Master)&max=0&min=0&range=300".format(base_url))
+    status_code = requests.get(url).status_code
+    while status_code != 200:
+        return True
+
+    # Stop deletion before backups are scheduled to start(1am UTC)
+    # and resume when backups complete (~9:30am, but set to 10am to
+    # leave room for error)
+    now = datetime.datetime.utcnow()
+    if now.hour < 10:
+        return True
