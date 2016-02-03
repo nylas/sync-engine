@@ -12,7 +12,6 @@ from datetime import datetime
 
 import gevent
 from gevent.coros import BoundedSemaphore
-from sqlalchemy.orm import contains_eager
 
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
@@ -20,7 +19,7 @@ logger = get_logger()
 from inbox.ignition import engine_manager
 from inbox.util.concurrency import retry_with_logging
 from inbox.models.session import session_scope, session_scope_by_shard_id
-from inbox.models import ActionLog, Namespace, Account
+from inbox.models import ActionLog
 from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 save_draft, update_draft, delete_draft,
@@ -83,21 +82,16 @@ class SyncbackService(gevent.Greenlet):
     def _process_log(self):
         for key in self.keys:
             with session_scope_by_shard_id(key) as db_session:
-                query = db_session.query(ActionLog).join(Namespace).\
-                    join(Account).\
+                query = db_session.query(ActionLog). \
                     filter(ActionLog.discriminator == 'actionlog',
-                           ActionLog.status == 'pending',
-                           Account.sync_should_run).\
-                    order_by(ActionLog.id).\
-                    options(contains_eager(ActionLog.namespace,
-                                           Namespace.account))
+                           ActionLog.status == 'pending'). \
+                    order_by(ActionLog.id)
 
-                running_action_ids = [worker.action_log_id for worker in
-                                      self.workers]
-                if running_action_ids:
-                    query = query.filter(~ActionLog.id.in_(running_action_ids))
-
+                running_action_ids = {worker.action_log_id for worker in
+                                      self.workers}
                 for log_entry in query:
+                    if log_entry.id in running_action_ids:
+                        continue
                     namespace = log_entry.namespace
                     self.log.info('delegating action',
                                   action_id=log_entry.id,
