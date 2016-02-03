@@ -253,6 +253,7 @@ get_default_providers = lambda: {
             "clearpoolgroup.com",
             "stsci.edu",
             "kms-technology.com",
+            "cigital.com",
         ],
         "mx_servers": [
             # Office365
