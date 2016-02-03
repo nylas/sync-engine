@@ -8,7 +8,8 @@ Includes:
 * Account liveness/status data (in Redis).
 
 """
-import time
+from gevent import monkey; monkey.patch_all()
+
 import click
 import gevent
 import logging
@@ -23,21 +24,22 @@ log = get_logger()
 
 
 @click.command()
+@click.option('--throttle', is_flag=True)
 @click.option('--dry-run', is_flag=True)
-def run(dry_run):
+def run(throttle, dry_run):
     pool = []
 
     for key in engine_manager.engines:
         log.info("Spawning delete process for shard",
                  shard_id=key)
-        pool.append(gevent.spawn(delete_account_data, key, dry_run))
+        pool.append(gevent.spawn(delete_account_data, key, throttle, dry_run))
 
     gevent.joinall(pool)
 
 
-def delete_account_data(shard_id, dry_run):
+def delete_account_data(shard_id, throttle, dry_run):
     while True:
-        delete_marked_accounts(shard_id, dry_run)
+        delete_marked_accounts(shard_id, throttle, dry_run)
         gevent.sleep(600)
 
 

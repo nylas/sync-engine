@@ -1,8 +1,35 @@
 import random
+import gevent
+from requests import Response
+from pytest import fixture
+from freezegun import freeze_time
+
 from tests.util.base import (add_fake_account, add_fake_thread, add_fake_message,
                              add_fake_calendar, add_fake_event, add_fake_folder,
                              add_fake_imapuid, add_fake_gmail_account,
                              add_fake_contact, add_fake_msg_with_calendar_part)
+
+
+@fixture
+def patch_requests_throttle(monkeypatch):
+    def get(*args, **kwargs):
+        resp = Response()
+        resp.status_code = 500
+
+    monkeypatch.setattr(
+        'requests.get',
+        lambda *args, **kwargs: get())
+
+
+@fixture
+def patch_requests_no_throttle(monkeypatch):
+    def get(*args, **kwargs):
+        resp = Response()
+        resp.status_code = 500
+
+    monkeypatch.setattr(
+        'requests.get',
+        lambda *args, **kwargs: get())
 
 
 def random_range(start, end):
@@ -97,6 +124,84 @@ def test_bulk_namespace_deletion(db):
     assert account_4_id not in alive_accounts
     assert account_3_id not in alive_accounts
     assert account_2_id not in alive_accounts
+
+
+@freeze_time("2016-02-02 11:01:34")
+def test_deletion_no_throttle(db, patch_requests_no_throttle):
+    from inbox.models import Account
+    from inbox.models.util import delete_marked_accounts
+
+    new_accounts = set()
+    account_1 = add_completely_fake_account(db)
+    new_accounts.add(account_1.id)
+
+    account_2 = add_completely_fake_account(db, "test2@nylas.com")
+    new_accounts.add(account_2.id)
+
+    account_1.mark_deleted()
+    account_2.mark_deleted()
+    db.session.commit()
+
+    greenlet = gevent.spawn(delete_marked_accounts, 0, throttle=True)
+    gevent.sleep(5)
+    gevent.kill(greenlet)
+
+    alive_accounts = db.session.query(Account.id).all()
+
+    # Ensure the two accounts we added were deleted
+    assert new_accounts - set(alive_accounts) == new_accounts
+
+
+@freeze_time("2016-02-02 11:01:34")
+def test_deletion_metric_throttle(db, patch_requests_throttle):
+    from inbox.models import Account
+    from inbox.models.util import delete_marked_accounts
+
+    account_1 = add_completely_fake_account(db)
+    account_1_id = account_1.id
+
+    account_2 = add_completely_fake_account(db, "test2@nylas.com")
+    account_2_id = account_2.id
+
+    account_1.mark_deleted()
+    account_2.mark_deleted()
+    db.session.commit()
+
+    greenlet = gevent.spawn(delete_marked_accounts, 0, throttle=True)
+    gevent.sleep(5)
+    gevent.kill(greenlet)
+
+    alive_accounts = [acc.id for acc in db.session.query(Account).all()]
+
+    # Ensure the two accounts we added are still present
+    assert account_1_id in alive_accounts
+    assert account_2_id in alive_accounts
+
+
+@freeze_time("2016-02-02 01:01:34")
+def test_deletion_time_throttle(db, patch_requests_no_throttle):
+    from inbox.models import Account
+    from inbox.models.util import delete_marked_accounts
+
+    account_1 = add_completely_fake_account(db, "test5@nylas.com")
+    account_1_id = account_1.id
+
+    account_2 = add_completely_fake_account(db, "test6@nylas.com")
+    account_2_id = account_2.id
+
+    account_1.mark_deleted()
+    account_2.mark_deleted()
+    db.session.commit()
+
+    greenlet = gevent.spawn(delete_marked_accounts, 0, throttle=True)
+    gevent.sleep(2)
+    gevent.kill(greenlet)
+
+    alive_accounts = [acc.id for acc in db.session.query(Account).all()]
+
+    # Ensure the two accounts we added are still present
+    assert account_1_id in alive_accounts
+    assert account_2_id in alive_accounts
 
 
 def test_namespace_deletion(db, default_account):
