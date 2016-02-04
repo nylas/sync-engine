@@ -10,12 +10,15 @@ Create Date: 2016-01-26 06:01:15.339018
 revision = 'bc1119471fe'
 down_revision = '501f6b2fef28'
 
-from alembic import context, op
+from alembic import op, context
 import sqlalchemy as sa
 
 
 def upgrade():
     from inbox.sqlalchemy_ext.util import JSON
+
+    shard_id = int(context.get_x_argument(as_dictionary=True).get('shard_id'))
+    namespace_id_type = sa.Integer() if shard_id == 0 else sa.BigInteger()
 
     op.create_table(
         'metadata',
@@ -27,7 +30,7 @@ def upgrade():
         sa.Column('app_id', sa.Integer(), nullable=True),
         sa.Column('app_client_id', sa.BINARY(length=16), nullable=False),
         sa.Column('app_type', sa.String(length=20), nullable=False),
-        sa.Column('namespace_id', sa.BigInteger(), nullable=False),
+        sa.Column('namespace_id', namespace_id_type, nullable=False),
         sa.Column('object_public_id', sa.String(length=191), nullable=False),
         sa.Column('object_type', sa.String(length=20), nullable=False),
         sa.Column('object_id', sa.BigInteger(), nullable=False),
@@ -52,7 +55,6 @@ def upgrade():
     op.create_index('ix_obj_public_id_app_id', 'metadata',
                     ['object_public_id', 'app_id'], unique=True)
 
-    shard_id = int(context.get_x_argument(as_dictionary=True).get('shard_id'))
     conn = op.get_bind()
     increment = (shard_id << 48) + 1
     conn.execute('ALTER TABLE metadata AUTO_INCREMENT={}'.format(increment))
