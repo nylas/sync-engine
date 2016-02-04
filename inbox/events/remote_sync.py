@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError
-from sqlalchemy import func
 
 from nylas.logging import get_logger
 logger = get_logger()
@@ -135,14 +134,15 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
     """Persists new or updated Event objects to the database."""
     added_count = 0
     updated_count = 0
-    existing_event_count = db_session.query(func.count(Event.id)).filter(
+    existing_event_query = db_session.query(Event).filter(
         Event.namespace_id == namespace_id,
-        Event.calendar_id == calendar_id).scalar()
+        Event.calendar_id == calendar_id).exists()
+    events_exist = db_session.query(existing_event_query).scalar()
     for event in events:
         assert event.uid is not None, 'Got remote item with null uid'
 
         local_event = None
-        if existing_event_count:
+        if events_exist:
             # Skip this lookup if there are no local events at all, for faster
             # first sync.
             local_event = db_session.query(Event).filter(
