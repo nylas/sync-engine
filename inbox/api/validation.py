@@ -75,6 +75,15 @@ def valid_public_id(value):
     return value
 
 
+def valid_category_type(category_type, rule):
+    if category_type not in rule:
+        if category_type == 'label':
+            raise NotFoundError("GMail accounts don't support folders")
+        elif category_type == 'folder':
+            raise NotFoundError("Non-GMail accounts don't support labels")
+    return category_type
+
+
 def timestamp(value, key):
     try:
         return arrow.get(value).datetime

@@ -30,7 +30,7 @@ from inbox.api.validation import (get_attachments, get_calendar,
                                   limit, offset, ValidatableArgument,
                                   strict_bool, validate_draft_recipients,
                                   valid_delta_object_types, valid_display_name,
-                                  noop_event_update)
+                                  noop_event_update, valid_category_type)
 from inbox.config import config
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
@@ -376,6 +376,10 @@ def message_update_api(public_id):
 @app.route('/folders')
 @app.route('/labels')
 def folders_labels_query_api():
+    category_type = g.namespace.account.category_type
+    rule = request.url_rule.rule
+    valid_category_type(category_type, rule)
+
     g.parser.add_argument('view', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     if args['view'] == 'count':
@@ -409,6 +413,9 @@ def label_api(public_id):
 
 
 def folders_labels_api_impl(public_id):
+    category_type = g.namespace.account.category_type
+    rule = request.url_rule.rule
+    valid_category_type(category_type, rule)
     valid_public_id(public_id)
     try:
         category = g.db_session.query(Category).filter(
@@ -424,6 +431,8 @@ def folders_labels_api_impl(public_id):
 @app.route('/labels', methods=['POST'])
 def folders_labels_create_api():
     category_type = g.namespace.account.category_type
+    rule = request.url_rule.rule
+    valid_category_type(category_type, rule)
     data = request.get_json(force=True)
     display_name = data.get('display_name')
 
@@ -469,6 +478,8 @@ def folders_labels_create_api():
 @app.route('/labels/<public_id>', methods=['PUT'])
 def folder_label_update_api(public_id):
     category_type = g.namespace.account.category_type
+    rule = request.url_rule.rule
+    valid_category_type(category_type, rule)
     valid_public_id(public_id)
     try:
         category = g.db_session.query(Category).filter(
@@ -507,6 +518,8 @@ def folder_label_update_api(public_id):
 @app.route('/labels/<public_id>', methods=['DELETE'])
 def folder_label_delete_api(public_id):
     category_type = g.namespace.account.category_type
+    rule = request.url_rule.rule
+    valid_category_type(category_type, rule)
     valid_public_id(public_id)
     try:
         category = g.db_session.query(Category).filter(
