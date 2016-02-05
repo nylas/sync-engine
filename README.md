@@ -35,8 +35,7 @@ The sync engine will automatically begin syncing your account with the underlyin
 
 The Nylas API service provides a REST API for interacting with your data. To start it in your development environment, run command below from the `/vagrant` folder within your VM:
 
-```
-:::bash
+```bash
 $ bin/inbox-api
 ```
 
@@ -46,7 +45,9 @@ You can get a list of all connected accounts by requesting `http://localhost:555
 
 For subsequent requests to retreive mail, contacts, and calendar data, your app should pass the `account_id` value from the previous step as the "username" parameter in HTTP Basic auth. For example:
 
-`curl --user 'ACCOUNT_ID_VALUE_HERE:' http://localhost:5555/threads
+```
+curl --user 'ACCOUNT_ID_VALUE_HERE:' http://localhost:5555/threads
+```
 
 If you are using a web browser and would like to clear your cached HTTP Basic Auth values, simply visit http://localhost:5555/logout and click "Cancel".
 
