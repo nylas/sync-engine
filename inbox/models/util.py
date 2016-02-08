@@ -253,7 +253,7 @@ def check_throttle():
     # Ensure replica lag is not spiking
     base_url = config["UMPIRE_BASE_URL"]
     url = ("https://{}/check?metric=maxSeries(servers.prod.sync-mysql-node.*.mysql."
-           "Seconds_Behind_Master)&max=0&min=0&range=300".format(base_url))
+           "Seconds_Behind_Master)&max=10&min=0&range=300".format(base_url))
     status_code = requests.get(url).status_code
     while status_code != 200:
         return True
