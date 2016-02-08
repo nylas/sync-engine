@@ -1,0 +1,3 @@
+install: "sudo ./setup.sh"
+# command to run tests
+script: INBOX_ENV=test ./runtests
