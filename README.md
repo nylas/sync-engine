@@ -1,8 +1,8 @@
-# Nylas Sync Engine
+# Nylas Sync Engine [![Build Status](https://travis-ci.org/nylas/sync-engine.svg?branch=master)](https://travis-ci.org/nylas/sync-engine)
 
 The Nylas Sync Engine provides a RESTful API on top of a powerful email sync platform, making it easy to build apps on top of email. See the [full API documentation](https://www.nylas.com/docs/) for more details.
 
-[Join our Slack channel ![Slack Invite Button](http://slack-invite.nylas.com/badge.svg)](http://slack-invite.nylas.com)
+Need help? [Join our Slack channel ![Slack Invite Button](http://slack-invite.nylas.com/badge.svg)](http://slack-invite.nylas.com)
 
 
 ### Installation and Setup
