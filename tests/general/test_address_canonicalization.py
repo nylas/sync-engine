@@ -4,6 +4,7 @@ def test_canonicalization(db):
     account = Account(namespace=ns,
                       email_address='lambda.the.ultimate@gmail.com')
     db.session.add(account)
+    db.session.add(ns)
     db.session.commit()
     assert account.email_address == 'lambda.the.ultimate@gmail.com'
 

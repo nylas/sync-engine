@@ -137,20 +137,6 @@ def make_default_account(db, config):
     return account
 
 
-def make_imap_account(db_session, email_address):
-    import platform
-    from inbox.models.backends.generic import GenericAccount
-    from inbox.models import Namespace
-    account = GenericAccount(email_address=email_address,
-                             sync_host=platform.node(),
-                             provider='custom')
-    account.imap_password = 'bananagrams'
-    account.smtp_password = 'bananagrams'
-    account.namespace = Namespace()
-    db_session.add(account)
-    db_session.commit()
-    return account
-
 
 @fixture(scope='function')
 def default_account(db, config):
@@ -164,7 +150,7 @@ def default_namespace(db, default_account):
 
 @fixture(scope='function')
 def generic_account(db):
-    return make_imap_account(db.session, 'inboxapptest@example.com')
+    return add_generic_imap_account(db.session)
 
 
 @fixture(scope='function')
@@ -225,10 +211,16 @@ def add_fake_folder(db_session, default_account):
                                  'All Mail', 'all')
 
 
-def add_fake_account(db_session, email_address='test@nilas.com'):
-    from inbox.models import Account, Namespace
-    namespace = Namespace()
-    account = Account(email_address=email_address, namespace=namespace)
+def add_generic_imap_account(db_session, email_address='test@nylas.com'):
+    import platform
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    account = GenericAccount(email_address=email_address,
+                             sync_host=platform.node(),
+                             provider='custom')
+    account.imap_password = 'bananagrams'
+    account.smtp_password = 'bananagrams'
+    account.namespace = Namespace()
     db_session.add(account)
     db_session.commit()
     return account
@@ -380,7 +372,7 @@ def add_fake_category(db_session, namespace_id, display_name, name=None):
 
 @fixture
 def new_account(db):
-    return add_fake_account(db.session)
+    return add_generic_imap_account(db.session)
 
 
 @fixture

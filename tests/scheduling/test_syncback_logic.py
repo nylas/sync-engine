@@ -9,7 +9,7 @@ from inbox.models.account import Account
 from inbox.models.action_log import ActionLog, schedule_action
 from inbox.transactions.actions import SyncbackService
 
-from tests.util.base import make_imap_account
+from tests.util.base import add_generic_imap_account
 
 
 @pytest.fixture
@@ -81,11 +81,13 @@ def test_all_keys_are_assigned_exactly_once(patched_enginemanager):
 
 def test_actions_are_claimed(purge_accounts_and_actions, patched_worker):
     with session_scope_by_shard_id(0) as db_session:
-        account = make_imap_account(db_session, '{}@test.com'.format(0))
+        account = add_generic_imap_account(db_session,
+                                    email_address='{}@test.com'.format(0))
         schedule_test_action(db_session, account)
 
     with session_scope_by_shard_id(1) as db_session:
-        account = make_imap_account(db_session, '{}@test.com'.format(1))
+        account = add_generic_imap_account(db_session,
+                                    email_address='{}@test.com'.format(1))
         schedule_test_action(db_session, account)
 
     service = SyncbackService(cpu_id=1, total_cpus=2)
@@ -110,7 +112,9 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
     actionlogs = []
     for key in (0, 1):
         with session_scope_by_shard_id(key) as db_session:
-            account = make_imap_account(db_session, '{}@test.com'.format(key))
+            account = add_generic_imap_account(
+                db_session,
+                email_address='{}@test.com'.format(key))
             schedule_test_action(db_session, account)
             actionlogs += [db_session.query(ActionLog).one().id]
 

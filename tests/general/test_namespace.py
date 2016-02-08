@@ -4,7 +4,7 @@ from requests import Response
 from pytest import fixture
 from freezegun import freeze_time
 
-from tests.util.base import (add_fake_account, add_fake_thread, add_fake_message,
+from tests.util.base import (add_generic_imap_account, add_fake_thread, add_fake_message,
                              add_fake_calendar, add_fake_event, add_fake_folder,
                              add_fake_imapuid, add_fake_gmail_account,
                              add_fake_contact, add_fake_msg_with_calendar_part)
@@ -228,7 +228,7 @@ def test_namespace_deletion(db, default_account):
         print "count for", m, ":", c
         assert c != 0
 
-    fake_account = add_fake_account(db.session)
+    fake_account = add_generic_imap_account(db.session)
     fake_account_id = fake_account.id
 
     assert fake_account_id != account.id and \

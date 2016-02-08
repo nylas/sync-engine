@@ -1,17 +1,14 @@
 import pytest
 
-from tests.util.base import add_fake_gmail_account
+from tests.util.base import add_fake_gmail_account, add_generic_imap_account
 
 
 def add_fake_imap_account(db_session, provider, email_address, password):
-    from inbox.models import Namespace
-    from inbox.models.backends.generic import GenericAccount
-    namespace = Namespace()
-    account = GenericAccount(namespace=namespace, provider=provider,
-                             email_address=email_address,
-                             imap_password=password,
-                             smtp_password=password)
-    db_session.add(account)
+    account = add_generic_imap_account(db_session)
+    account.provider = provider
+    account.email_address = email_address
+    account.imap_password = password
+    account.smtp_password = password
     db_session.commit()
     return account
 

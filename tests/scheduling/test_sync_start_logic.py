@@ -9,7 +9,7 @@ from inbox.mailsync.service import SyncService
 from inbox.models import Account
 from inbox.models.session import session_scope_by_shard_id
 from inbox.scheduling.queue import QueueClient, QueuePopulator
-from tests.util.base import add_fake_account
+from tests.util.base import add_generic_imap_account
 
 
 host = platform.node()
@@ -123,8 +123,8 @@ def test_queue_population_limited_by_zone(db, default_account,
 
 def test_external_sync_disabling(db, mock_queue_client):
     purge_other_accounts()
-    account = add_fake_account(db.session, email_address='test@example.com')
-    other_account = add_fake_account(db.session,
+    account = add_generic_imap_account(db.session, email_address='test@example.com')
+    other_account = add_generic_imap_account(db.session,
                                      email_address='test2@example.com')
     qp = QueuePopulator(zone='testzone')
     qp.queue_client = mock_queue_client
