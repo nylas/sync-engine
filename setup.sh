@@ -86,7 +86,6 @@ apt-get -y install git \
                    libmysqlclient-dev \
                    gcc \
                    g++ \
-                   libzmq-dev \
                    libxml2-dev \
                    libxslt-dev \
                    lib32z1-dev \
