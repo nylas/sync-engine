@@ -290,10 +290,10 @@ def test_distinct_results(api_client, db, default_namespace):
 
 
 def test_filtering_accounts(db, test_client):
-    all_accounts = json.loads(test_client.get('/accounts/').data)
+    all_accounts = json.loads(test_client.get('/accounts/?limit=100').data)
     email = all_accounts[0]['email_address']
 
-    some_accounts = json.loads(test_client.get('/accounts/?offset=1').data)
+    some_accounts = json.loads(test_client.get('/accounts/?offset=1&limit=99').data)
     assert len(some_accounts) == len(all_accounts) - 1
 
     no_all_accounts = json.loads(test_client.get('/accounts/?limit=0').data)
