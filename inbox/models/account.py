@@ -15,6 +15,10 @@ from inbox.models.calendar import Calendar
 from inbox.providers import provider_info
 
 
+# Note, you should never directly create Account objects. Instead you
+# should use objects that inherit from this, such as GenericAccount or
+# GmailAccount
+
 class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
               HasRevisions):
     API_OBJECT_NAME = 'account'

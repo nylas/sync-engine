@@ -23,6 +23,9 @@ from inbox.util.misc import cleanup_subject
 PROVIDER = 'imap'
 
 
+# Note, you should never directly create ImapAccount objects. Instead you
+# should use objects that inherit from this, such as GenericAccount or
+# GmailAccount
 class ImapAccount(Account):
     id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
                 primary_key=True)
