@@ -54,10 +54,10 @@ fi
 
 # Don't fail builds if apt-get update fails (eg due to ksplice being down)
 set +e
-apt-get update
+apt-get -qq update
 set -e
 
-apt-get -y install python-software-properties
+apt-get -qq -y install python-software-properties
 
 
 { \
@@ -192,7 +192,7 @@ color '35;1' 'Removing .pyc files...'   # they might be stale
 find . -name \*.pyc -delete
 
 color '35;1' 'Installing dependencies from pip...'
-SODIUM_INSTALL=system pip install -r requirements.txt
+SODIUM_INSTALL=system pip install -r requirements.txt -q
 pip install -e .
 
 color '35;1' 'Finished installing dependencies.'
