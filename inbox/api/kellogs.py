@@ -334,11 +334,9 @@ def _encode(obj, namespace_public_id=None, expand=False):
             'application_id': obj.app_client_id,
             'object_type': obj.object_type,
             'object_id': obj.object_public_id,
-            'version': obj.version
+            'version': obj.version,
+            'value': obj.value
         }
-        if expand:
-            resp['value'] = obj.value
-
         return resp
 
 
