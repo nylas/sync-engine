@@ -228,7 +228,14 @@ def _update_categories(db_session, message, synced_categories):
         ActionLog.table_name == 'message',
         ActionLog.record_id == message.id,
         ActionLog.action.in_(['change_labels', 'move'])).scalar()
-    actionlog = db_session.query(ActionLog).get(actionlog_id)
+    if actionlog_id is not None:
+        actionlog = db_session.query(ActionLog).get(actionlog_id)
+        # Do /not/ overwrite message.categories in case of a recent local
+        # change - namely, a still 'pending' action or one that completed
+        # recently.
+        if (actionlog.status == 'pending' or
+                (now - actionlog.updated_at).seconds <= 90):
+            return
 
     # We completed the syncback action /long enough ago/ (on average and
     # with an error margin) that:
@@ -239,10 +246,5 @@ def _update_categories(db_session, message, synced_categories):
     # TODO[k]/(emfree): Implement proper rollback of local state in this case.
     # This is needed in order to pick up future changes to the message,
     # the local_changes counter is reset as well.
-    if actionlog.status in ('successful', 'failed') and \
-            (now - actionlog.updated_at).seconds >= 90:
-        message.categories = synced_categories
-        message.categories_changes = False
-
-    # Do /not/ overwrite message.categories in case of a recent local change -
-    # namely, a still 'pending' action or one that completed recently.
+    message.categories = synced_categories
+    message.categories_changes = False

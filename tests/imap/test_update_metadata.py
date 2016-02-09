@@ -1,6 +1,7 @@
 import pytest
 from inbox.crispin import GmailFlags, Flags
-from inbox.mailsync.backends.imap.common import update_metadata
+from inbox.mailsync.backends.imap.common import (update_metadata,
+                                                 update_message_metadata)
 from tests.util.base import (add_fake_message, add_fake_imapuid,
                              add_fake_folder, add_fake_thread)
 
@@ -47,3 +48,11 @@ def test_generic_drafts_flag_constrained_by_folder(db, generic_account,
     update_metadata(generic_account.id, folder.id, folder_role, new_flags,
                     db.session)
     assert message.is_draft == (folder_role == 'drafts')
+
+
+def test_update_categories_when_actionlog_entry_missing(
+        db, default_account, message, imapuid):
+    message.categories_changes = True
+    db.session.commit()
+    update_message_metadata(db.session, imapuid.account, message, False)
+    assert message.categories == {imapuid.folder.category}
