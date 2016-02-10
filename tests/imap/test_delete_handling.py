@@ -255,3 +255,13 @@ def test_renamed_label_refresh(db, default_account, thread, message,
     labels = list(imapuid.labels)
     assert len(labels) == 1
     assert labels[0].name == 'new label'
+
+
+def test_reply_to_message_cascade(db, default_namespace, thread, message):
+    reply = add_fake_message(db.session, default_namespace.id, thread)
+    reply.reply_to_message = message
+    db.session.commit()
+
+    db.session.expire_all()
+    db.session.delete(message)
+    db.session.commit()

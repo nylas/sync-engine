@@ -150,7 +150,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     is_reply = Column(Boolean)
 
     reply_to_message_id = Column(ForeignKey('message.id'), nullable=True)
-    reply_to_message = relationship('Message', remote_side=lambda: Message.id)
+    # The backref here is unused, but must be configured so that the child's
+    # foreign key gets updated when the parent is deleted.
+    reply_to_message = relationship('Message', remote_side=lambda: Message.id,
+                                    backref='replies')
 
     def mark_for_deletion(self):
         """
