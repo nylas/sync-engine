@@ -30,7 +30,11 @@ def reconcile_message(new_message, session):
     from inbox.models.message import Message
 
     if new_message.inbox_uid is None:
-        return None
+        # try to reconcile using other means
+        q = session.query(Message).filter(
+            Message.namespace_id == new_message.namespace_id,
+            Message.data_sha256 == new_message.data_sha256)
+        return q.first()
 
     if '-' not in new_message.inbox_uid:
         # Old X-Inbox-Id format; use the old reconciliation strategy.

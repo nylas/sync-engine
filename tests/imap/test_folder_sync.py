@@ -25,6 +25,12 @@ def inbox_folder(db, generic_account):
 
 
 @pytest.fixture
+def generic_trash_folder(db, generic_account):
+    return create_folder_with_syncstatus(generic_account, '/Trash',
+                                         'trash', db.session)
+
+
+@pytest.fixture
 def all_mail_folder(db, default_account):
     return create_folder_with_syncstatus(default_account, '[Gmail]/All Mail',
                                          'all', db.session)
@@ -227,3 +233,50 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
     assert db.session.query(Message).filter(
         Message.namespace_id == default_account.namespace.id,
         Message.g_msgid == uid_values['X-GM-MSGID']).count() == 1
+
+
+def test_imap_message_deduplication(db, generic_account, inbox_folder,
+                                     generic_trash_folder, mock_imapclient):
+    uid = 22
+    uid_values = uid_data.example()
+
+    mock_imapclient.list_folders = lambda: [(('\\All', '\\HasNoChildren',),
+                                             '/', u'/Inbox'),
+                                            (('\\Trash', '\\HasNoChildren',),
+                                             '/', u'/Trash')]
+    mock_imapclient.idle = lambda: None
+    mock_imapclient.add_folder_data(inbox_folder.name, {uid: uid_values})
+    mock_imapclient.add_folder_data(generic_trash_folder.name,
+                                    {uid: uid_values})
+
+    folder_sync_engine = FolderSyncEngine(
+                         generic_account.id,
+                         generic_account.namespace.id,
+                         inbox_folder.name,
+                         generic_account.email_address,
+                         'custom',
+                         BoundedSemaphore(1))
+    folder_sync_engine.initial_sync()
+
+    trash_folder_sync_engine = FolderSyncEngine(
+                               generic_account.id,
+                               generic_account.namespace.id,
+                               generic_trash_folder.name,
+                               generic_account.email_address,
+                               'custom',
+                               BoundedSemaphore(1))
+    trash_folder_sync_engine.initial_sync()
+
+    # Check that we have two uids, but just one message.
+    assert [(uid,)] == db.session.query(ImapUid.msg_uid).filter(
+        ImapUid.folder_id == inbox_folder.id).all()
+
+    assert [(uid,)] == db.session.query(ImapUid.msg_uid).filter(
+        ImapUid.folder_id == generic_trash_folder.id).all()
+
+    # used to uniquely ID messages
+    body_sha = sha256(uid_values['BODY[]']).hexdigest()
+
+    assert db.session.query(Message).filter(
+        Message.namespace_id == generic_account.namespace.id,
+        Message.data_sha256 == body_sha).count() == 1
