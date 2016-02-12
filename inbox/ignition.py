@@ -52,7 +52,7 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
                            max_overflow=max_overflow,
                            connect_args={'charset': 'utf8mb4',
                                          'waiter': gevent_waiter,
-                                         'connect_timeout': 10})
+                                         'connect_timeout': 60})
 
     @event.listens_for(engine, 'checkout')
     def receive_checkout(dbapi_connection, connection_record,
