@@ -252,10 +252,15 @@ def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
 def check_throttle():
     # Ensure replica lag is not spiking
     base_url = config["UMPIRE_BASE_URL"]
-    url = ("https://{}/check?metric=maxSeries(servers.prod.sync-mysql-node.*.mysql."
-           "Seconds_Behind_Master)&max=10&min=0&range=300".format(base_url))
-    status_code = requests.get(url).status_code
-    while status_code != 200:
+    replica_lag_url = ("https://{}/check?metric=maxSeries(servers.prod.sync-mysql-node.*.mysql."
+                       "Seconds_Behind_Master)&max=10&min=0&range=300".format(base_url))
+
+    cpu_url = ('https://{}/check?metric=maxSeries(offset(scale(groupByNode(servers.prod.sync'
+               '-mysql-node.*.cpu.cpu*.idle,3,"averageSeries"),-1),100))&max=70&min=0&range=300'.format(base_url))
+
+    replica_lag_status_code = requests.get(replica_lag_url).status_code
+    cpu_status_code = requests.get(cpu_url).status_code
+    if replica_lag_status_code != 200 or cpu_status_code != 200:
         return True
 
     # Stop deletion before backups are scheduled to start(1am UTC)
