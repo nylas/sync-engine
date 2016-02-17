@@ -76,6 +76,7 @@ setup(
              'bin/create-test-db',
              'bin/verify-db',
              'bin/migrate-db',
+             'bin/stamp-db',
              'bin/inbox-api',
              'bin/get-id',
              'bin/get-object',
