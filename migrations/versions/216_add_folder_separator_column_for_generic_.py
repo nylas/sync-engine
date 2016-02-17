@@ -17,12 +17,11 @@ from sqlalchemy.sql import text
 def upgrade():
     conn = op.get_bind()
     conn.execute(text("set @@lock_wait_timeout = 20;"))
-    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN folder_separator varchar(16)"))
-    conn.execute(text("ALTER TABLE genericaccount ADD COLUMN folder_prefix varchar(191)"))
+    conn.execute(text("""ALTER TABLE genericaccount ADD COLUMN folder_separator varchar(16),
+                                                    ADD COLUMN folder_prefix varchar(191);"""))
 
 
 def downgrade():
     conn = op.get_bind()
     conn.execute(text("set @@lock_wait_timeout = 20;"))
-    conn.execute(text("ALTER TABLE genericaccount DROP COLUMN folder_separator"))
-    conn.execute(text("ALTER TABLE genericaccount DROP COLUMN folder_prefix"))
+    conn.execute(text("ALTER TABLE genericaccount DROP COLUMN folder_separator, DROP COLUMN folder_prefix"))
