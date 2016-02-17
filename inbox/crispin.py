@@ -348,11 +348,14 @@ class CrispinClient(object):
         return or_none(self.selected_folder_info, lambda i: i.get('UIDNEXT'))
 
     @property
-    def folder_delimiter(self):
-        folders = self._fetch_folder_list()
-        _, delimiter, __ = folders[0]
+    def folder_separator(self):
+        folder_prefix, folder_separator = self.conn.namespace()[0][0]
+        return folder_separator
 
-        return delimiter
+    @property
+    def folder_prefix(self):
+        folder_prefix, folder_separator = self.conn.namespace()[0][0]
+        return folder_prefix
 
     def sync_folders(self):
         """
