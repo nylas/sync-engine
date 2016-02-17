@@ -431,6 +431,9 @@ def test_calculate_snippet():
     body = 'Hello,<br><br> world'
     assert m.calculate_html_snippet(body) == 'Hello, world'
 
+    body = '<div dir="ltr">line1<div>line2</div><div>line3</div><div><br></div></div>'
+    assert m.calculate_html_snippet(body) == 'line1 line2 line3'
+
     # Check that snippets are properly truncated to 191 characters.
     body = '''Etenim quid est, <strong>Catilina</strong>, quod iam amplius
               exspectes, si neque nox tenebris obscurare coetus nefarios nec
