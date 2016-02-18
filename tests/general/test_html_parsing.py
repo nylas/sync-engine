@@ -6,7 +6,7 @@ from inbox.util.html import strip_tags
 def test_strip_tags():
     text = ('<div><script> AAH JAVASCRIPT</script><style> AAH CSS AHH</style>'
             'check out this <a href="http://example.com">link</a> yo!</div>')
-    assert strip_tags(text) == 'check out this link yo!'
+    assert strip_tags(text).strip() == 'check out this link yo!'
 
 
 def test_preserve_refs():
