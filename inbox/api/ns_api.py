@@ -356,7 +356,7 @@ def message_read_api(public_id):
     return encoder.jsonify(message)
 
 
-@app.route('/messages/<public_id>', methods=['PUT'])
+@app.route('/messages/<public_id>', methods=['PUT', 'PATCH'])
 def message_update_api(public_id):
     try:
         valid_public_id(public_id)
@@ -474,8 +474,8 @@ def folders_labels_create_api():
     return g.encoder.jsonify(category)
 
 
-@app.route('/folders/<public_id>', methods=['PUT'])
-@app.route('/labels/<public_id>', methods=['PUT'])
+@app.route('/folders/<public_id>', methods=['PUT', 'PATCH'])
+@app.route('/labels/<public_id>', methods=['PUT', 'PATCH'])
 def folder_label_update_api(public_id):
     category_type = g.namespace.account.category_type
     rule = request.url_rule.rule
@@ -740,7 +740,7 @@ def event_read_api(public_id):
     return g.encoder.jsonify(event)
 
 
-@app.route('/events/<public_id>', methods=['PUT'])
+@app.route('/events/<public_id>', methods=['PUT', 'PATCH'])
 def event_update_api(public_id):
     g.parser.add_argument('notify_participants', type=strict_bool,
                           location='args')
@@ -1176,7 +1176,7 @@ def draft_create_api():
     return g.encoder.jsonify(draft)
 
 
-@app.route('/drafts/<public_id>', methods=['PUT'])
+@app.route('/drafts/<public_id>', methods=['PUT', 'PATCH'])
 def draft_update_api(public_id):
     data = request.get_json(force=True)
     original_draft = get_draft(public_id, data.get('version'), g.namespace.id,
