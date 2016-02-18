@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    shard_id = int(context.get_x_argument(as_dictionary=True).get('shard_id'))
+    shard_id = int(context.config.get_main_option('shard_id'))
     namespace_id_type = sa.Integer() if shard_id == 0 else sa.BigInteger()
 
     op.create_table('accounttransaction',
