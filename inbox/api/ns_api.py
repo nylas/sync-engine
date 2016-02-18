@@ -30,7 +30,8 @@ from inbox.api.validation import (get_attachments, get_calendar,
                                   limit, offset, ValidatableArgument,
                                   strict_bool, validate_draft_recipients,
                                   valid_delta_object_types, valid_display_name,
-                                  noop_event_update, valid_category_type)
+                                  noop_event_update, valid_category_type,
+                                  comma_separated_email_list)
 from inbox.config import config
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
@@ -136,7 +137,8 @@ def thread_query_api():
     g.parser.add_argument('from', type=bounded_str, location='args')
     g.parser.add_argument('cc', type=bounded_str, location='args')
     g.parser.add_argument('bcc', type=bounded_str, location='args')
-    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=comma_separated_email_list,
+                          location='args')
     g.parser.add_argument('started_before', type=timestamp, location='args')
     g.parser.add_argument('started_after', type=timestamp, location='args')
     g.parser.add_argument('last_message_before', type=timestamp,
@@ -257,7 +259,8 @@ def message_query_api():
     g.parser.add_argument('from', type=bounded_str, location='args')
     g.parser.add_argument('cc', type=bounded_str, location='args')
     g.parser.add_argument('bcc', type=bounded_str, location='args')
-    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=comma_separated_email_list,
+                          location='args')
     g.parser.add_argument('started_before', type=timestamp, location='args')
     g.parser.add_argument('started_after', type=timestamp, location='args')
     g.parser.add_argument('last_message_before', type=timestamp,
@@ -1109,7 +1112,8 @@ def draft_query_api():
     g.parser.add_argument('to', type=bounded_str, location='args')
     g.parser.add_argument('cc', type=bounded_str, location='args')
     g.parser.add_argument('bcc', type=bounded_str, location='args')
-    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=comma_separated_email_list,
+                          location='args')
     g.parser.add_argument('started_before', type=timestamp, location='args')
     g.parser.add_argument('started_after', type=timestamp, location='args')
     g.parser.add_argument('last_message_before', type=timestamp,
