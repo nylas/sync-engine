@@ -105,9 +105,10 @@ class SMTP(smtplib.SMTP):
 
 
 def _transform_ssl_error(strerror):
-    """ Clean up errors like:
-
+    """
+    Clean up errors like:
     _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed  # noqa
+
     """
     if strerror.endswith('certificate verify failed'):
         return 'SMTP server SSL certificate verify failed'
@@ -118,13 +119,14 @@ def _transform_ssl_error(strerror):
 class SMTPConnection(object):
 
     def __init__(self, account_id, email_address, smtp_username,
-                 auth_type, auth_token, smtp_endpoint, log):
+                 auth_type, auth_token, smtp_endpoint, ssl_required, log):
         self.account_id = account_id
         self.email_address = email_address
         self.smtp_username = smtp_username
         self.auth_type = auth_type
         self.auth_token = auth_token
         self.smtp_endpoint = smtp_endpoint
+        self.ssl_required = ssl_required
         self.log = log
         self.log.bind(account_id=self.account_id)
         self.auth_handlers = {'oauth2': self.smtp_oauth2,
@@ -157,21 +159,37 @@ class SMTPConnection(object):
         else:
             self.connection = SMTP(timeout=SMTP_TIMEOUT)
             self._connect(host, port)
-            # Put the SMTP connection in TLS mode
-            self.connection.ehlo()
-            if not self.connection.has_extn('starttls'):
-                raise SendMailException('Required SMTP STARTTLS not '
-                                        'supported.', 403)
-            try:
-                self.connection.starttls()
-            except ssl.SSLError as e:
-                msg = _transform_ssl_error(e.strerror)
-                raise SendMailException(msg, 503)
+            self._upgrade_connection()
 
         # Auth the connection
         self.connection.ehlo()
         auth_handler = self.auth_handlers.get(self.auth_type)
         auth_handler()
+
+    def _upgrade_connection(self):
+        """
+        Upgrade the connection if STARTTLS is supported.
+        If it's not/ it fails and SSL is not required, do nothing. Otherwise,
+        raise an exception.
+
+        """
+        # If STARTTLS is available, always use it -- irrespective of the
+        # `self.ssl_required`. If it's not or it fails, use `self.ssl_required`
+        # to determine whether to fail or continue with plaintext authentication.
+        self.connection.ehlo()
+        if self.connection.has_extn('starttls'):
+            try:
+                self.connection.starttls()
+            except ssl.SSLError as e:
+                if not self.ssl_required:
+                    log.warning('STARTTLS supported but failed for SSL NOT '
+                                'required authentication', exc_info=True)
+                else:
+                    msg = _transform_ssl_error(e.strerror)
+                    raise SendMailException(msg, 503)
+        elif self.ssl_required:
+            raise SendMailException('Required SMTP STARTTLS not supported.',
+                                    403)
 
     # OAuth2 authentication
     def _smtp_oauth2_try_refresh(self):
@@ -256,9 +274,11 @@ class SMTPClient(object):
         self.log.bind(account_id=account.id)
         if isinstance(account, GenericAccount):
             self.smtp_username = account.smtp_username
+            self.ssl_required = account.ssl_required
         else:
-            # non-generic accounts have no smtp username
+            # Non-generic accounts have no smtp username, ssl_required
             self.smtp_username = account.email_address
+            self.ssl_required = True
         self.email_address = account.email_address
         self.provider_name = account.provider
         self.sender_name = account.name
@@ -428,5 +448,6 @@ class SMTPClient(object):
                                          auth_type=self.auth_type,
                                          auth_token=self.auth_token,
                                          smtp_endpoint=self.smtp_endpoint,
+                                         ssl_required=self.ssl_required,
                                          log=self.log)
         return smtp_connection

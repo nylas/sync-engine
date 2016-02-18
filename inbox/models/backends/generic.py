@@ -34,6 +34,9 @@ class GenericAccount(ImapAccount):
                                single_parent=True, uselist=False,
                                lazy='joined',
                                foreign_keys=[smtp_password_id])
+
+    ssl_required = Column(Boolean, default=True)
+
     # Old Secret
     # TODO[logan]: delete once IMAP and SMTP secret are in production.
     password_id = Column(ForeignKey(Secret.id, ondelete='CASCADE'),
