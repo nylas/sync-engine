@@ -23,7 +23,9 @@ configure_logging(config.get('LOGLEVEL'))
               help='Re-authenticate an account even if it already exists')
 @click.option('--target', type=int, default=0,
               help='Database shard id to target for the account')
-def main(email_address, reauth, target):
+@click.option('--provider', is_flag=False,
+              help='Manually specify the provider instead of trying to detect it')
+def main(email_address, reauth, target, provider):
     """ Auth an email account. """
     preflight()
 
@@ -36,12 +38,14 @@ def main(email_address, reauth, target):
             sys.exit('Already have this account!')
 
         auth_info = {}
-        provider = provider_from_address(email_address)
 
-        # Resolve unknown providers into either custom IMAP or EAS.
-        if provider == 'unknown':
-            is_imap = raw_input('IMAP account? [Y/n] ').strip().lower() != 'n'
-            provider = 'custom' if is_imap else 'eas'
+        if not provider:
+            provider = provider_from_address(email_address)
+
+            # Resolve unknown providers into either custom IMAP or EAS.
+            if provider == 'unknown':
+                is_imap = raw_input('IMAP account? [Y/n] ').strip().lower() != 'n'
+                provider = 'custom' if is_imap else 'eas'
 
         auth_info['provider'] = provider
         auth_handler = handler_from_provider(provider)
