@@ -8,7 +8,8 @@ from nylas.logging import get_logger
 log = get_logger()
 
 from inbox.auth.base import AuthHandler, account_or_none
-from inbox.basicauth import ValidationError, UserRecoverableConfigError
+from inbox.basicauth import (ValidationError, UserRecoverableConfigError,
+                             SSLNotSupportedError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
@@ -92,6 +93,8 @@ class GenericAuthHandler(AuthHandler):
                         "Updating IMAP/ SMTP endpoints is not permitted. "
                         "Please contact Nylas support to do so.")
 
+        account.ssl_required = response.get('ssl_required', True)
+
         # Ensure account has sync enabled after authing.
         account.enable_sync()
         return account
@@ -109,14 +112,16 @@ class GenericAuthHandler(AuthHandler):
 
         """
         host, port = account.imap_endpoint
+        ssl_required = account.ssl_required
         try:
-            conn = create_imap_connection(host, port)
+            conn = create_imap_connection(host, port, ssl_required)
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,
                       email=account.email_address,
                       host=host,
                       port=port,
+                      ssl_required=ssl_required,
                       error=exc)
             raise
         try:
@@ -127,6 +132,7 @@ class GenericAuthHandler(AuthHandler):
                           account_id=account.id,
                           email=account.email_address,
                           host=host, port=port,
+                          ssl_required=ssl_required,
                           error=exc)
                 raise ValidationError(exc)
             else:
@@ -135,6 +141,7 @@ class GenericAuthHandler(AuthHandler):
                           email=account.email_address,
                           host=host,
                           port=port,
+                          ssl_required=ssl_required,
                           error=exc)
                 raise
 
@@ -154,6 +161,7 @@ class GenericAuthHandler(AuthHandler):
                             email=account.email_address,
                             host=host,
                             port=port,
+                            ssl_required=ssl_required,
                             error=exc)
 
         return conn
@@ -171,20 +179,23 @@ class GenericAuthHandler(AuthHandler):
         capabilities = conn.capabilities()
         if "CONDSTORE" in capabilities:
             return True
-
         return False
 
     def verify_account(self, account):
         """
-        Verifies a generic IMAP account by logging in and logging out.
+        Verifies a generic IMAP account by logging in and logging out to both
+        the IMAP/ SMTP servers.
 
-        Note: Raises exceptions from connect_account() on error.
+        Note:
+        Raises exceptions from connect_account(), SMTPClient._get_connection()
+        on error.
 
         Returns
         -------
-        True: If the client can successfully connect.
+        True: If the client can successfully connect to both.
 
         """
+        # Verify IMAP login
         conn = self.connect_account(account)
         info = account.provider_info
         if "condstore" not in info:
@@ -203,6 +214,8 @@ class GenericAuthHandler(AuthHandler):
                                              "administrator and try again.")
         finally:
             conn.logout()
+
+        # Verify SMTP login
         try:
             # Check that SMTP settings work by establishing and closing and
             # SMTP session.
@@ -219,7 +232,6 @@ class GenericAuthHandler(AuthHandler):
         return True
 
     def interactive_auth(self, email_address):
-
         response = dict(email=email_address)
 
         if self.provider_name == 'custom':
@@ -237,6 +249,9 @@ class GenericAuthHandler(AuthHandler):
             smtp_pwm = 'SMTP password for {0} (empty for same as IMAP): '
             smtp_p = getpass.getpass(smtp_pwm.format(email_address)) or imap_p
 
+            ssl_required = raw_input('Require SSL? (empty for True): ').\
+                strip() or True
+
             response.update(imap_server_host=imap_server_host,
                             imap_server_port=imap_server_port,
                             imap_username=imap_user,
@@ -244,7 +259,8 @@ class GenericAuthHandler(AuthHandler):
                             smtp_server_host=smtp_server_host,
                             smtp_server_port=smtp_server_port,
                             smtp_username=smtp_user,
-                            smtp_password=smtp_p)
+                            smtp_password=smtp_p,
+                            ssl_required=ssl_required)
         else:
             password_message = 'Password for {0} (hidden): '
             pw = ''
@@ -273,22 +289,44 @@ def _auth_is_invalid(exc):
                AUTH_INVALID_PREFIXES)
 
 
-def create_imap_connection(host, port):
+def create_imap_connection(host, port, ssl_required):
+    """
+    Return a connection to the IMAP server.
+    The connection is encrypted if the specified port is the default IMAP
+    SSL port (993) or the server supports STARTTLS.
+    IFF neither condition is met and SSL is not required, an insecure connection
+    is returned. Otherwise, an exception is raised.
+
+    """
     use_ssl = port == 993
 
     # TODO: certificate pinning for well known sites
     context = create_default_context()
-
     conn = IMAPClient(host, port=port, use_uid=True,
                       ssl=use_ssl, ssl_context=context, timeout=120)
+
     if not use_ssl:
-        # Raises an exception if TLS can't be established
-        conn.starttls(context)
+        # If STARTTLS is available, always use it. If it's not/ it fails, use
+        # `ssl_required` to determine whether to fail or continue with
+        # plaintext authentication.
+        if conn.has_capability('STARTTLS'):
+            try:
+                conn.starttls(context)
+            except Exception:
+                if not ssl_required:
+                    log.warning('STARTTLS supported but failed for SSL NOT '
+                                'required authentication', exc_info=True)
+                else:
+                    raise
+        elif ssl_required:
+            raise SSLNotSupportedError('Required IMAP STARTTLS not supported.')
+
     return conn
 
 
 def create_default_context():
-    """Return a backports.ssl.SSLContext object configured with sensible
+    """
+    Return a backports.ssl.SSLContext object configured with sensible
     default settings. This was adapted from imapclient.create_default_context
     to allow all ciphers and disable certificate verification.
 
