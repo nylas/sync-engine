@@ -102,9 +102,6 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
                          in db_session.query(Account) if acc.is_deleted]
 
     for account_id, namespace_id in ids_to_delete:
-        if throttle and check_throttle():
-            log.info("Throttling deletion")
-            gevent.sleep(60)
         try:
             with session_scope(namespace_id) as db_session:
                 account = db_session.query(Account).get(account_id)
@@ -123,7 +120,8 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
             # Delete data in database
             try:
                 log.info('Deleting database data', account_id=account_id)
-                delete_namespace(account_id, namespace_id, dry_run=dry_run)
+                delete_namespace(account_id, namespace_id, throttle=throttle,
+                                 dry_run=dry_run)
             except Exception as e:
                 log.critical('Database data deletion failed', error=e,
                              account_id=account_id)
@@ -141,7 +139,7 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
              time=end - start, count=deleted_count)
 
 
-def delete_namespace(account_id, namespace_id, dry_run=False):
+def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
     """
     Delete all the data associated with a namespace from the database.
     USE WITH CAUTION.
@@ -179,7 +177,7 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
             filters['easfoldersyncstatus'] = ('account_id', account_id)
 
     for cls in filters:
-        _batch_delete(engine, cls, filters[cls], dry_run=dry_run)
+        _batch_delete(engine, cls, filters[cls], throttle=throttle, dry_run=dry_run)
 
     # Use a single delete for the other tables. Rows from tables which contain
     # cascade-deleted foreign keys to other tables deleted here (or above)
@@ -201,6 +199,10 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
         log.info('Performing bulk deletion', table=table)
         start = time.time()
 
+        if throttle and check_throttle():
+            log.info("Throttling deletion")
+            gevent.sleep(60)
+
         if not dry_run:
             engine.execute(query.format(table, column, id_))
         else:
@@ -218,7 +220,7 @@ def delete_namespace(account_id, namespace_id, dry_run=False):
             db_session.commit()
 
 
-def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
+def _batch_delete(engine, table, xxx_todo_changeme, throttle=False, dry_run=False):
     (column, id_) = xxx_todo_changeme
     count = engine.execute(
         'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
@@ -236,15 +238,11 @@ def _batch_delete(engine, table, xxx_todo_changeme, dry_run=False):
 
     query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
 
-    pruned_messages = False
     for i in range(0, batches):
+        if throttle and check_throttle():
+            log.info("Throttling deletion")
+            gevent.sleep(60)
         if dry_run is False:
-            if table == "message" and not pruned_messages:
-                if engine.execute("SELECT EXISTS(SELECT id FROM message WHERE reply_to_message_id IS NOT NULL);").scalar():
-                    query = 'DELETE FROM message WHERE {}={} AND reply_to_message_id IS NOT NULL LIMIT 1000;'.format(column, id_)
-                else:
-                    pruned_messages = True
-
             engine.execute(query)
         else:
             log.debug(query)
