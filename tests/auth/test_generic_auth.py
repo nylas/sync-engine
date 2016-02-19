@@ -4,7 +4,7 @@ import pytest
 
 from inbox.models.account import Account
 from inbox.auth.generic import GenericAuthHandler
-from inbox.basicauth import UserRecoverableConfigError
+from inbox.basicauth import UserRecoverableConfigError, ValidationError
 
 
 settings = {
@@ -80,6 +80,56 @@ def test_update_account(db):
         assert getattr(account, attr) != value
         assert account.imap_endpoint == (imap_host, imap_port)
         assert account.smtp_endpoint == (smtp_host, smtp_port)
+
+
+def test_double_auth(db):
+    settings = {
+        'provider': 'yahoo',
+        'settings': {
+            'name': 'Y.Y!',
+            'locale': 'fr',
+            'email': 'cypresstest@yahoo.com',
+            'password': 'g8ah6gamtlP4'}
+    }
+    email = settings['settings']['email']
+    password = settings['settings']['password']
+
+    handler = GenericAuthHandler(settings['provider'])
+
+    # First authentication, using a valid password, succeeds.
+    valid_settings = copy.deepcopy(settings)
+
+    account = handler.create_account(email, valid_settings['settings'])
+    assert handler.verify_account(account) is True
+
+    db.session.add(account)
+    db.session.commit()
+    id_ = account.id
+    account = db.session.query(Account).get(id_)
+    assert account.email_address == email
+    assert account.imap_username == email
+    assert account.smtp_username == email
+    assert account.password == password
+    assert account.imap_password == password
+    assert account.smtp_password == password
+
+    # Second auth using an invalid password should fail.
+    invalid_settings = copy.deepcopy(settings)
+    invalid_settings['settings']['password'] = 'invalid_password'
+    with pytest.raises(ValidationError):
+        account = handler.update_account(account, invalid_settings['settings'])
+        handler.verify_account(account)
+
+    db.session.expire(account)
+
+    # Ensure original account is unaffected
+    account = db.session.query(Account).get(id_)
+    assert account.email_address == email
+    assert account.imap_username == email
+    assert account.smtp_username == email
+    assert account.password == password
+    assert account.imap_password == password
+    assert account.smtp_password == password
 
 
 def generate_endpoint_updates(settings):

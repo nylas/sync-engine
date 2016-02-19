@@ -1,7 +1,7 @@
 import pytest
 
 from inbox.auth.generic import GenericAuthHandler
-from inbox.basicauth import UserRecoverableConfigError
+from inbox.basicauth import ValidationError
 
 creds = [
     {
@@ -64,14 +64,14 @@ def test_auth(creds):
 
     # Test that the password can be updated...
     bad_creds = {'email': creds['settings']['email'],
-                 'smtp_password': 'bad_password',
+                 'imap_password': 'bad_password',
                  'imap_server_host': creds['settings'].get('imap_server_host'),
                  'imap_server_port': 993,
                  'smtp_server_host': creds['settings'].get('smtp_server_host'),
                  'smtp_server_port': 587
                  }
     handler.update_account(account, bad_creds)
-    assert account.smtp_password == 'bad_password'
+    assert account.imap_password == 'bad_password'
     # ...but logging in again won't work.
-    with pytest.raises(UserRecoverableConfigError):
+    with pytest.raises(ValidationError):
         handler.verify_account(account)

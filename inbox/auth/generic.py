@@ -46,7 +46,9 @@ class GenericAuthHandler(AuthHandler):
             account.smtp_endpoint = (response['smtp_server_host'],
                                      response['smtp_server_port'])
 
-        # Verification for legacy auth account creation attempts.
+        # Shim for back-compatability with legacy auth
+        # The old API does NOT send these but authentication now uses them
+        # so set them (included here, set in update_account()).
         for username in ['imap_username', 'smtp_username']:
             if username not in response:
                 response[username] = email_address
@@ -59,14 +61,25 @@ class GenericAuthHandler(AuthHandler):
     def update_account(self, account, response):
         account.email_address = response['email']
         for attribute in ['name', 'imap_username', 'imap_password',
-                          'smtp_username', 'smtp_password']:
+                          'smtp_username', 'smtp_password', 'password']:
             if response.get(attribute):
                 setattr(account, attribute, response[attribute])
 
-        # shim until the password_id field is gone
-        # TODO[logan]: remove this once changeover is successful
+        # Shim for back-compatability with legacy auth
         if response.get('imap_password'):
+            # The new API sends separate IMAP/ SMTP credentials but we need to
+            # set the legacy password attribute.
+            # TODO[k]: Remove once column in dropped.
             account.password = response['imap_password']
+        else:
+            # The old API does NOT send these but authentication now uses them
+            # so update them.
+            for attr in ('imap_username', 'smtp_username'):
+                if attr not in response:
+                    setattr(account, attr, response['email'])
+            for attr in ('imap_password', 'smtp_password'):
+                if attr not in response:
+                    setattr(account, attr, response['password'])
 
         account.date = datetime.datetime.utcnow()
 
