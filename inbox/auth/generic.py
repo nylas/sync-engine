@@ -37,6 +37,15 @@ class GenericAuthHandler(AuthHandler):
         namespace = Namespace()
         account = GenericAccount(namespace=namespace)
 
+        # The server endpoints can ONLY be set at account creation and
+        # CANNOT be subsequently changed in order to prevent MITM attacks.
+        account.provider = self.provider_name
+        if self.provider_name == 'custom':
+            account.imap_endpoint = (response['imap_server_host'],
+                                     response['imap_server_port'])
+            account.smtp_endpoint = (response['smtp_server_host'],
+                                     response['smtp_server_port'])
+
         # Verification for legacy auth account creation attempts.
         for username in ['imap_username', 'smtp_username']:
             if username not in response:
@@ -60,12 +69,16 @@ class GenericAuthHandler(AuthHandler):
             account.password = response['imap_password']
 
         account.date = datetime.datetime.utcnow()
-        account.provider = self.provider_name
+
         if self.provider_name == 'custom':
-            account.imap_endpoint = (response['imap_server_host'],
-                                     response['imap_server_port'])
-            account.smtp_endpoint = (response['smtp_server_host'],
-                                     response['smtp_server_port'])
+            for attribute in ('imap_server_host', 'smtp_server_host'):
+                value = getattr(account, '_{}'.format(attribute), None)
+                if (response.get(attribute) and value and
+                        response[attribute] != value):
+                    raise UserRecoverableConfigError(
+                        "Updating IMAP/ SMTP endpoints is not permitted. "
+                        "Please contact Nylas support to do so.")
+
         # Ensure account has sync enabled after authing.
         account.enable_sync()
         return account
