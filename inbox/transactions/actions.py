@@ -117,7 +117,6 @@ class SyncbackService(gevent.Greenlet):
             gevent.sleep(self.poll_interval)
 
     def stop(self):
-        self.workers.kill()
         self.keep_running = False
 
     def _run(self):
@@ -193,6 +192,7 @@ class SyncbackWorker(gevent.Greenlet):
                                  latency=latency)
                         self._log_to_statsd(action_log_entry.status, latency)
                         return
+
                 except Exception:
                     log_uncaught_errors(log, account_id=self.account_id,
                                         provider=self.provider)

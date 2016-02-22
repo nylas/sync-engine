@@ -104,12 +104,12 @@ def remote_create_folder(account_id, category_id):
         # Some generic IMAP providers have different conventions
         # regarding folder names. For example, Fastmail wants paths
         # to be of the form "INBOX.A". The API abstracts this.
-        if account_provider not in ['gmail', 'eas']:
-            # Translate the name of the folder to an actual IMAP name
-            # (e.g: "Accounting/Taxes" becomes "Accounting.Taxes")
+        if account_provider in ['generic', 'fastmail']:
+            # Update the name of the folder to 'INBOX.whatever'.
+            # We need to do this to keep track of the folder name
+            # on the backend. The API abstracts this anyway.
             new_display_name = imap_folder_path(
-                display_name, separator=crispin_client.folder_separator,
-                prefix=crispin_client.folder_prefix)
+                display_name, separator=crispin_client.folder_delimiter)
         else:
             new_display_name = display_name
         crispin_client.conn.create_folder(new_display_name)
@@ -127,10 +127,12 @@ def remote_update_folder(account_id, category_id, old_name):
         display_name = category.display_name
 
     with writable_connection_pool(account_id).get() as crispin_client:
-        if account_provider not in ['gmail', 'eas']:
+        if account_provider in ['generic', 'fastmail']:
+            # Update the name of the folder to 'INBOX.whatever'.
+            # We need to do this to keep track of the folder name
+            # on the backend. The API abstracts this anyway.
             new_display_name = imap_folder_path(
-                display_name, separator=crispin_client.folder_separator,
-                prefix=crispin_client.folder_prefix)
+                display_name, separator=crispin_client.folder_delimiter)
         else:
             new_display_name = display_name
         crispin_client.conn.rename_folder(old_name, new_display_name)
@@ -143,18 +145,10 @@ def remote_update_folder(account_id, category_id, old_name):
 
 def remote_delete_folder(account_id, category_id):
     with session_scope(account_id) as db_session:
-        account_provider = db_session.query(Account).get(account_id).provider
         category = db_session.query(Category).get(category_id)
         display_name = category.display_name
-
     with writable_connection_pool(account_id).get() as crispin_client:
         try:
-            if account_provider not in ['gmail', 'eas']:
-                # Translate a Unix-style path to the actual folder path.
-                display_name = imap_folder_path(
-                    display_name, separator=crispin_client.folder_separator,
-                    prefix=crispin_client.folder_prefix)
-
             crispin_client.conn.delete_folder(display_name)
         except IMAP4.error:
             # Folder has already been deleted on remote. Treat delete as

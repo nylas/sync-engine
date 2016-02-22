@@ -198,40 +198,34 @@ def cleanup_subject(subject_str):
     return re.sub(cleanup_regexp, "", subject_str)
 
 
-# IMAP doesn't support nested folders and instead encodes paths inside folder
-# names.
+# Generic IMAP doesn't support nested folders but there's a convention to
+# support those --- clients use "." to handle nested folders. For example,
+# most email clients use will represent "Inbox.FolderA.FolderB" as
+# "/FolderA/FolderB".
 # imap_folder_path converts a "/" delimited path to an IMAP compatible path.
-def imap_folder_path(path, separator='.', prefix=''):
+def imap_folder_path(path, separator='.'):
     folders = [folder for folder in path.split('/') if folder != '']
 
-    res = None
-
     if folders != []:
-        res = separator.join(folders)
-
-        if prefix != '' and not res.startswith(prefix):
-            if prefix[-1] != separator:
-                res = u"{}{}{}".format(prefix, separator, res)
-            else:
-                res = u"{}{}".format(prefix, res)
-
-    return res
-
-
-def strip_prefix(path, prefix):
-    if path.startswith(prefix):
-        return path[len(prefix):]
-
-    return path
+        return "INBOX" + separator + separator.join(folders)
+    else:
+        return "INBOX"
 
 
 # fs_folder_path converts an IMAP compatible path to a "/" delimited path.
-def fs_folder_path(path, separator='.', prefix=''):
-    if prefix != '':
-        path = strip_prefix(path, prefix)
+def fs_folder_path(path, separator='.'):
+    ret = ""
 
-    folders = path.split(separator)
-    if folders[0] == '':
-        folders.pop(0)
+    folders = path[6:].split(separator)
+    ret += '/'.join(folders)
+    return ret
 
-    return '/'.join(folders)
+
+def is_imap_folder_path(path):
+    if len(path) < 6:
+        return False
+
+    if path[:5] == 'INBOX' and path[5] in ['.', '/']:
+        return True
+
+    return False
