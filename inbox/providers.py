@@ -447,6 +447,13 @@ get_default_providers = lambda: {
         "auth": "password",
         "mx_servers": ["qiye163mx0[12].mxmail.netease.com"]
     },
+    "123_reg": {
+        "type": "generic",
+        "imap": ("imap.123-reg.co.uk", 993),
+        "smtp": ("smtp.123-reg.co.uk", 465),
+        "auth": "password",
+        "mx_servers": ["mx[01].123-reg.co.uk"]
+    },
     "126": {
         "type": "generic",
         "imap": ("imap.126.com", 993),
