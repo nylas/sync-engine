@@ -299,6 +299,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
         return parsed_owner[1]
 
+    @property
     def organizer_name(self):
         parsed_owner = parseaddr(self.owner)
 
