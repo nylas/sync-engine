@@ -43,7 +43,7 @@ class Metadata(MailSyncBase, HasPublicID, HasRevisions):
     # external identifier, while type and id allow direct lookup of the object.
     object_public_id = Column(String(191), nullable=False, index=True)
     object_type = Column(String(20), nullable=False)
-    object_id = Column(BigInteger, nullable=False, index=True)
+    object_id = Column(BigInteger, nullable=False)
 
     value = Column(JSON)
 
@@ -51,3 +51,5 @@ class Metadata(MailSyncBase, HasPublicID, HasRevisions):
 
 Index('ix_obj_public_id_app_id',
       Metadata.object_public_id, Metadata.app_id, unique=True)
+Index('ix_namespace_id_app_id',
+      Metadata.namespace_id, Metadata.app_id)
