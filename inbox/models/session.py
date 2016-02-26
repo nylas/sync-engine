@@ -2,6 +2,7 @@ import sys
 import time
 from contextlib import contextmanager
 
+import gevent
 from sqlalchemy import event
 from sqlalchemy.orm.session import Session
 from sqlalchemy.exc import OperationalError
@@ -36,7 +37,7 @@ def two_phase_session(engine_map, versioned=True):
     return session
 
 
-def new_session(engine, versioned=True):
+def new_session(engine, versioned=True, explicit_begin=False):
     """Returns a session bound to the given engine."""
     session = Session(bind=engine, autoflush=True, autocommit=False)
 
@@ -55,6 +56,8 @@ def new_session(engine, versioned=True):
 
         @event.listens_for(session, 'after_begin')
         def after_begin(session, transaction, connection):
+            if explicit_begin:
+                connection.execute('BEGIN')
             # It's okay to key on the session object here, because each session
             # binds to only one engine/connection. If this changes in the
             # future such that a session may encompass multiple engines, then
@@ -103,7 +106,7 @@ def configure_versioning(session):
 
 
 @contextmanager
-def session_scope(id_, versioned=True):
+def session_scope(id_, versioned=True, explicit_begin=False):
     """
     Provide a transactional scope around a series of operations.
 
@@ -119,9 +122,9 @@ def session_scope(id_, versioned=True):
     ----------
     versioned : bool
         Do you want to enable the transaction log?
-    debug : bool
-        Do you want to turn on SQL echoing? Use with caution. Engine is not
-        cached in this case!
+    explicit_begin: bool
+        If True, issue an explicit BEGIN statement instead of relying on
+        implicit transactional semantics.
 
     Yields
     ------
@@ -144,6 +147,9 @@ def session_scope(id_, versioned=True):
                         sessions_used=engine.pool.checkedout())
         yield session
         session.commit()
+    except (gevent.GreenletExit, gevent.Timeout) as exc:
+        log.info('Invalidating connection on gevent exception', exc_info=True)
+        session.invalidate()
     except BaseException as exc:
         try:
             session.rollback()
