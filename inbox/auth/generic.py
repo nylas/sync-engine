@@ -279,8 +279,8 @@ class GenericAuthHandler(AuthHandler):
             smtp_pwm = 'SMTP password for {0} (empty for same as IMAP): '
             smtp_p = getpass.getpass(smtp_pwm.format(email_address)) or imap_p
 
-            ssl_required = raw_input('Require SSL? (empty for True): ').\
-                strip() or True
+            ssl_required = raw_input('Require SSL? [Y/n] ').strip().\
+                lower() != 'n'
 
             response.update(imap_server_host=imap_server_host,
                             imap_server_port=imap_server_port,
