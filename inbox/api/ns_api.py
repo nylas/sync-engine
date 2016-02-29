@@ -1274,16 +1274,16 @@ def sync_deltas():
     g.parser.add_argument('timeout', type=int,
                           default=LONG_POLL_REQUEST_TIMEOUT, location='args')
     g.parser.add_argument('view', type=view, location='args')
-
-    # Metadata has restricted access - only N1 can make a request with this
-    # arg included. For everyone else, set exclude_metadata to True by default.
-    g.parser.add_argument('exclude_metadata', type=strict_bool,
-                          location='args', default=True)
     # - Begin shim -
     # Remove after folders and labels exposed in the Delta API for everybody,
     # right now, only expose for Edgehill.
     g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
+    g.parser.add_argument('exclude_account', type=strict_bool, location='args')
     # - End shim -
+    # Metadata has restricted access - only N1 can make a request with this
+    # arg included. For everyone else, set exclude_metadata to True by default.
+    g.parser.add_argument('exclude_metadata', type=strict_bool,
+                          location='args', default=True)
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
@@ -1293,6 +1293,9 @@ def sync_deltas():
     exclude_folders = args.get('exclude_folders')
     if exclude_folders is None:
         exclude_folders = True
+    exclude_account = args.get('exclude_account')
+    if exclude_account is None:
+        exclude_account = True
     # - End shim -
     cursor = args['cursor']
     timeout = args['timeout']
@@ -1321,7 +1324,7 @@ def sync_deltas():
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
                 exclude_types, include_types, exclude_folders,
-                exclude_metadata, expand=expand)
+                exclude_metadata, exclude_account, expand=expand)
 
         response = {
             'cursor_start': cursor,
