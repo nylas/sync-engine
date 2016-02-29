@@ -245,6 +245,7 @@ class GenericAuthHandler(AuthHandler):
         except Exception as exc:
             log.error('Failed to establish an SMTP connection',
                       email=account.email_address,
+                      smtp_endpoint=account.smtp_endpoint,
                       account_id=account.id,
                       error=exc)
             raise UserRecoverableConfigError("Please check that your SMTP "
