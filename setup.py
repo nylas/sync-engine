@@ -23,11 +23,10 @@ setup(
         "mysqlclient==1.3.7",
         "setproctitle>=1.1.8",
         "pymongo>=2.5.2",
-        "python-dateutil>=2.4",
+        "python-dateutil==2.4",
         "ipython>=1.0.0",
         "enum34==1.0.4",
         "gdata>=2.0.18",
-        "simplejson>=3.6.0",
         "icalendar>=3.8.2",
         "simplejson>=3.6.0",
         "Flask>=0.10.1",
@@ -47,7 +46,7 @@ setup(
         "backports.ssl>=0.0.9",
         "imapclient==1.0.1",
     ],
-    dependency_links=[],
+    dependency_links=["git+https://github.com/nylas/dateutil.git@da336a366cd3#egg=python-dateutil-2.4.2"],
 
     include_package_data=True,
     package_data={
