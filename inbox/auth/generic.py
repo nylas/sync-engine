@@ -208,8 +208,7 @@ class GenericAuthHandler(AuthHandler):
                       email=account.email_address,
                       account_id=account.id,
                       error=e.message)
-            raise UserRecoverableConfigError("Full IMAP support is not "
-                                             "enabled for this account. "
+            raise UserRecoverableConfigError("Unable to get a list of IMAP folders!"
                                              "Please contact your domain "
                                              "administrator and try again.")
         finally:
@@ -222,6 +221,20 @@ class GenericAuthHandler(AuthHandler):
             smtp_client = SMTPClient(account)
             with smtp_client._get_connection():
                 pass
+        except socket.gaierror as exc:
+            log.error('Failed to resolve SMTP server domain',
+                      email=account.email_address,
+                      account_id=account.id,
+                      error=exc)
+            raise UserRecoverableConfigError("Couldn't resolve the SMTP "
+                                             "server domain name.")
+        except socket.timeout as exc:
+            log.error('TCP timeout when connecting to SMTP server',
+                      email=account.email_address,
+                      account_id=account.id,
+                      error=exc)
+            raise UserRecoverableConfigError("Connection timeout when"
+                                             "connecting to SMTP server.")
         except Exception as exc:
             log.error('Failed to establish an SMTP connection',
                       email=account.email_address,
@@ -283,7 +296,8 @@ def _auth_is_invalid(exc):
         'invalid login or password',
         'login login error password error',
         '[auth] authentication failed.',
-        'invalid login credentials'
+        'invalid login credentials',
+        '[ALERT] Please log in via your web browser',
     )
     return any(exc.message.lower().startswith(msg) for msg in
                AUTH_INVALID_PREFIXES)
