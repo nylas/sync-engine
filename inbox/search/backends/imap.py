@@ -5,6 +5,8 @@ from inbox.basicauth import NotSupportedError
 from inbox.models import Message, Folder, Account, Thread
 from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
+from inbox.basicauth import ValidationError
+from inbox.search.base import SearchBackendException
 
 from sqlalchemy import desc
 from imaplib import IMAP4
@@ -21,13 +23,21 @@ class IMAPSearchClient(object):
 
     def _open_crispin_connection(self, db_session):
         account = db_session.query(Account).get(self.account_id)
-        conn = account.auth_handler.connect_account(account)
+        try:
+            conn = account.auth_handler.connect_account(account)
+        except ValidationError:
+            raise SearchBackendException(
+                "This search can't be performed because the account's "
+                "credentials are out of date. Please reauthenticate and try "
+                "again.", 403)
+
         try:
             acct_provider_info = provider_info(account.provider)
         except NotSupportedError:
             self.log.warn('Account provider not supported',
                           provider=account.provider)
             raise
+
         self.crispin_client = CrispinClient(self.account_id,
                                             acct_provider_info,
                                             account.email_address,

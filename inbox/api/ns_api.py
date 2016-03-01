@@ -23,7 +23,7 @@ from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
-from inbox.api.validation import (get_attachments, get_calendar,
+from inbox.api.validation import (valid_account, get_attachments, get_calendar,
                                   get_recipients, get_draft, valid_public_id,
                                   valid_event, valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args,
@@ -95,6 +95,25 @@ def start():
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
     g.parser.add_argument('offset', default=0, type=offset, location='args')
+
+
+@app.before_request
+def before_remote_request():
+    """
+    Verify the validity of the account's credentials before performing a
+    request to the remote server.
+
+    The message and thread /search endpoints, and the /send endpoint directly
+    interact with the remote server. All create, update, delete requests
+    result in requests to the remote server via action syncback.
+
+    """
+    # Search uses 'GET', all the other requests we care about use a write
+    # HTTP method.
+    if (request.endpoint in ('namespace_api.message_search_api',
+                             'namespace_api.thread_search_api') or
+            request.method in ('POST', 'PUT', 'PATCH', 'DELETE')):
+        valid_account(g.namespace)
 
 
 @app.after_request
@@ -192,8 +211,8 @@ def thread_search_api():
         g.log.error(err_string)
         return err(400, err_string)
 
-    search_client = get_search_client(g.namespace.account)
     try:
+        search_client = get_search_client(g.namespace.account)
         results = search_client.search_threads(g.db_session, args['q'],
                                                offset=args['offset'],
                                                limit=args['limit'])
@@ -320,8 +339,8 @@ def message_search_api():
         g.log.error(err_string)
         return err(400, err_string)
 
-    search_client = get_search_client(g.namespace.account)
     try:
+        search_client = get_search_client(g.namespace.account)
         results = search_client.search_messages(g.db_session, args['q'],
                                                 offset=args['offset'],
                                                 limit=args['limit'])

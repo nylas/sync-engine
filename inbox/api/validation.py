@@ -7,7 +7,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.models import Calendar, Thread, Block, Message, Category, Event
 from inbox.models.when import parse_as_when
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.api.err import InputError, NotFoundError, ConflictError
+from inbox.api.err import (InputError, NotFoundError, ConflictError,
+                           AccountInvalidError, AccountStoppedError)
 from inbox.api.kellogs import encode
 from inbox.util.addr import valid_email
 
@@ -92,6 +93,13 @@ def valid_public_id(value):
     except (TypeError, ValueError):
         raise InputError(u'Invalid id: {}'.format(value))
     return value
+
+
+def valid_account(namespace):
+    if namespace.account.sync_state == 'invalid':
+        raise AccountInvalidError()
+    if namespace.account.sync_state == 'stopped':
+        raise AccountStoppedError()
 
 
 def valid_category_type(category_type, rule):

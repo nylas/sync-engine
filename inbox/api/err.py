@@ -29,13 +29,20 @@ class ConflictError(APIException):
         self.message = message
 
 
-class ActionError(APIException):
-    """Raised when an account's credentials aren't valid. (We don't accept
-    actions if they can't be synced back."""
+class AccountInvalidError(APIException):
+    """ Raised when an account's credentials are not valid. """
     status_code = 403
     message = "This action can't be performed because the account's " \
               "credentials are out of date. Please reauthenticate and try " \
               "again."
+
+
+class AccountStoppedError(APIException):
+    """ Raised when an account has been stopped. """
+    status_code = 403
+    message = "This action can't be performed because the account's sync " \
+              "has been stopped. Please contact support@nylas.com to resume " \
+              "sync."
 
 
 def err(http_code, message, **kwargs):
