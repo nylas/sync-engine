@@ -59,7 +59,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
     @property
     def provider_info(self):
-        return provider_info(self.provider, self.email_address)
+        return provider_info(self.provider)
 
     @property
     def thread_cls(self):

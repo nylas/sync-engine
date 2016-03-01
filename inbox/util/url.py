@@ -74,7 +74,8 @@ def mx_match(mx_domains, match_domains):
         # Match the given domain against any of the mx_server regular
         # expressions we have stored for the given domain. If none of them
         # match, then we cannot confirm this as the given provider
-        match_filter = lambda x: re.match(x, mx_domain)
+        def match_filter(x):
+            return re.match(x, mx_domain)
         if any(match_filter(m) for m in match_domains):
             return True
 
@@ -100,8 +101,6 @@ def provider_from_address(email_address):
         log.error('No answer from provider', domain=domain)
 
     for (name, info) in providers.iteritems():
-        provider_mx = info.get('mx_servers', [])
-        provider_ns = info.get('ns_servers', [])
         provider_domains = info.get('domains', [])
 
         # If domain is in the list of known domains for a provider,
@@ -110,10 +109,16 @@ def provider_from_address(email_address):
             if domain.endswith(d):
                 return name
 
+    for (name, info) in providers.iteritems():
+        provider_mx = info.get('mx_servers', [])
+
         # If a retrieved mx_domain is in the list of stored MX domains for a
         # provider, return the provider.
         if mx_match(mx_domains, provider_mx):
             return name
+
+    for (name, info) in providers.iteritems():
+        provider_ns = info.get('ns_servers', [])
 
         # If a retrieved name server is in the list of stored name servers for
         # a provider, return the provider.

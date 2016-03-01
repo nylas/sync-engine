@@ -283,8 +283,7 @@ class SMTPClient(object):
         self.provider_name = account.provider
         self.sender_name = account.name
         self.smtp_endpoint = account.smtp_endpoint
-        self.auth_type = provider_info(self.provider_name,
-                                       self.email_address)['auth']
+        self.auth_type = provider_info(self.provider_name)['auth']
 
         if self.auth_type == 'oauth2':
             try:
