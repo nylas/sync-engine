@@ -208,9 +208,11 @@ class GenericAuthHandler(AuthHandler):
                       email=account.email_address,
                       account_id=account.id,
                       error=e.message)
-            raise UserRecoverableConfigError("Unable to get a list of IMAP folders!"
-                                             "Please contact your domain "
-                                             "administrator and try again.")
+            error_message = ("Full IMAP support is not enabled for this account. "
+                             "Please contact your domain "
+                             "administrator and try again.")
+            raise UserRecoverableConfigError(error_message)
+
         finally:
             conn.logout()
 
@@ -226,15 +228,20 @@ class GenericAuthHandler(AuthHandler):
                       email=account.email_address,
                       account_id=account.id,
                       error=exc)
-            raise UserRecoverableConfigError("Couldn't resolve the SMTP "
-                                             "server domain name.")
+            error_message = ("Couldn't resolve the SMTP server domain name. "
+                             "Please check that your SMTP settings are correct.")
+            raise UserRecoverableConfigError(error_message)
+
         except socket.timeout as exc:
             log.error('TCP timeout when connecting to SMTP server',
                       email=account.email_address,
                       account_id=account.id,
                       error=exc)
-            raise UserRecoverableConfigError("Connection timeout when"
-                                             "connecting to SMTP server.")
+
+            error_message = ("Connection timeout when connecting to SMTP server. "
+                             "Please check that your SMTP settings are correct.")
+            raise UserRecoverableConfigError(error_message)
+
         except Exception as exc:
             log.error('Failed to establish an SMTP connection',
                       email=account.email_address,
