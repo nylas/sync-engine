@@ -2,7 +2,6 @@ from sqlalchemy import (Column, BigInteger, Integer, Text, ForeignKey, Enum,
                         Index, String)
 from sqlalchemy.orm import relationship
 
-from inbox.api.err import ActionError
 from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -12,12 +11,7 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     # Ensure that the record's id is non-null
     db_session.flush()
 
-    # Ensure account is valid
     account = db_session.query(Namespace).get(namespace_id).account
-
-    if account.sync_state == 'invalid':
-        raise ActionError()
-
     log_entry = account.actionlog_cls.create(
         action=func_name,
         table_name=record.__tablename__,

@@ -3,7 +3,7 @@ import datetime
 import json
 import mock
 import requests
-from pytest import fixture
+from pytest import fixture, yield_fixture
 from inbox.search.base import get_search_client
 from inbox.search.backends.gmail import GmailSearchClient
 from inbox.search.backends.imap import IMAPSearchClient
@@ -170,6 +170,20 @@ def imap_connection(monkeypatch):
     return conn
 
 
+@yield_fixture
+def invalid_imap_connection(monkeypatch):
+    from inbox.basicauth import ValidationError
+
+    def raise_401(*args):
+        raise ValidationError()
+    conn = MockImapConnection()
+    monkeypatch.setattr(
+        'inbox.auth.generic.GenericAuthHandler.connect_account',
+        raise_401)
+    yield conn
+    monkeypatch.undo()
+
+
 @fixture
 def patch_token_manager(monkeypatch):
     monkeypatch.setattr(
@@ -186,6 +200,19 @@ def patch_gmail_search_response():
         'messages': [{'id': '1'}, {'id': '2'}, {'id': '3'}]
     })
     requests.get = mock.Mock(return_value=resp)
+
+
+@yield_fixture
+def invalid_gmail_token(monkeypatch):
+    from inbox.basicauth import OAuthError
+
+    def raise_401(*args):
+        raise OAuthError()
+    monkeypatch.setattr(
+        'inbox.models.backends.gmail.g_token_manager.get_token_for_email',
+        raise_401)
+    yield
+    monkeypatch.undo()
 
 
 def test_gmail_message_search(api_client, default_account,
@@ -212,6 +239,31 @@ def test_gmail_thread_search(api_client, test_gmail_thread,
     threads = api_client.get_data('/threads/search?q=blah%20blah%20blah')
 
     assert_search_result(sorted_gmail_threads, threads)
+
+
+def test_gmail_search_unicode(db, api_client, test_gmail_thread,
+                              patch_token_manager,
+                              patch_gmail_search_response,
+                              default_account,
+                              sorted_gmail_messages,
+                              sorted_gmail_threads):
+    search_client = get_search_client(default_account)
+    assert isinstance(search_client, GmailSearchClient)
+
+    threads = api_client.get_data('/threads/search?q=存档')
+
+    assert_search_result(sorted_gmail_threads, threads)
+
+
+def test_invalid_gmail_account_search(db, api_client, default_account,
+                                      invalid_gmail_token,
+                                      patch_gmail_search_response,
+                                      sorted_gmail_messages):
+    response = api_client.get_raw('/messages/search?'
+                                  'q=blah%20blah%20blah')
+    assert response.status_code == 403
+    assert "This search can\'t be performed because the account\'s "\
+        "credentials are out of date." in json.loads(response.data)['message']
 
 
 def test_imap_message_search(imap_api_client, generic_account,
@@ -253,18 +305,15 @@ def test_imap_thread_search_unicode(db, imap_api_client, generic_account,
     assert_search_result(sorted_imap_threads, threads)
 
 
-def test_gmail_search_unicode(db, api_client, test_gmail_thread,
-                              patch_token_manager,
-                              patch_gmail_search_response,
-                              default_account,
-                              sorted_gmail_messages,
-                              sorted_gmail_threads):
-    search_client = get_search_client(default_account)
-    assert isinstance(search_client, GmailSearchClient)
-
-    threads = api_client.get_data('/threads/search?q=存档')
-
-    assert_search_result(sorted_gmail_threads, threads)
+def test_invalid_imap_account_search(db, imap_api_client, generic_account,
+                                     invalid_imap_connection,
+                                     imap_folder,
+                                     sorted_imap_messages):
+    response = imap_api_client.get_raw('/messages/search?'
+                                       'q=blah%20blah%20blah')
+    assert response.status_code == 403
+    assert "This search can\'t be performed because the account\'s "\
+        "credentials are invalid." in json.loads(response.data)['message']
 
 
 def assert_search_result(expected, actual):

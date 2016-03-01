@@ -342,6 +342,7 @@ def add_fake_event(db_session, namespace_id, calendar=None,
                   all_day=all_day,
                   raw_data='',
                   uid=str(uuid.uuid4()))
+    event.sequence_number = 0
     db_session.add(event)
     db_session.commit()
     return event
