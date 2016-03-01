@@ -1274,16 +1274,18 @@ def sync_deltas():
     g.parser.add_argument('timeout', type=int,
                           default=LONG_POLL_REQUEST_TIMEOUT, location='args')
     g.parser.add_argument('view', type=view, location='args')
-
+    # - Begin shim -
+    # Remove after folders and labels exposed in the Delta API for everybody,
+    # right now, only expose for Edgehill.
+    # Same for the account object.
+    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
+    g.parser.add_argument('exclude_account', type=strict_bool, location='args',
+                          default=True)
+    # - End shim -
     # Metadata has restricted access - only N1 can make a request with this
     # arg included. For everyone else, set exclude_metadata to True by default.
     g.parser.add_argument('exclude_metadata', type=strict_bool,
                           location='args', default=True)
-    # - Begin shim -
-    # Remove after folders and labels exposed in the Delta API for everybody,
-    # right now, only expose for Edgehill.
-    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
-    # - End shim -
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
@@ -1293,6 +1295,7 @@ def sync_deltas():
     exclude_folders = args.get('exclude_folders')
     if exclude_folders is None:
         exclude_folders = True
+    exclude_account = args.get('exclude_account')
     # - End shim -
     cursor = args['cursor']
     timeout = args['timeout']
@@ -1321,7 +1324,7 @@ def sync_deltas():
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
                 exclude_types, include_types, exclude_folders,
-                exclude_metadata, expand=expand)
+                exclude_metadata, exclude_account, expand=expand)
 
         response = {
             'cursor_start': cursor,
@@ -1388,16 +1391,18 @@ def stream_changes():
     g.parser.add_argument('include_types', type=valid_delta_object_types,
                           location='args')
     g.parser.add_argument('view', type=view, location='args')
-
+    # - Begin shim -
+    # Remove after folders and labels exposed in the Delta API for everybody,
+    # right now, only expose for Edgehill.
+    # Same for the account object.
+    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
+    g.parser.add_argument('exclude_account', type=strict_bool, location='args',
+                          default=True)
+    # - End shim -
     # Metadata has restricted access - only N1 can make a request with this
     # arg included. For everyone else, set exclude_metadata to True by default.
     g.parser.add_argument('exclude_metadata', type=strict_bool,
                           location='args', default=True)
-    # - Begin shim -
-    # Remove after folders and labels exposed in the Delta API for everybody,
-    # right now, only expose for Edgehill.
-    g.parser.add_argument('exclude_folders', type=strict_bool, location='args')
-    # - End shim -
 
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 1800
@@ -1412,6 +1417,7 @@ def stream_changes():
     exclude_folders = args.get('exclude_folders')
     if exclude_folders is None:
         exclude_folders = True
+    exclude_account = args.get('exclude_account')
     # End shim #
 
     if include_types and exclude_types:
@@ -1440,7 +1446,8 @@ def stream_changes():
         poll_interval=poll_interval, timeout=timeout,
         exclude_types=exclude_types, include_types=include_types,
         exclude_folders=exclude_folders,
-        exclude_metadata=exclude_metadata, expand=expand)
+        exclude_metadata=exclude_metadata, exclude_account=exclude_account,
+        expand=expand)
     return Response(stream_with_context(generator),
                     mimetype='text/event-stream')
 

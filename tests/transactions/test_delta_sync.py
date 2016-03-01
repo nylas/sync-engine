@@ -116,3 +116,67 @@ def test_handle_missing_objects(api_client, db, thread, default_namespace):
                                     format(cursor))
     assert len(sync_data['deltas']) == 100
     assert all(delta['event'] == 'delete' for delta in sync_data['deltas'])
+
+
+def test_exclude_account(api_client, db, default_namespace, thread):
+    ts = int(time.time() + 22)
+    cursor = get_cursor(api_client, ts)
+
+    # Create `account`, `message`, `thread` deltas
+    default_namespace.account.sync_state = 'invalid'
+    db.session.commit()
+    add_fake_message(db.session, default_namespace.id, thread)
+
+    # Verify the default value of `exclude_account`=True and
+    # the account delta is *not* included
+    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
+    assert len(sync_data['deltas']) == 2
+    assert set([d['object'] for d in sync_data['deltas']]) == \
+        set(['message', 'thread'])
+
+    # Verify setting `exclude_account`=True returns the account delta as well.
+    sync_data = api_client.get_data('/delta?cursor={}&exclude_account=false'.
+                                    format(cursor))
+    assert len(sync_data['deltas']) == 3
+    assert set([d['object'] for d in sync_data['deltas']]) == \
+        set(['message', 'thread', 'account'])
+
+
+def test_account_delta(api_client, db, default_namespace):
+    ts = int(time.time() + 22)
+    cursor = get_cursor(api_client, ts)
+
+    account = default_namespace.account
+
+    # Create an `account` delta
+    default_namespace.account.sync_state = 'invalid'
+    db.session.commit()
+
+    sync_data = api_client.get_data('/delta?cursor={}&exclude_account=false'.
+                                    format(cursor))
+    assert len(sync_data['deltas']) == 1
+    delta = sync_data['deltas'][0]
+    assert delta['object'] == 'account'
+    assert delta['event'] == 'modify'
+    assert delta['attributes']['id'] == default_namespace.public_id
+    assert delta['attributes']['account_id'] == default_namespace.public_id
+    assert delta['attributes']['email_address'] == account.email_address
+    assert delta['attributes']['name'] == account.name
+    assert delta['attributes']['provider'] == account.provider
+    assert delta['attributes']['organization_unit'] == account.category_type
+    assert delta['attributes']['sync_state'] == 'invalid'
+
+    cursor = sync_data['cursor_end']
+
+    # Create an new `account` delta
+    default_namespace.account.sync_state = 'running'
+    db.session.commit()
+    sync_data = api_client.get_data('/delta?cursor={}&exclude_account=false'.
+                                    format(cursor))
+
+    assert len(sync_data['deltas']) == 1
+    delta = sync_data['deltas'][0]
+    assert delta['object'] == 'account'
+    assert delta['event'] == 'modify'
+    assert delta['attributes']['id'] == default_namespace.public_id
+    assert delta['attributes']['sync_state'] == 'running'
