@@ -23,7 +23,7 @@ setup(
         "mysqlclient==1.3.7",
         "setproctitle>=1.1.8",
         "pymongo>=2.5.2",
-        "python-dateutil==2.4",
+        "python-dateutil==2.4.2",
         "ipython>=1.0.0",
         "enum34==1.0.4",
         "gdata>=2.0.18",
