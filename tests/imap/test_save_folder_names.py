@@ -88,7 +88,7 @@ def test_gmail_handle_folder_renames(db, default_account):
 
     assert len(original_folders) == 2
     for folder in original_folders:
-        assert folder.category != None
+        assert folder.category is not None
 
     original_categories = {f.canonical_name: f.category.display_name for f in
                             original_folders}
@@ -107,7 +107,7 @@ def test_gmail_handle_folder_renames(db, default_account):
         Folder.account_id == default_account.id).all()
 
     for folder in renamed_folders:
-        assert folder.category != None
+        assert folder.category is not None
 
     renamed_categories = {f.canonical_name: f.category.display_name for f in
                             renamed_folders}
@@ -197,7 +197,7 @@ def test_imap_remote_delete(db, default_account):
 
     assert len(original_folders) == 3
     for label in original_folders:
-        assert label.category != None
+        assert label.category is not None
 
     original_categories = {f.canonical_name: f.category.display_name for f in
                             original_folders}
@@ -216,7 +216,7 @@ def test_imap_remote_delete(db, default_account):
         Folder.account_id == default_account.id).all()
 
     for folder in renamed_folders:
-        assert label.category != None
+        assert folder.category is not None
 
     renamed_categories = {f.canonical_name: f.category.display_name for f in
                             renamed_folders}
@@ -224,3 +224,25 @@ def test_imap_remote_delete(db, default_account):
     for folder in new_folders:
         display_name, role = folder
         assert renamed_categories[role] == display_name
+
+
+def test_not_deleting_canonical_folders(empty_db, default_account):
+    # Create a label w/ no messages attached.
+    label = Label.find_or_create(empty_db.session, default_account,
+                                 '[Gmail]/Tous les messages')
+    label.canonical_name = 'all'
+    empty_db.session.commit()
+
+    monitor = GmailSyncMonitor(default_account)
+
+    folder_names_and_roles = {
+        ('[Gmail]/Corbeille', 'trash'),
+        ('[Gmail]/Spam', 'spam'),
+        ('Recettes', None),
+    }
+
+    raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
+    monitor.save_folder_names(empty_db.session, raw_folders)
+
+    label = empty_db.session.query(Label).get(label.id)
+    assert label.deleted_at is None

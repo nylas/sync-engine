@@ -116,9 +116,11 @@ class GmailSyncMonitor(ImapSyncMonitor):
         # folders --- we need to check that there's no messages still
         # associated with the label.
         for deleted_label in deleted_labels:
-            deleted_label.deleted_at = datetime.now()
-            cat = deleted_label.category
-            cat.deleted_at = datetime.now()
+            # Don't mark canonical labels such as Inbox, Important, etc.
+            if deleted_label.canonical_name is None:
+                deleted_label.deleted_at = datetime.now()
+                cat = deleted_label.category
+                cat.deleted_at = datetime.now()
 
     def save_folder_names(self, db_session, raw_folders):
         """

@@ -170,24 +170,24 @@ def test_deletion_creates_revision(db, default_account, default_namespace,
     assert latest_thread_transaction.command == 'delete'
 
 
-def test_deleted_labels_get_gced(db, default_account, thread, message,
+def test_deleted_labels_get_gced(empty_db, default_account, thread, message,
                                  imapuid, folder):
     # Check that only the labels without messages attached to them
     # get deleted.
-
     default_namespace = default_account.namespace
 
     # Create a label w/ no messages attached.
-    label = Label.find_or_create(db.session, default_account, 'dangling label')
+    label = Label.find_or_create(empty_db.session, default_account,
+                                 'dangling label')
     label.deleted_at = datetime.utcnow()
     label.category.deleted_at = datetime.utcnow()
     label_id = label.id
-    db.session.commit()
+    empty_db.session.commit()
 
     # Create a label with attached messages.
     msg_uid = imapuid.msg_uid
     update_metadata(default_account.id, folder.id, folder.canonical_name,
-                    {msg_uid: GmailFlags((), ('label',), None)}, db.session)
+                    {msg_uid: GmailFlags((), ('label',), None)}, empty_db.session)
 
     label_ids = []
     for cat in message.categories:
@@ -200,15 +200,15 @@ def test_deleted_labels_get_gced(db, default_account, thread, message,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     handler.gc_deleted_categories()
-    db.session.commit()
+    empty_db.session.commit()
 
     # Check that the first label got gc'ed
-    marked_deleted = db.session.query(Label).get(label_id)
+    marked_deleted = empty_db.session.query(Label).get(label_id)
     assert marked_deleted is None
 
     # Check that the other labels didn't.
     for label_id in label_ids:
-        assert db.session.query(Label).get(label_id) is not None
+        assert empty_db.session.query(Label).get(label_id) is not None
 
 
 def test_renamed_label_refresh(db, default_account, thread, message,
