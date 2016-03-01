@@ -10,7 +10,7 @@ creds = [
             'name': 'Y.Y!',
             'locale': 'fr',
             'email': 'cypresstest@yahoo.com',
-            'password': 'g8ah6gamtlP4'}
+            'password': 'IHate2Gmail'}
     },
     {
         'provider': 'custom',

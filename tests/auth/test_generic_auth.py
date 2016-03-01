@@ -89,7 +89,7 @@ def test_double_auth(db):
             'name': 'Y.Y!',
             'locale': 'fr',
             'email': 'cypresstest@yahoo.com',
-            'password': 'g8ah6gamtlP4'}
+            'password': 'IHate2Gmail'}
     }
     email = settings['settings']['email']
     password = settings['settings']['password']
