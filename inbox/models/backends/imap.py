@@ -152,7 +152,10 @@ class ImapUid(MailSyncBase):
         category_map = {
             '\\Inbox': 'inbox',
             '\\Important': 'important',
-            '\\Sent': 'sent'
+            '\\Sent': 'sent',
+            '\\Trash': 'trash',
+            '\\Spam': 'spam',
+            '\\All': 'all'
         }
 
         remote_labels = set()
