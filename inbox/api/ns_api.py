@@ -560,8 +560,9 @@ def folder_label_delete_api(public_id):
             MessageCategory.category_id == category.id).exists()
         messages_exist = g.db_session.query(messages_with_category).scalar()
         if messages_exist:
-            return err(403, "Folder {} cannot be deleted because it contains "
-                            "messages.".format(public_id))
+            raise InputError(
+                "Folder {} cannot be deleted because it contains messages.".
+                format(public_id))
 
         deleted_at = datetime.utcnow()
         category.deleted_at = deleted_at

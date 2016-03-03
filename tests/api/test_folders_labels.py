@@ -103,7 +103,7 @@ def test_folder_delete(db, generic_account, folder_client):
 
     # Test that DELETE requests 403 on folders with items in them
     d_data = folder_client.delete('/folders/{}'.format(generic_folder['id']))
-    assert d_data.status_code == 403
+    assert d_data.status_code == 400
 
     # Make an empty folder
     resp = folder_client.post_data('/folders/',
