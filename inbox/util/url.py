@@ -1,8 +1,10 @@
 import dns
+import socket
 from dns.resolver import Resolver
 from dns.resolver import NoNameservers, NXDOMAIN, Timeout, NoAnswer
 from urllib import urlencode
 from nylas.logging import get_logger
+from tldextract import extract as tld_extract
 import re
 log = get_logger('inbox.util.url')
 
@@ -157,3 +159,53 @@ def url_concat(url, args, fragments=None):
         args_tail += urlencode(args)
 
     return url + args_tail + fragment_tail
+
+
+def resolve_hostname(addr):
+    try:
+        return socket.gethostbyname(addr)
+    except socket.error:
+        return None
+
+
+def parent_domain(domain):
+    return tld_extract(domain).registered_domain
+
+
+def matching_subdomains(new_value, old_value):
+    """We allow our customers to update their server addresses,
+    provided that the new server has:
+    1. the same IP as the old server
+    2. shares the same top-level domain name."""
+
+    if new_value is None and old_value is not None:
+        return False
+
+    new_parent_domain = parent_domain(new_value)
+    old_parent_domain = parent_domain(old_value)
+
+    if old_parent_domain is None:
+        log.error('old_parent_domain is None',
+                  old_value=old_value, new_value=new_value)
+        # Shouldn't actually happen.
+        return False
+
+    if new_parent_domain is None:
+        log.error('new_parent_domain is None',
+                  old_value=old_value, new_value=new_value)
+        return False
+
+    if parent_domain(new_value) != parent_domain(old_value):
+        log.error("Domains aren't matching",
+                  new_value=new_value, old_value=old_value)
+        return False
+
+    new_ip = resolve_hostname(new_value)
+    old_ip = resolve_hostname(old_value)
+
+    if (new_ip is None or old_ip is None or new_ip != old_ip):
+        log.error("IP addresses aren't matching",
+                  new_value=new_value, old_Value=old_value)
+        return False
+
+    return True

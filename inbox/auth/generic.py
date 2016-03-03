@@ -13,7 +13,7 @@ from inbox.basicauth import (ValidationError, UserRecoverableConfigError,
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
-
+from inbox.util.url import matching_subdomains
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
@@ -86,12 +86,21 @@ class GenericAuthHandler(AuthHandler):
 
         if self.provider_name == 'custom':
             for attribute in ('imap_server_host', 'smtp_server_host'):
-                value = getattr(account, '_{}'.format(attribute), None)
-                if (response.get(attribute) and value and
-                        response[attribute] != value):
-                    raise UserRecoverableConfigError(
-                        "Updating IMAP/ SMTP endpoints is not permitted. "
-                        "Please contact Nylas support to do so.")
+                old_value = getattr(account, '_{}'.format(attribute), None)
+                new_value = response.get(attribute)
+                if (new_value is not None and old_value is not None and
+                        new_value != old_value):
+
+                    # Before updating the domain name, check if:
+                    # 1/ they have the same parent domain
+                    # 2/ they direct to the same IP.
+                    if not matching_subdomains(new_value, old_value):
+                        raise UserRecoverableConfigError(
+                            "Updating IMAP/ SMTP endpoints is not permitted. "
+                            "Please contact Nylas support to do so.")
+
+                    # If all those conditions are met, update the address.
+                    setattr(account, '_{}'.format(attribute), new_value)
 
         account.ssl_required = response.get('ssl_required', True)
 
