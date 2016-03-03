@@ -171,15 +171,37 @@ class GmailAuthHandler(OAuthAuthHandler):
             auth_creds.refresh_token = new_refresh_token
             auth_creds.is_valid = True
 
-        try:
-            self.verify_config(account)
-        except ImapSupportDisabledError:
-            if account.sync_email:
-                raise
-
         # Ensure account has sync enabled.
         account.enable_sync()
         return account
+
+    def verify_account(self, account):
+        """
+        Verify the credentials provided by logging in.
+        Verify the account configuration -- specifically checks for the presence
+        of the 'All Mail' folder.
+
+        Raises
+        ------
+        An inbox.crispin.GmailSettingError if the 'All Mail' folder is
+        not present and is required (account.sync_email == True).
+
+        """
+        try:
+            # Verify login.
+            conn = self.connect_account(account)
+            # Verify configuration.
+            client = GmailCrispinClient(account.id,
+                                        provider_info('gmail'),
+                                        account.email_address,
+                                        conn,
+                                        readonly=True)
+            client.sync_folders()
+            conn.logout()
+        except ImapSupportDisabledError:
+            if account.sync_email:
+                raise
+        return True
 
     def validate_token(self, access_token):
         response = requests.get(self.OAUTH_TOKEN_VALIDATION_URL,
@@ -190,23 +212,6 @@ class GmailAuthHandler(OAuthAuthHandler):
             raise OAuthError(validation_dict['error'])
 
         return validation_dict
-
-    def verify_config(self, account):
-        """
-        Verifies configuration, specifically presence of 'All Mail' folder.
-        Will raise an inbox.crispin.GmailSettingError if not present.
-
-        """
-        conn = self.connect_account(account)
-        # make a crispin client and check the folders
-        client = GmailCrispinClient(account.id,
-                                    provider_info('gmail'),
-                                    account.email_address,
-                                    conn,
-                                    readonly=True)
-        client.sync_folders()
-        conn.logout()
-        return True
 
     def interactive_auth(self, email_address=None):
         url_args = {'redirect_uri': self.OAUTH_REDIRECT_URI,

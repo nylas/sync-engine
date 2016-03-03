@@ -44,7 +44,7 @@ def test_all_mail_missing(monkeypatch):
     """
     g = get_auth_handler(monkeypatch, {'inbox': 'INBOX'})
     with pytest.raises(GmailSettingError):
-        g.verify_config(AccountStub())
+        g.verify_account(AccountStub())
 
 
 def test_all_mail_present(monkeypatch):
@@ -54,4 +54,4 @@ def test_all_mail_present(monkeypatch):
     """
     g = get_auth_handler(monkeypatch, {'all': 'ALL', 'inbox': 'INBOX',
                                        'trash': 'TRASH'})
-    assert g.verify_config(AccountStub())
+    assert g.verify_account(AccountStub())
