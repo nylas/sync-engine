@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import re
 import binascii
 import datetime
 import itertools
@@ -418,51 +416,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return self.calculate_plaintext_snippet(text)
 
     def calculate_plaintext_snippet(self, text):
-        # Translation for key words in...
-        # English, Spanish, German, French, Portuguese, Dutch
-        # (in that order)
-        regexes = [ur"On\s.*?\s\d{1,2}\:\d{1,2}.*?wrote:?",
-                   ur"El\s.*?\s\d{1,2}\:\d{1,2}.*?escribió:?",
-                   ur"Am\s.*?\s\d{1,2}\:\d{1,2}.*?schrieb:?",
-                   ur"Le\s.*?\s\d{1,2}\:\d{1,2}.*?écrit:?",
-                   ur"No\s.*?\s\d{1,2}\:\d{1,2}.*?escreve:?",
-                   ur"Op\s.*?\s\d{1,2}\:\d{1,2}.*?schreef:?",
-                   ur"Date:\s.*?\s+\d{1,2}:\d{1,2}.*?From:?"]
-
-        compiled = [re.compile(regex, re.UNICODE) for regex in regexes]
-
-        # go through all of the snippets, and take off anything after a match
-        # note that this is done incrementally (i.e. the output is fed as input
-        # to the next c.split) so that if multiple regexes match, we throw away
-        # as much as possible and the order of the regexes doesn't matter
-
-        snippet = text
-        for c in compiled:
-            snippet = c.split(snippet)[0]
-
-        # for example, if we get this message:
-
-        # Blah
-        #
-        # On 10:10, 2016, Someone wrote:
-        #
-        # More blah
-        #
-        # Am 10:10, 2015, Someone Else schrieb:
-        #
-        # Even more blah
-
-        # then if we simply applied whichever regex matched we would either
-        #   A) correctly process it, or
-        #   B) only remove the second reply (Am... schrieb)
-        # depending on what order the regexes are in when we loop through them.
-
-        snippet = ' '.join(snippet.split())[:self.SNIPPET_LENGTH]
-        if not snippet:
-            # if there was no content in the body, fall back to the
-            # "full" snippet
-            snippet = ' '.join(text.split())[:self.SNIPPET_LENGTH]
-        return snippet
+        return ' '.join(text.split())[:self.SNIPPET_LENGTH]
 
     @property
     def body(self):
