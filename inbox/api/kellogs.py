@@ -97,7 +97,7 @@ def _encode(obj, namespace_public_id=None, expand=False):
         return encode(obj.datetime)
 
     if isinstance(obj, Namespace):  # These are now "accounts"
-        return {
+        resp = {
             'id': obj.public_id,
             'object': 'account',
             'account_id': obj.public_id,
@@ -107,6 +107,10 @@ def _encode(obj, namespace_public_id=None, expand=False):
             'organization_unit': obj.account.category_type,
             'sync_state': obj.account.sync_state
         }
+        # Gmail accounts do not set the `server_settings`
+        if expand and obj.account.server_settings:
+            resp['server_settings'] = obj.account.server_settings
+        return resp
 
     elif isinstance(obj, Account):
         raise Exception("Should never be serializing accounts")

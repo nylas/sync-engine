@@ -120,3 +120,11 @@ class GenericAccount(ImapAccount):
     def actionlog_cls(self):
         from inbox.models.action_log import ActionLog
         return ActionLog
+
+    @property
+    def server_settings(self):
+        settings = {}
+        settings['imap_host'], settings['imap_port'] = self.imap_endpoint
+        settings['smtp_host'], settings['smtp_port'] = self.smtp_endpoint
+        settings['ssl_required'] = self.ssl_required
+        return settings

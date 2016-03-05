@@ -218,6 +218,23 @@ def add_generic_imap_account(db_session, email_address='test@nylas.com'):
     account = GenericAccount(email_address=email_address,
                              sync_host=platform.node(),
                              provider='custom')
+    account.imap_endpoint = ('imap.custom.com', 993)
+    account.smtp_endpoint = ('smtp.custom.com', 587)
+    account.imap_password = 'bananagrams'
+    account.smtp_password = 'bananagrams'
+    account.namespace = Namespace()
+    db_session.add(account)
+    db_session.commit()
+    return account
+
+
+def add_fake_yahoo_account(db_session, email_address='cypresstest@yahoo.com'):
+    import platform
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    account = GenericAccount(email_address=email_address,
+                             sync_host=platform.node(),
+                             provider='yahoo')
     account.imap_password = 'bananagrams'
     account.smtp_password = 'bananagrams'
     account.namespace = Namespace()

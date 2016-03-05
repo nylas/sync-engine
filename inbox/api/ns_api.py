@@ -144,7 +144,11 @@ def handle_input_error(error):
 
 @app.route('/account')
 def one_account():
-    return g.encoder.jsonify(g.namespace)
+    g.parser.add_argument('view', type=view, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    # Use a new encoder object with the expand parameter set.
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
+    return encoder.jsonify(g.namespace)
 
 
 #

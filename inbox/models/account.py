@@ -270,6 +270,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         return not (obj_state.pending or
                     inspect(self).attrs.sync_state.history.has_changes())
 
+    @property
+    def server_settings(self):
+        return None
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}
