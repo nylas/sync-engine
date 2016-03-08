@@ -3,4 +3,4 @@ before_install:
 
 install: "sudo ./setup.sh"
 # command to run tests
-script: INBOX_ENV=test ./runtests
+script: INBOX_ENV=test py.test tests
