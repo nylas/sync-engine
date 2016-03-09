@@ -66,7 +66,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             return message
 
     @property
-    def receivedrecentdate(self):
+    def most_recent_received_date(self):
         received_recent_date = None
         for m in self.messages:
             if all(category.name != "sent" for category in m.categories) and \
@@ -85,6 +85,21 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             received_recent_date = sorted_messages[-1].received_date
 
         return received_recent_date
+
+    @property
+    def most_recent_sent_date(self):
+        """ This is the timestamp of the most recently *sent* message on this
+            thread, as decided by whether the message is in the sent folder or
+            not. Clients can use this to properly sort the Sent view.
+            """
+        sent_recent_date = None
+        sorted_messages = sorted(self.messages,
+                                 key=lambda m: m.received_date, reverse=True)
+        for m in sorted_messages:
+            if "sent" in [c.name for c in m.categories] or \
+                    (m.is_draft and m.is_sent):
+                sent_recent_date = m.received_date
+                return sent_recent_date
 
     @property
     def unread(self):
