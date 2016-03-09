@@ -98,6 +98,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         except InputError:
             pass
         category_query = db_session.query(Message.thread_id). \
+            prefix_with('STRAIGHT_JOIN'). \
             join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
                    or_(*category_filters)).subquery()
@@ -298,7 +299,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
             param_dict['in_id'] = in_
         except InputError:
             pass
-        query += lambda q: q.join(MessageCategory).join(Category). \
+        query += lambda q: q.prefix_with('STRAIGHT_JOIN'). \
+            join(MessageCategory).join(Category). \
             filter(Category.namespace_id == namespace_id,
                    or_(*category_filters))
 
