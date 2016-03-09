@@ -185,21 +185,30 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                             if trx.command != 'delete']
 
             object_cls = transaction_objects()[obj_type]
+
             if object_cls == Account:
+                # The base query for Account queries the /Namespace/ table
+                # since the API-returned "`account`" is a `namespace`
+                # under-the-hood.
                 query = db_session.query(Namespace).join(Account).filter(
                     Account.id.in_(ids_to_query),
                     Namespace.id == namespace.id)
+
+                # Key by /namespace.account_id/ --
+                # namespace.id may not be equal to account.id
+                # and trx.record_id == account.id for `account` trxs.
+                objects = {obj.account_id: obj for obj in query}
             else:
                 query = db_session.query(object_cls).filter(
                     object_cls.id.in_(ids_to_query),
                     object_cls.namespace_id == namespace.id)
 
-            if object_cls == Thread:
-                query = query.options(*Thread.api_loading_options(expand))
-            elif object_cls == Message:
-                query = query.options(*Message.api_loading_options(expand))
+                if object_cls == Thread:
+                    query = query.options(*Thread.api_loading_options(expand))
+                elif object_cls == Message:
+                    query = query.options(*Message.api_loading_options(expand))
 
-            objects = {obj.id: obj for obj in query}
+                objects = {obj.id: obj for obj in query}
 
             for trx in latest_trxs:
                 delta = {

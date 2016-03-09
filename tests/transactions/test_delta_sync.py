@@ -6,6 +6,24 @@ from tests.api.base import api_client
 __all__ = ['api_client']
 
 
+def add_account_with_different_namespace_id(db_session,
+                                            email_address='cypress@yahoo.com'):
+    import platform
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    account = GenericAccount(id=11,
+                             email_address=email_address,
+                             sync_host=platform.node(),
+                             provider='yahoo')
+    account.imap_password = 'bananagrams'
+    account.smtp_password = 'bananagrams'
+    account.namespace = Namespace()
+    db_session.add(account)
+    db_session.commit()
+    assert account.namespace.id != account.id
+    return account
+
+
 def get_cursor(api_client, timestamp):
     cursor_response = api_client.post_data('/delta/generate_cursor',
                                            {'start': timestamp})
@@ -180,3 +198,24 @@ def test_account_delta(api_client, db, default_namespace):
     assert delta['event'] == 'modify'
     assert delta['attributes']['id'] == default_namespace.public_id
     assert delta['attributes']['sync_state'] == 'running'
+
+
+def test_account_delta_for_different_namespace_id(db):
+    from inbox.transactions.delta_sync import format_transactions_after_pointer
+
+    account = add_account_with_different_namespace_id(db.session)
+    namespace = account.namespace
+
+    # Create an `account` delta
+    account.sync_state = 'invalid'
+    db.session.commit()
+
+    # Verify `account` delta is not returned when exclude_account=True
+    txns, _ = format_transactions_after_pointer(namespace, 0, db.session, 10,
+                                                exclude_account=True)
+    assert not txns
+
+    # Verify `account` delta is returned when exclude_account=False
+    txns, _ = format_transactions_after_pointer(namespace, 0, db.session, 10,
+                                                exclude_account=False)
+    assert txns
