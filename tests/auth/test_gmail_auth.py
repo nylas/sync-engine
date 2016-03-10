@@ -1,4 +1,5 @@
 import copy
+import mock
 
 import pytest
 
@@ -84,3 +85,29 @@ def test_verify_account(db, patched_gmail_client):
     assert account.sync_email == False
     # Verify an exception is NOT raised if there is an email settings error.
     account = handler.verify_account(account)
+
+
+def test_successful_reauth_resets_sync_state(monkeypatch, db):
+    monkeypatch.setattr('inbox.auth.gmail.GmailCrispinClient', mock.Mock())
+    handler = GmailAuthHandler('gmail')
+    handler.connect_account = lambda account: mock.Mock()
+
+    account = handler.create_account(settings['email'], settings)
+    assert handler.verify_account(account) is True
+    # Brand new accounts have `sync_state`=None.
+    assert account.sync_state is None
+    db.session.add(account)
+    db.session.commit()
+
+    # Pretend account sync starts, and subsequently the password changes,
+    # causing the account to be in `sync_state`='invalid'.
+    account.mark_invalid()
+    db.session.commit()
+    assert account.sync_state == 'invalid'
+
+    # Verify the `sync_state` is reset to 'running' on a successful "re-auth".
+    account = handler.update_account(account, settings)
+    assert handler.verify_account(account) is True
+    assert account.sync_state == 'running'
+    db.session.add(account)
+    db.session.commit()
