@@ -747,10 +747,10 @@ class GmailCrispinClient(CrispinClient):
 
         if 'all' not in present_folders:
             raise GmailSettingError(
-                "Account {} ({}) is missing the 'All Mail' folder. This is "
+                "Account {} is missing the 'All Mail' folder. This is "
                 "probably due to 'Show in IMAP' being disabled. "
                 "See https://support.nylas.com/hc/en-us/articles/217562277 for more details."
-                .format(self.account_id, self.email_address))
+                .format(self.email_address))
 
         # If the account has Trash, Spam folders, sync those too.
         to_sync = []

@@ -5,8 +5,9 @@ import click
 import sys
 import IPython
 from inbox.models import (Account, Message, Namespace, Thread, Event,
-                          Calendar, Transaction, Block, Part)
-from inbox.models.session import global_session_scope
+                          Calendar, Transaction, Block, Part, ActionLog,
+                          Label, Folder, Category)
+from inbox.models.session import global_session_scope, session_scope
 
 cls_for_type = dict(
     account=Account,
@@ -19,13 +20,20 @@ cls_for_type = dict(
     calendar=Calendar,
     transaction=Transaction)
 
+try:
+    from inbox.models.backends.eas import EASFolderSyncStatus
+    cls_for_type['easfoldersyncstatus'] = EASFolderSyncStatus
+except ImportError:
+    pass
 
 @click.command()
 @click.option('--type', '-t', type=str, required=True)
 @click.option('--id', type=str, default=None)
 @click.option('--public-id', type=str, default=None)
+@click.option('--account-id', type=str, default=None)
+@click.option('--namespace-id', type=str, default=None)
 @click.option('--readwrite', is_flag=True, default=False)
-def main(type, id, public_id, readwrite):
+def main(type, id, public_id, account_id, namespace_id, readwrite):
     type = type.lower()
 
     if type not in cls_for_type:
@@ -34,17 +42,24 @@ def main(type, id, public_id, readwrite):
 
     cls = cls_for_type[type]
 
-    if public_id is None and id is None:
+    if all([id, public_id, account_id, namespace_id]):
         print "Error: you should specify an id or public id to query."
         sys.exit(-1)
 
     with global_session_scope() as db_session:
         with db_session.no_autoflush:
+            qu = db_session.query(cls)
+
             if public_id:
-                obj = db_session.query(cls).filter(cls.public_id == public_id)\
-                    .one()
+                qu = qu.filter(cls.public_id == public_id)
             elif id:
-                obj = db_session.query(cls).filter(cls.id == id).one()
+                qu = qu.filter(cls.id == id)
+            elif account_id:
+                qu = qu.filter(cls.account_id == account_id)
+            elif namespace_id:
+                qu = qu.filter(cls.namespace_id == namespace_id)
+
+            obj = qu.one()
 
             banner = """The object you queried is accessible as `obj`.
 Note that the db session is read-only, unless if you start this script with --readwrite"""
