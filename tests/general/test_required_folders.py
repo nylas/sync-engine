@@ -11,6 +11,7 @@ class AccountStub(object):
     email_address = 'bob@bob.com'
     access_token = None
     imap_endpoint = None
+    sync_state = 'running'
 
     def new_token(self):
         return ('foo', 22)
