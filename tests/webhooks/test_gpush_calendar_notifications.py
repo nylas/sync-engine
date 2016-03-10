@@ -1,4 +1,5 @@
 import pytest
+import time
 from datetime import datetime, timedelta
 
 from inbox.models.calendar import Calendar
@@ -157,7 +158,23 @@ def test_event_update(db, webhooks_client, watched_calendar):
     r = webhooks_client.post_data(event_path, {}, headers)
     assert r.status_code == 200
     db.session.refresh(watched_calendar)
-    assert watched_calendar.gpush_last_ping > before
+    gpush_last_ping = watched_calendar.gpush_last_ping
+    assert gpush_last_ping > before
+
+    # Test that gpush_last_ping is not updated if already recently updated
+    watched_calendar.gpush_last_ping = gpush_last_ping - timedelta(seconds=2)
+    gpush_last_ping = watched_calendar.gpush_last_ping
+    db.session.commit()
+    r = webhooks_client.post_data(event_path, {}, headers)
+    db.session.refresh(watched_calendar)
+    assert gpush_last_ping == watched_calendar.gpush_last_ping
+
+    # Test that gpush_last_ping *is* updated if last updated too long ago
+    watched_calendar.gpush_last_ping = gpush_last_ping - timedelta(seconds=22)
+    db.session.commit()
+    r = webhooks_client.post_data(event_path, {}, headers)
+    db.session.refresh(watched_calendar)
+    assert watched_calendar.gpush_last_ping > gpush_last_ping
 
     bad_event_path = CALENDAR_PATH.format(1111111111111)
     r = webhooks_client.post_data(bad_event_path, {}, headers)

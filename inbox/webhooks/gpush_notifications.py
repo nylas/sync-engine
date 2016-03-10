@@ -1,3 +1,5 @@
+import random
+from datetime import datetime
 from flask import request, g, Blueprint, make_response
 from flask import jsonify
 from sqlalchemy.orm.exc import NoResultFound
@@ -81,6 +83,16 @@ def event_update(calendar_public_id):
             calendar = db_session.query(Calendar) \
                 .filter(Calendar.public_id == calendar_public_id) \
                 .one()
+            if calendar.gpush_last_ping is not None:
+                time_since_last_ping = (
+                    datetime.utcnow() - calendar.gpush_last_ping
+                ).total_seconds()
+
+                # Limit write volume, and de-herd, in case we're getting many
+                # concurrent updates for the same calendar.
+                if time_since_last_ping < 10 + random.randrange(0, 10):
+                    return resp(200)
+
             calendar.handle_gpush_notification()
             db_session.commit()
         return resp(200)
