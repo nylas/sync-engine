@@ -105,7 +105,7 @@ def _encode(obj, namespace_public_id=None, expand=False):
             'name': obj.account.name,
             'provider': obj.account.provider,
             'organization_unit': obj.account.category_type,
-            'sync_state': obj.account.sync_state
+            'sync_state': obj.account.sync_state if obj.account.sync_state else 'running'  # noqa
         }
         # Gmail accounts do not set the `server_settings`
         if expand and obj.account.server_settings:

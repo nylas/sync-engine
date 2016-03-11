@@ -64,3 +64,26 @@ def test_account_expanded(db, api_client, generic_account, gmail_account):
     resp_data = api_client.get_data('/account/?view=expanded')
     assert resp_data['provider'] == 'gmail'
     assert 'server_settings' not in resp_data
+
+
+def test_account_repr_for_new_account(db):
+    account = add_fake_yahoo_account(db.session)
+
+    # Sync for the account has not started yet.
+    assert account.sync_state is None
+
+    # However the API-returned account object has `sync_state=running`
+    # so API clients can do the right thing.
+    api_client = new_api_client(db, account.namespace)
+    resp_data = api_client.get_data('/account')
+    assert resp_data['id'] == account.namespace.public_id
+    assert resp_data['sync_state'] == 'running'
+
+    # Verify other sync_states are not masked.
+    account.sync_state = 'invalid'
+    db.session.commit()
+
+    api_client = new_api_client(db, account.namespace)
+    resp_data = api_client.get_data('/account')
+    assert resp_data['id'] == account.namespace.public_id
+    assert resp_data['sync_state'] == 'invalid'
