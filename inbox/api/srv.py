@@ -45,12 +45,24 @@ def auth():
         return
 
     if not request.authorization or not request.authorization.username:
-        return make_response((
-            "Could not verify access credential.", 401,
-            {'WWW-Authenticate': 'Basic realm="API '
-             'Access Token Required"'}))
 
-    namespace_public_id = request.authorization.username
+        AUTH_ERROR_MSG = ("Could not verify access credential.", 401,
+                             {'WWW-Authenticate': 'Basic realm="API '
+                              'Access Token Required"'})
+
+        auth_header = request.headers.get('Authorization', None)
+
+        if not auth_header:
+            return make_response(AUTH_ERROR_MSG)
+
+        parts = auth_header.split()
+
+        if (len(parts) != 2 or parts[0].lower() != 'bearer' or not parts[1]):
+            return make_response(AUTH_ERROR_MSG)
+        namespace_public_id = parts[1]
+
+    else:
+        namespace_public_id = request.authorization.username
 
     with global_session_scope() as db_session:
         try:
