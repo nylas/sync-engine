@@ -556,7 +556,8 @@ def metadata(namespace_id, app_id, view, limit, offset,
     else:
         query = db_session.query(Metadata)
 
-    filters = [Metadata.namespace_id == namespace_id]
+    filters = [Metadata.namespace_id == namespace_id,
+               Metadata.value.isnot(None)]
     if app_id is not None:
         filters.append(Metadata.app_id == app_id)
 
