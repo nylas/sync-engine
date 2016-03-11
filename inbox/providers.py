@@ -143,7 +143,7 @@ providers = dict([
     }),
     ("soverin", {
         "type": "generic",
-        "imap": ("imap.soverin.net", 143),
+        "imap": ("imap.soverin.net", 993),
         "smtp": ("smtp.soverin.net", 587),
         "auth": "password",
         "domains": ["soverin.net"],
