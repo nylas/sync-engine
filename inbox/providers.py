@@ -141,7 +141,7 @@ providers = dict([
         "domains": ["icloud.com"],
         "mx_servers": ["mx[1-6].mail.icloud.com"]
     }),
-    ("soverin.net", {
+    ("soverin", {
         "type": "generic",
         "imap": ("imap.soverin.net", 143),
         "smtp": ("smtp.soverin.net", 587),
