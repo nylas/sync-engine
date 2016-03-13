@@ -88,7 +88,10 @@ def start():
     engine = engine_manager.get_for_id(g.namespace_id)
     g.db_session = new_session(engine)
     g.namespace = Namespace.get(g.namespace_id, g.db_session)
-    g.encoder = APIEncoder(g.namespace.public_id)
+
+    is_n1 = request.environ.get('IS_N1', False)
+    g.encoder = APIEncoder(g.namespace.public_id, is_n1=is_n1)
+
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
@@ -1466,13 +1469,15 @@ def stream_changes():
 
     poll_interval = config.get('STREAMING_API_POLL_INTERVAL', 1)
     # TODO make transaction log support the `expand` feature
+
+    is_n1 = request.environ.get('IS_N1', False)
     generator = delta_sync.streaming_change_generator(
         g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=poll_interval, timeout=timeout,
         exclude_types=exclude_types, include_types=include_types,
         exclude_folders=exclude_folders,
         exclude_metadata=exclude_metadata, exclude_account=exclude_account,
-        expand=expand)
+        expand=expand, is_n1=is_n1)
     return Response(stream_with_context(generator),
                     mimetype='text/event-stream')
 

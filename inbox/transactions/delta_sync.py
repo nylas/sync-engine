@@ -87,7 +87,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                                       result_limit, exclude_types=None,
                                       include_types=None, exclude_folders=True,
                                       exclude_metadata=True, exclude_account=True,
-                                      expand=False):
+                                      expand=False, is_n1=False):
     """
     Return a pair (deltas, new_pointer), where deltas is a list of change
     events, represented as dictionaries:
@@ -223,7 +223,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                         continue
                     repr_ = encode(
                         obj, namespace_public_id=namespace.public_id,
-                        expand=expand)
+                        expand=expand, is_n1=is_n1)
                     delta['attributes'] = repr_
 
                 results.append((trx.id, delta))
@@ -244,7 +244,7 @@ def streaming_change_generator(namespace, poll_interval, timeout,
                                transaction_pointer, exclude_types=None,
                                include_types=None, exclude_folders=True,
                                exclude_metadata=True, exclude_account=True,
-                               expand=False):
+                               expand=False, is_n1=False):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
@@ -261,14 +261,14 @@ def streaming_change_generator(namespace, poll_interval, timeout,
         `transaction_pointer`.
 
     """
-    encoder = APIEncoder()
+    encoder = APIEncoder(is_n1=is_n1)
     start_time = time.time()
     while time.time() - start_time < timeout:
         with session_scope(namespace.id) as db_session:
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
                 exclude_types, include_types, exclude_folders,
-                exclude_metadata, exclude_account, expand=expand)
+                exclude_metadata, exclude_account, expand=expand, is_n1=is_n1)
 
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer
