@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from inbox.config import config
 from inbox.models import Account
+from inbox.util.stats import statsd_client
 from inbox.models.session import session_scope
 from nylas.logging.sentry import log_uncaught_errors
 from inbox.heartbeat.status import clear_heartbeat_status
@@ -101,7 +102,15 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
         ids_to_delete = [(acc.id, acc.namespace.id) for acc
                          in db_session.query(Account) if acc.is_deleted]
 
+    queue_size = len(ids_to_delete)
     for account_id, namespace_id in ids_to_delete:
+        # queue_size = length of queue
+        # deleted_count = number of accounts deleted during loop iteration
+        # this is necessary because the length of ids_to_delete doesn't
+        # change during loop iteration
+        statsd_client.gauge('mailsync.{}.account_deletion.queue.length'
+                            .format(shard_id),
+                            queue_size - deleted_count)
         try:
             with session_scope(namespace_id) as db_session:
                 account = db_session.query(Account).get(account_id)
@@ -116,7 +125,7 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
                     continue
 
             log.info('Deleting account', account_id=account_id)
-
+            start_time = time.time()
             # Delete data in database
             try:
                 log.info('Deleting database data', account_id=account_id)
@@ -131,6 +140,9 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
             log.debug('Deleting liveness data', account_id=account_id)
             clear_heartbeat_status(account_id)
             deleted_count += 1
+            statsd_client.incr('mailsync.account_deletion.queue.deleted', 1)
+            statsd_client.timing('mailsync.account_deletion.queue.deleted',
+                                 time.time() - start_time)
         except Exception:
             log_uncaught_errors(log, account_id=account_id)
 
@@ -177,7 +189,8 @@ def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
             filters['easfoldersyncstatus'] = ('account_id', account_id)
 
     for cls in filters:
-        _batch_delete(engine, cls, filters[cls], throttle=throttle, dry_run=dry_run)
+        _batch_delete(engine, cls, filters[cls], throttle=throttle,
+                      dry_run=dry_run)
 
     # Use a single delete for the other tables. Rows from tables which contain
     # cascade-deleted foreign keys to other tables deleted here (or above)
@@ -220,7 +233,8 @@ def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
             db_session.commit()
 
 
-def _batch_delete(engine, table, xxx_todo_changeme, throttle=False, dry_run=False):
+def _batch_delete(engine, table, xxx_todo_changeme, throttle=False,
+                  dry_run=False):
     (column, id_) = xxx_todo_changeme
     count = engine.execute(
         'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
@@ -254,11 +268,14 @@ def _batch_delete(engine, table, xxx_todo_changeme, throttle=False, dry_run=Fals
 def check_throttle():
     # Ensure replica lag is not spiking
     base_url = config["UMPIRE_BASE_URL"]
-    replica_lag_url = ("https://{}/check?metric=maxSeries(servers.prod.sync-mysql-node.*.mysql."
-                       "Seconds_Behind_Master)&max=10&min=0&range=300".format(base_url))
+    replica_lag_url = ("https://{}/check?metric=maxSeries(servers.prod."
+                       "sync-mysql-node.*.mysql.Seconds_Behind_Master)"
+                       "&max=10&min=0&range=300".format(base_url))
 
-    cpu_url = ('https://{}/check?metric=maxSeries(offset(scale(groupByNode(servers.prod.sync'
-               '-mysql-node.*.cpu.cpu*.idle,3,"averageSeries"),-1),100))&max=70&min=0&range=300'.format(base_url))
+    cpu_url = ('https://{}/check?metric=maxSeries(offset(scale(groupByNode('
+               'servers.prod.sync-mysql-node.*.cpu.cpu*.idle,3,'
+               '"averageSeries"),-1),100))&max=70&min=0&range=300'.
+               format(base_url))
 
     replica_lag_status_code = requests.get(replica_lag_url).status_code
     cpu_status_code = requests.get(cpu_url).status_code
