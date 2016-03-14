@@ -172,6 +172,17 @@ def parent_domain(domain):
     return tld_extract(domain).registered_domain
 
 
+def naked_domain(url):
+    # This function extracts the domain name part of an URL.
+    # It works indiscriminately on URLs or plain domains.
+    res = tld_extract(url)
+
+    if not res.subdomain or res.subdomain == '':
+        return res.registered_domain
+    else:
+        return ".".join([res.subdomain, res.registered_domain])
+
+
 def matching_subdomains(new_value, old_value):
     """We allow our customers to update their server addresses,
     provided that the new server has:
@@ -180,6 +191,15 @@ def matching_subdomains(new_value, old_value):
 
     if new_value is None and old_value is not None:
         return False
+
+    if new_value == old_value:
+        return True
+
+    new_domain = naked_domain(new_value)
+    old_domain = naked_domain(old_value)
+
+    if new_domain == old_domain:
+        return True
 
     new_parent_domain = parent_domain(new_value)
     old_parent_domain = parent_domain(old_value)
@@ -195,7 +215,7 @@ def matching_subdomains(new_value, old_value):
                   old_value=old_value, new_value=new_value)
         return False
 
-    if parent_domain(new_value) != parent_domain(old_value):
+    if new_parent_domain != old_parent_domain:
         log.error("Domains aren't matching",
                   new_value=new_value, old_value=old_value)
         return False
