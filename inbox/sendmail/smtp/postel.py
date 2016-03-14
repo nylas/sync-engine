@@ -349,7 +349,9 @@ class SMTPClient(object):
             # Distinguish between permanent failures due to message
             # content or recipients, and temporary failures for other reasons.
             # In particular, see https://support.google.com/a/answer/3726730
-            if err.smtp_code == 550 and err.smtp_error.startswith('5.4.5'):
+            if (err.smtp_code == 550 and (
+                    err.smtp_error.startswith('5.4.5') or
+                    err.smtp_error.startswith('5.7.1'))):
                 message = 'Daily sending quota exceeded'
                 http_code = 429
             elif (err.smtp_code == 552 and

@@ -93,12 +93,17 @@ def erring_smtp_connection(exc_type, *args):
     return ErringSMTPConnection
 
 
+# Different providers use slightly different errors, so parametrize this test
+# fixture to imitate them.
+@pytest.fixture(params=[
+    "5.4.5 Daily sending quota exceeded"
+    "5.7.1 You have exceeded your daily sending limits"])
 @pytest.fixture
-def quota_exceeded(patch_token_manager, monkeypatch):
+def quota_exceeded(patch_token_manager, monkeypatch, request):
     monkeypatch.setattr('inbox.sendmail.smtp.postel.SMTPConnection',
                         erring_smtp_connection(
                             smtplib.SMTPDataError, 550,
-                            '5.4.5 Daily sending quota exceeded'))
+                            request.param))
 
 
 @pytest.fixture
