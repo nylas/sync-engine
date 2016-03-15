@@ -96,8 +96,11 @@ class GenericAuthHandler(AuthHandler):
                     # 2/ they direct to the same IP.
                     if not matching_subdomains(new_value, old_value):
                         raise UserRecoverableConfigError(
-                            "Updating IMAP/ SMTP endpoints is not permitted. "
-                            "Please contact Nylas support to do so.")
+                            "Updating the IMAP/SMTP servers is not permitted. Please "
+                            "verify that the server names you entered are correct. "
+                            "If your IMAP/SMTP server has in fact changed, please "
+                            "contact Nylas support to update it. More details here: "
+                            "https://support.nylas.com/hc/en-us/articles/218006767")
 
                     # If all those conditions are met, update the address.
                     setattr(account, '_{}'.format(attribute), new_value)
