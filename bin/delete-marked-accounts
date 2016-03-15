@@ -14,7 +14,7 @@ import click
 import gevent
 import logging
 
-from inbox.ignition import engine_manager
+from inbox.config import config
 from inbox.models.util import delete_marked_accounts
 
 from nylas.logging import get_logger, configure_logging
@@ -29,19 +29,23 @@ log = get_logger()
 def run(throttle, dry_run):
     pool = []
 
-    for key in engine_manager.engines:
-        log.info("Spawning delete process for shard",
-                 shard_id=key)
-        pool.append(gevent.spawn(delete_account_data, key, throttle, dry_run))
+    for host in config['DATABASE_HOSTS']:
+        log.info("Spawning delete process for host",
+                 host=host['HOSTNAME'])
+        pool.append(gevent.spawn(delete_account_data, host, throttle, dry_run))
 
     gevent.joinall(pool)
 
 
-def delete_account_data(shard_id, throttle, dry_run):
+def delete_account_data(host, throttle, dry_run):
     while True:
-        delete_marked_accounts(shard_id, throttle, dry_run)
+        for shard in host['SHARDS']:
+            # Ensure shard is explicitly not marked as disabled
+            if 'DISABLED' in shard and not shard['DISABLED']:
+                delete_marked_accounts(shard['ID'], throttle, dry_run)
         gevent.sleep(600)
 
 
 if __name__ == '__main__':
     run()
+
