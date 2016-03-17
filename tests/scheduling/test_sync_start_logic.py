@@ -178,3 +178,37 @@ def test_http_unassignment(db, default_account, mock_queue_client):
             '/unassign', data=json.dumps({'account_id': default_account.id}),
             content_type='application/json')
         assert resp.status_code == 409
+
+
+def test_start_accounts_w_sync_should_run_set(db, default_account,
+                                              config,
+                                              mock_queue_client):
+    purge_other_accounts(default_account)
+    config['SYNC_STEAL_ACCOUNTS'] = True
+    default_account.sync_should_run = True
+    db.session.commit()
+
+    qp = QueuePopulator(zone='testzone')
+    qp.queue_client = mock_queue_client
+    qp.enqueue_new_accounts()
+    s = patched_sync_service(mock_queue_client)
+
+    s.poll()
+    assert s.start_sync.call_count == 1
+
+
+def test_dont_start_accounts_when_sync_should_run_is_none(db, default_account,
+                                                          config,
+                                                          mock_queue_client):
+    purge_other_accounts(default_account)
+    config['SYNC_STEAL_ACCOUNTS'] = True
+    default_account.sync_should_run = False
+    db.session.commit()
+
+    qp = QueuePopulator(zone='testzone')
+    qp.queue_client = mock_queue_client
+    qp.enqueue_new_accounts()
+    s = patched_sync_service(mock_queue_client)
+
+    s.poll()
+    assert s.start_sync.call_count == 0
