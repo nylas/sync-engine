@@ -21,6 +21,7 @@ from flanker.addresslib.quote import smart_quote
 from flanker.mime.message.headers.encoding import encode_string
 from flanker.addresslib.parser import MAX_ADDRESS_LENGTH
 from html2text import html2text
+from inbox.events.ical import generate_icalendar_invite
 
 VERSION = pkg_resources.get_distribution('inbox-sync').version
 
@@ -61,7 +62,8 @@ def create_email(from_name,
                  html,
                  in_reply_to,
                  references,
-                 attachments):
+                 attachments,
+                 event=None):
     """
     Creates a MIME email message (both body and sets the needed headers).
 
@@ -97,6 +99,11 @@ def create_email(from_name,
     msg.append(
         mime.create.text('plain', plaintext),
         mime.create.text('html', html))
+
+    if event:
+        ical_txt = generate_icalendar_invite(event).to_ical()
+        msg.append(mime.create.text('calendar; method=REQUEST', ical_txt,
+                                    charset='utf8'))
 
     # Create an outer multipart/mixed message
     if attachments:

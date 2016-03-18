@@ -6,7 +6,7 @@ from inbox.sendmail.base import get_sendmail_client, SendMailException
 log = get_logger()
 
 
-def send_draft(account, draft, db_session):
+def send_draft(account, draft, db_session, event=None):
     """Send the draft with id = `draft_id`."""
     # Update message state and prepare a response so that we can immediately
     # return it on success, and not potentially have queries fail after
@@ -16,7 +16,7 @@ def send_draft(account, draft, db_session):
     response_on_success = APIEncoder().jsonify(draft)
     try:
         sendmail_client = get_sendmail_client(account)
-        sendmail_client.send(draft)
+        sendmail_client.send(draft, event)
     except SendMailException as exc:
         kwargs = {}
         if exc.failures:

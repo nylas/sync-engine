@@ -7,10 +7,10 @@ from flanker import mime
 from inbox.basicauth import OAuthError
 from inbox.models import Message, Event
 from tests.util.base import thread, message, imported_event
-from tests.api.base import api_client
+from tests.api.base import api_client, attachments
 
 
-__all__ = ['thread', 'message', 'api_client', 'imported_event']
+__all__ = ['thread', 'message', 'api_client', 'imported_event', 'attachments']
 
 
 class MockTokenManager(object):
@@ -182,26 +182,81 @@ def example_draft_bad_body(db, default_account):
     }
 
 
-@pytest.fixture
-def example_event(db, api_client):
-    from inbox.models.calendar import Calendar
-    cal = db.session.query(Calendar).get(1)
+def test_send_with_event(patch_smtp, api_client, example_draft, event):
+    # Create a draft
+    r = api_client.post_data('/drafts', example_draft)
+    msgs = patch_smtp
+    assert r.status_code == 200
+    draft_public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
-    event = {
-        'title': 'Invite test',
-        'when': {
-            "end_time": 1436210662,
-            "start_time": 1436207062
-        },
-        'participants': [
-            {'email': 'helena@nylas.com'}
-        ],
-        'calendar_id': cal.public_id,
-    }
+    # Send the draft along with an event ID to use for invites
+    r = api_client.post_data('/send',
+                             {'draft_id': draft_public_id,
+                              'version': version,
+                              'event_id': event.public_id})
+    assert r.status_code == 200
 
-    r = api_client.post_data('/events', event)
-    event_public_id = json.loads(r.data)['id']
-    return event_public_id
+    # Make sure one message was sent
+    assert len(msgs) == 1
+    recipients, raw_msg = msgs[0]
+    msg = mime.from_string(raw_msg)
+
+    # Check the MIME body of the message to make sure the event is there
+    parts = []
+    for mimepart in msg.walk(with_self=msg.content_type.is_singlepart()):
+        format_type = mimepart.content_type.format_type
+        subtype = mimepart.content_type.subtype
+        parts.append((format_type, subtype))
+    assert ('text', 'plain') in parts
+    assert ('text', 'html') in parts
+    assert ('text', 'calendar') in parts
+
+
+def test_send_with_event_and_attachments(patch_smtp, api_client, example_draft,
+                                         event, attachments):
+    msgs = patch_smtp
+
+    # Load and post file for attachment
+    filename, path = attachments[0]
+    data = {'file': (open(path, 'rb'), filename)}
+    r = api_client.post_raw('/files', data=data)
+    assert r.status_code == 200
+    attachment_id = json.loads(r.data)[0]['id']
+
+    # Add attachment to the new draft and post the draft
+    example_draft['file_ids'] = [attachment_id]
+    r = api_client.post_data('/drafts', example_draft)
+    assert r.status_code == 200
+    returned_draft = json.loads(r.data)
+    draft_public_id = returned_draft['id']
+    version = returned_draft['version']
+
+    # Send the draft along with an event ID to use for invites
+    r = api_client.post_data('/send',
+                             {'draft_id': draft_public_id,
+                              'version': version,
+                              'event_id': event.public_id})
+    assert r.status_code == 200
+
+    # Make sure one message was sent
+    assert len(msgs) == 1
+    recipients, raw_msg = msgs[0]
+    msg = mime.from_string(raw_msg)
+
+    # Check the MIME body of the message to make sure both the event and the
+    # attachment are there
+    parts = []
+    for mimepart in msg.walk(with_self=msg.content_type.is_singlepart()):
+        is_attachment = mimepart.is_attachment()
+        format_type = mimepart.content_type.format_type
+        subtype = mimepart.content_type.subtype
+        parts.append((format_type, subtype, is_attachment))
+
+    assert ('text', 'plain', False) in parts
+    assert ('text', 'html', False) in parts
+    assert ('text', 'calendar', False) in parts
+    assert ('image', 'jpeg', True) in parts
 
 
 def test_send_existing_draft(patch_smtp, api_client, example_draft):
