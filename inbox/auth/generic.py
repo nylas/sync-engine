@@ -266,8 +266,10 @@ class GenericAuthHandler(AuthHandler):
         # Reset the sync_state to 'running' on a successful re-auth.
         # Necessary for API requests to proceed and an account modify delta to
         # be returned to delta/ streaming clients.
-        account.sync_state = ('running' if account.sync_state in
-                              ('running', 'invalid') else account.sync_state)
+        # NOTE: Setting this does not restart the sync. Sync scheduling occurs
+        # via the sync_should_run bit (set to True in update_account() above).
+        account.sync_state = ('running' if account.sync_state else
+                              account.sync_state)
         return True
 
     def interactive_auth(self, email_address):
