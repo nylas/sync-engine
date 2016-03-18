@@ -179,13 +179,14 @@ def test_http_unassignment(db, default_account, mock_queue_client):
             content_type='application/json')
         assert resp.status_code == 409
 
-
+@pytest.mark.parametrize("sync_state", ["running", "stopped", "invalid"])
 def test_start_accounts_w_sync_should_run_set(db, default_account,
                                               config,
-                                              mock_queue_client):
+                                              mock_queue_client, sync_state):
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
     default_account.sync_should_run = True
+    default_account.sync_state = sync_state
     db.session.commit()
 
     qp = QueuePopulator(zone='testzone')
@@ -197,12 +198,15 @@ def test_start_accounts_w_sync_should_run_set(db, default_account,
     assert s.start_sync.call_count == 1
 
 
+@pytest.mark.parametrize("sync_state", ["running", "stopped", "invalid"])
 def test_dont_start_accounts_when_sync_should_run_is_none(db, default_account,
                                                           config,
-                                                          mock_queue_client):
+                                                          mock_queue_client,
+                                                          sync_state):
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
     default_account.sync_should_run = False
+    default_account.sync_state = sync_state
     db.session.commit()
 
     qp = QueuePopulator(zone='testzone')
