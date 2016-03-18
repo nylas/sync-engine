@@ -15,7 +15,8 @@ from inbox.sqlalchemy_ext.util import ForceStrictMode
 @click.option('--target-hostname', default=None,
               help='Limit database initialization to only one host / '
                    'set of shards')
-def main(target_hostname):
+@click.option('--host-ip', default=None)
+def main(target_hostname, host_ip):
     database_hosts = config.get_required('DATABASE_HOSTS')
     database_users = config.get_required('DATABASE_USERS')
     engine_manager = EngineManager(database_hosts, database_users,
@@ -27,11 +28,12 @@ def main(target_hostname):
             key = shard['ID']
             assert isinstance(key, int)
             hostname = host['HOSTNAME']
+            connect_to = host_ip if host_ip else hostname
             mysql_user = database_users[hostname]['USER']
             mysql_password = database_users[hostname]['PASSWORD']
             base_uri = build_uri(username=mysql_user,
                                  password=mysql_password,
-                                 hostname=host['HOSTNAME'],
+                                 hostname=connect_to,
                                  port=host['PORT'],
                                  database_name='')
             base_engine = sqlalchemy.create_engine(
