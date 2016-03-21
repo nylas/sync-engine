@@ -88,9 +88,7 @@ class GenericAuthHandler(AuthHandler):
             for attribute in ('imap_server_host', 'smtp_server_host'):
                 old_value = getattr(account, '_{}'.format(attribute), None)
                 new_value = response.get(attribute)
-                if (new_value is not None and old_value is not None and
-                        new_value != old_value):
-
+                if (new_value and old_value and new_value != old_value):
                     # Before updating the domain name, check if:
                     # 1/ they have the same parent domain
                     # 2/ they direct to the same IP.
