@@ -645,8 +645,7 @@ def rsvp_recipient(event):
         return event.organizer_email
 
     if event.message is not None:
-        if event.message.from_addr is not None \
-                and len(event.message.from_addr) == 1:
+        if event.message.from_addr is not None and len(event.message.from_addr) == 1:
             from_addr = event.message.from_addr[0][1]
             if from_addr is not None and from_addr != '':
                 return from_addr

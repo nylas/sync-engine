@@ -175,8 +175,7 @@ class SMTPConnection(object):
         """
         # If STARTTLS is available, always use it -- irrespective of the
         # `self.ssl_required`. If it's not or it fails, use `self.ssl_required`
-        # to determine whether to fail or continue with plaintext
-        # authentication.
+        # to determine whether to fail or continue with plaintext authentication.
         self.connection.ehlo()
         if self.connection.has_extn('starttls'):
             try:
@@ -379,7 +378,7 @@ class SMTPClient(object):
         # between SMTP and EAS.
         return self._send(recipients, raw_message)
 
-    def send(self, draft, event=None):
+    def send(self, draft):
         """
         Turn a draft object into a MIME message and send it.
 
@@ -420,8 +419,7 @@ class SMTPClient(object):
                            html=draft.body,
                            in_reply_to=draft.in_reply_to,
                            references=draft.references,
-                           attachments=attachments,
-                           event=event)
+                           attachments=attachments)
 
         recipient_emails = [email for name, email in itertools.chain(
             draft.to_addr, draft.cc_addr, draft.bcc_addr)]

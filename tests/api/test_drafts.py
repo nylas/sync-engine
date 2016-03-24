@@ -2,15 +2,16 @@
 """Test local behavior for the drafts API. Doesn't test syncback or actual
 sending."""
 import json
+import os
 from datetime import datetime
 import gevent
 
 import pytest
 
 from tests.util.base import add_fake_message, add_fake_thread
-from tests.api.base import api_client, attachments
+from tests.api.base import api_client
 
-__all__ = ['api_client', 'attachments']
+__all__ = ['api_client']
 
 
 @pytest.fixture
@@ -40,6 +41,22 @@ def example_bad_recipient_drafts():
     }
 
     return [empty_email, bad_email]
+
+
+@pytest.fixture(scope='function')
+def attachments(db):
+    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg']
+    data = []
+    for filename in filenames:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                            'data', filename).encode('utf-8')
+        # Mac and linux fight over filesystem encodings if we store this
+        # filename on the fs. Work around by changing the filename we upload
+        # instead.
+        if filename == 'piece-jointe.jpg':
+            filename = u'pièce-jointe.jpg'
+        data.append((filename, path))
+    return data
 
 
 @pytest.fixture

@@ -235,18 +235,6 @@ def get_calendar(calendar_public_id, namespace, db_session):
         raise NotFoundError('Calendar {} not found'.format(calendar_public_id))
 
 
-def get_event(event_public_id, namespace_id, db_session):
-    valid_public_id(event_public_id)
-    try:
-        event = db_session.query(Event).filter(
-            Event.namespace_id == namespace_id,
-            Event.public_id == event_public_id).one()
-    except NoResultFound:
-        raise NotFoundError("Couldn't find event "
-                            "id {0}".format(event_public_id))
-    return event
-
-
 def valid_when(when):
     try:
         parse_as_when(when)

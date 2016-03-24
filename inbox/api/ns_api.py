@@ -31,7 +31,7 @@ from inbox.api.validation import (valid_account, get_attachments, get_calendar,
                                   strict_bool, validate_draft_recipients,
                                   valid_delta_object_types, valid_display_name,
                                   noop_event_update, valid_category_type,
-                                  comma_separated_email_list, get_event)
+                                  comma_separated_email_list)
 from inbox.config import config
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
@@ -761,7 +761,13 @@ def event_create_api():
 @app.route('/events/<public_id>', methods=['GET'])
 def event_read_api(public_id):
     """Get all data for an existing event."""
-    event = get_event(public_id, g.namespace.id, g.db_session)
+    valid_public_id(public_id)
+    try:
+        event = g.db_session.query(Event).filter(
+            Event.namespace_id == g.namespace.id,
+            Event.public_id == public_id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find event id {0}".format(public_id))
     return g.encoder.jsonify(event)
 
 
@@ -772,7 +778,13 @@ def event_update_api(public_id):
     args = strict_parse_args(g.parser, request.args)
     notify_participants = args['notify_participants']
 
-    event = get_event(public_id, g.namespace.id, g.db_session)
+    valid_public_id(public_id)
+    try:
+        event = g.db_session.query(Event).filter(
+            Event.public_id == public_id,
+            Event.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find event {0}".format(public_id))
     if event.read_only:
         raise InputError('Cannot update read_only event.')
     if (isinstance(event, RecurringEvent) or
@@ -816,7 +828,13 @@ def event_delete_api(public_id):
     args = strict_parse_args(g.parser, request.args)
     notify_participants = args['notify_participants']
 
-    event = get_event(public_id, g.namespace.id, g.db_session)
+    valid_public_id(public_id)
+    try:
+        event = g.db_session.query(Event).filter_by(
+            public_id=public_id,
+            namespace_id=g.namespace.id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find event {0}".format(public_id))
     if event.calendar.read_only:
         raise InputError('Cannot delete event {} from read_only calendar.'.
                          format(public_id))
@@ -1265,11 +1283,7 @@ def draft_send_api():
         # message.
         return err(504, 'Request timed out.')
 
-    event_id = data.get('event_id')
-    event = get_event(event_id,
-                      g.namespace.id, g.db_session) if event_id else None
-
-    resp = send_draft(account, draft, g.db_session, event)
+    resp = send_draft(account, draft, g.db_session)
     return resp
 
 
