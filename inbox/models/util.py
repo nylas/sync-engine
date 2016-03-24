@@ -102,7 +102,6 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
         ids_to_delete = [(acc.id, acc.namespace.id) for acc
                          in db_session.query(Account) if acc.is_deleted]
 
-    queue_size = len(ids_to_delete)
     for account_id, namespace_id in ids_to_delete:
         try:
             with session_scope(namespace_id) as db_session:
