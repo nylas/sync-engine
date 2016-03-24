@@ -104,13 +104,6 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
 
     queue_size = len(ids_to_delete)
     for account_id, namespace_id in ids_to_delete:
-        # queue_size = length of queue
-        # deleted_count = number of accounts deleted during loop iteration
-        # this is necessary because the length of ids_to_delete doesn't
-        # change during loop iteration
-        statsd_client.gauge('mailsync.{}.account_deletion.queue.length'
-                            .format(shard_id),
-                            queue_size - deleted_count)
         try:
             with session_scope(namespace_id) as db_session:
                 account = db_session.query(Account).get(account_id)
@@ -140,7 +133,6 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
             log.debug('Deleting liveness data', account_id=account_id)
             clear_heartbeat_status(account_id)
             deleted_count += 1
-            statsd_client.incr('mailsync.account_deletion.queue.deleted', 1)
             statsd_client.timing('mailsync.account_deletion.queue.deleted',
                                  time.time() - start_time)
         except Exception:
