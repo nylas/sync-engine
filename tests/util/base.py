@@ -205,10 +205,10 @@ class ContactsProviderStub(object):
         return self._contacts
 
 
-def add_fake_folder(db_session, default_account):
+def add_fake_folder(db_session, default_account, display_name='All Mail',
+                    name='all'):
     from inbox.models.folder import Folder
-    return Folder.find_or_create(db_session, default_account,
-                                 'All Mail', 'all')
+    return Folder.find_or_create(db_session, default_account, display_name, name)
 
 
 def add_generic_imap_account(db_session, email_address='test@nylas.com'):
