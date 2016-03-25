@@ -1,5 +1,7 @@
 from sqlalchemy.orm.exc import NoResultFound
 
+from nylas.logging import get_logger
+log = get_logger()
 from inbox.models import Category
 from inbox.models.action_log import schedule_action
 from inbox.api.validation import valid_public_id
@@ -134,6 +136,7 @@ def update_message_labels(message, db_session, added_categories,
         'trash': '\\Trash',
         'spam': '\\Spam'
     }
+
     added_labels = []
     removed_labels = []
     for category in added_categories:
@@ -154,17 +157,96 @@ def update_message_labels(message, db_session, added_categories,
         else:
             removed_labels.append(category.display_name)
 
-    # Optimistically update message state.
+    # Optimistically update message state,
+    # in a manner that is consistent with Gmail.
     for cat in added_categories:
         message.categories.add(cat)
     for cat in removed_categories:
         message.categories.discard(cat)
+    apply_gmail_label_rules(db_session, message, added_categories, removed_categories)
+
     if removed_labels or added_labels:
         message.categories_changes = True
         schedule_action('change_labels', message, message.namespace_id,
                         removed_labels=removed_labels,
                         added_labels=added_labels,
                         db_session=db_session)
+
+
+def apply_gmail_label_rules(db_session, message, added_categories, removed_categories):
+    """
+    The API optimistically updates `message.categories` so ensure it does so
+    in a manner consistent with Gmail, namely:
+
+    1. Adding one of 'all', 'trash', 'spam' removes the other two --
+    a message MUST belong to exactly ONE of the '[Gmail]All Mail', '[Gmail]Trash',
+    '[Gmail]Spam' folders.
+
+    2. '\\Inbox' is a special label as well --
+    adding it removes a message out of the '[Gmail]Trash'/ '[Gmail]Spam' folders
+    and into the '[Gmail]All Mail' folder.
+
+    """
+    add = ()
+    discard = ()
+
+    categories = {c.name: c for c in message.categories if c.name}
+
+    for cat in added_categories:
+        if cat.name == 'all':
+            # Adding the 'all' label should remove the 'trash'/'spam' and
+            # preserve all else.
+            discard = ('trash', 'spam')
+        elif cat.name == 'trash':
+            # Adding the 'trash' label should remove the 'all'/'spam' and 'inbox',
+            # and preserve all else.
+            discard = ('all', 'spam', 'inbox')
+        elif cat.name == 'spam':
+            # Adding the 'spam' label should remove the 'all'/'trash' and 'inbox',
+            # and preserve all else.
+            discard = ('all', 'trash', 'inbox')
+        elif cat.name == 'inbox':
+            # Adding the 'inbox' label should remove the 'trash'/ 'spam',
+            # adding 'all' if needed, and preserve all else.
+            add = ('all')
+            discard = ('trash', 'spam')
+        # Adding any other label does not change the associated folder
+        # so nothing additional needs to be done.
+
+    for name in add:
+        if name not in message.categories:
+            category = db_session.query(Category).filter(
+                Category.namespace_id == message.namespace_id,
+                Category.name == name).one()
+            message.categories.add(category)
+
+    for name in discard:
+        if name in categories:
+            message.categories.discard(categories[name])
+
+    # Nothing needs to be done for the removed_categories:
+    # 1. Removing '\\All'/ \\Trash'/ '\\Spam' does not do anything on Gmail i.e.
+    # does not move the message to a different folder,
+    # 2. Removing '\\Inbox'/ '\\Important'/ custom labels simply removes these
+    # labels as well and does not move the message between folders.
+
+    # Validate labels:
+    # verify the message's labels operations make sense with respect to
+    # Gmail's semantics.
+    categories = {c.name for c in message.categories}
+    has_all = ('all' in categories)
+    has_trash = ('trash' in categories)
+    has_spam = ('spam' in categories)
+    if (has_all and (has_trash or has_spam) or (has_trash and has_spam) or
+            not any([has_all, has_trash, has_trash])):
+        log.error('Invalid labels', namespace_id=message.namespace_id,
+                  message_id=message.id,
+                  message_categories=[(c.name, c.display_name) for c
+                                      in message.categories],
+                  added_categories=[(c.name, c.display_name) for c
+                                    in added_categories],
+                  removed_categories=[(c.name, c.display_name) for c
+                                      in removed_categories])
 
 
 def update_message_folder(message, db_session, category):
