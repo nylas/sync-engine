@@ -458,6 +458,7 @@ class CrispinClient(object):
             'spam': 'spam',
             'archive': 'archive',
             'sent': 'sent',
+            'sent items': 'sent',
             'trash': 'trash'}
 
         # Additionally we provide a custom mapping for providers that

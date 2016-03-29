@@ -99,7 +99,8 @@ providers = dict([
         "auth": "password",
         "folder_map": {"INBOX.Archive": "archive",
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
-                       "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
+                       "INBOX.Sent": "sent", "INBOX.Sent Items": "sent",
+                       "INBOX.Trash": "trash"},
         "domains": ["fastmail.fm"],
         "mx_servers": ["in[12]-smtp.messagingengine.com"],
         # exact string matches
