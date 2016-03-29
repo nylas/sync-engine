@@ -14,6 +14,11 @@ class GenericAccount(ImapAccount):
     provider = Column(String(64))
     imap_username = Column(String(255), nullable=True)
     smtp_username = Column(String(255), nullable=True)
+
+    # The IMAP specs says folder separators always are one character-long
+    # but you never know.
+    folder_separator = Column(String(16), default='.')
+    folder_prefix = Column(String(191), default='')
     supports_condstore = Column(Boolean)
 
     # IMAP Secret
