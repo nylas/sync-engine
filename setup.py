@@ -66,10 +66,7 @@ setup(
 
     scripts=['bin/inbox-start',
              'bin/inbox-console',
-             'bin/migrate-account',
-             'bin/migrate-account-bulk',
              'bin/summary-stats',
-             'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/delete-account-data',
              'bin/create-db',
@@ -89,9 +86,6 @@ setup(
              'bin/populate-sync-queue',
              'bin/backpopulate-sync-assignments',
              'bin/delete-marked-accounts',
-             'bin/detect-utf7-folders',
-             'bin/backfix-utf7-folders',
-             'bin/populate-imap-smtp-credentials'
              ],
 
     # See:
