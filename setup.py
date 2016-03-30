@@ -84,7 +84,6 @@ setup(
              'bin/contact-search-delete-index',
              'bin/populate-sync-queue',
              'bin/delete-marked-accounts',
-             'bin/backfix-generic-imap-separators.py',
              'bin/correct-autoincrements'
              ],
 
