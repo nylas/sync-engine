@@ -293,6 +293,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             get_internaldate(parsed.headers.get('Date'),
                              parsed.headers.get('Received'))
 
+        # It seems MySQL rounds up fractional seconds in a weird way,
+        # preventing us from reconciling messages correctly. See:
+        # https://github.com/nylas/sync-engine/commit/ed16b406e0a for
+        # more details.
+        self.received_date = self.received_date.replace(microsecond=0)
+
         # Custom Inbox header
         self.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
