@@ -1,5 +1,5 @@
 import json
-from pytest import yield_fixture
+from pytest import fixture, yield_fixture
 from base64 import b64encode
 
 
@@ -16,6 +16,11 @@ def api_client(db, default_namespace):
     app.config['TESTING'] = True
     with app.test_client() as c:
         yield TestAPIClient(c, default_namespace.public_id)
+
+
+@fixture
+def imap_api_client(db, generic_account):
+    return new_api_client(db, generic_account.namespace)
 
 
 class TestAPIClient(object):
