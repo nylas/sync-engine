@@ -18,6 +18,7 @@ log = get_logger(purpose='separator-backfix')
 @click.option('--max-id', type=int, default=None)
 def main(min_id, max_id):
     generic_accounts = []
+    failed = []
 
     # Get the list of running Gmail accounts.
     with global_session_scope() as db_session:
@@ -39,15 +40,24 @@ def main(min_id, max_id):
     print "Total accounts: %d" % len(generic_accounts)
 
     for account_id in generic_accounts:
-        with session_scope(account_id) as db_session:
-            account = db_session.query(GenericAccount).get(account_id)
-            print "Updating %s" % account.email_address
+        try:
+            with session_scope(account_id) as db_session:
+                account = db_session.query(GenericAccount).get(account_id)
+                print "Updating %s" % account.email_address
 
-            with connection_pool(account.id).get() as crispin_client:
-                account.folder_prefix = crispin_client.folder_prefix
-                account.folder_separator = crispin_client.folder_separator
+                with connection_pool(account.id).get() as crispin_client:
+                    account.folder_prefix = crispin_client.folder_prefix
+                    account.folder_separator = crispin_client.folder_separator
 
-            db_session.commit()
+                db_session.commit()
+        except Exception:
+            failed.append(account_id)
+
+    print "Processed accounts:"
+    print generic_accounts
+
+    print "Failed accounts:"
+    print failed
 
 if __name__ == '__main__':
     main()
