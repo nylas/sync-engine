@@ -134,6 +134,7 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
             deleted_count += 1
             statsd_client.timing('mailsync.account_deletion.queue.deleted',
                                  time.time() - start_time)
+            gevent.sleep(60)
         except Exception:
             log_uncaught_errors(log, account_id=account_id)
 
@@ -241,7 +242,8 @@ def _batch_delete(engine, table, xxx_todo_changeme, throttle=False,
              batches=batches)
     start = time.time()
 
-    query = 'DELETE FROM {} WHERE {}={} LIMIT 2000;'.format(table, column, id_)
+    query = 'DELETE FROM {} WHERE {}={} LIMIT 20000;'.format(
+        table, column, id_)
 
     pruned_messages = False
     for i in range(0, batches):
