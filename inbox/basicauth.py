@@ -34,6 +34,10 @@ class UserRecoverableConfigError(Exception):
     pass
 
 
+class SettingUpdateError(Exception):
+    pass
+
+
 class GmailSettingError(ValidationError):
     pass
 
