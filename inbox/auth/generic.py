@@ -9,7 +9,7 @@ log = get_logger()
 
 from inbox.auth.base import AuthHandler, account_or_none
 from inbox.basicauth import (ValidationError, UserRecoverableConfigError,
-                             SSLNotSupportedError)
+                             SSLNotSupportedError, SettingUpdateError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
@@ -93,7 +93,7 @@ class GenericAuthHandler(AuthHandler):
                     # 1/ they have the same parent domain
                     # 2/ they direct to the same IP.
                     if not matching_subdomains(new_value, old_value):
-                        raise UserRecoverableConfigError(
+                        raise SettingUpdateError(
                             "Updating the IMAP/SMTP servers is not permitted. Please "
                             "verify that the server names you entered are correct. "
                             "If your IMAP/SMTP server has in fact changed, please "

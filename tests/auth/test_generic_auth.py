@@ -7,7 +7,7 @@ import pytest
 from inbox.util.url import parent_domain
 from inbox.models.account import Account
 from inbox.auth.generic import GenericAuthHandler
-from inbox.basicauth import UserRecoverableConfigError, ValidationError
+from inbox.basicauth import SettingUpdateError, ValidationError
 
 
 settings = {
@@ -74,7 +74,7 @@ def test_update_account(db):
     # Invalid updates
     for (attr, value, updated_settings) in generate_endpoint_updates(settings):
         assert value in updated_settings['settings'].values()
-        with pytest.raises(UserRecoverableConfigError):
+        with pytest.raises(SettingUpdateError):
             account = handler.update_account(account, updated_settings['settings'])
         db.session.add(account)
         db.session.commit()
