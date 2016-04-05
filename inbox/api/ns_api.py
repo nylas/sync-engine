@@ -114,7 +114,9 @@ def before_remote_request():
     # Search uses 'GET', all the other requests we care about use a write
     # HTTP method.
     if (request.endpoint in ('namespace_api.message_search_api',
-                             'namespace_api.thread_search_api') or
+                             'namespace_api.thread_search_api',
+                             'namespace_api.message_streaming_search_api',
+                             'namespace_api.thread_streaming_search_api') or
             request.method in ('POST', 'PUT', 'PATCH', 'DELETE')):
         valid_account(g.namespace)
 
@@ -225,6 +227,29 @@ def thread_search_api():
                                                offset=args['offset'],
                                                limit=args['limit'])
         return g.encoder.jsonify(results)
+    except SearchBackendException as exc:
+        kwargs = {}
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
+
+
+@app.route('/threads/search/streaming', methods=['GET'])
+def thread_streaming_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    if not args['q']:
+        err_string = ('GET HTTP method must include query'
+                      ' url parameter')
+        g.log.error(err_string)
+        return err(400, err_string)
+
+    try:
+        search_client = get_search_client(g.namespace.account)
+        generator = search_client.stream_threads(args['q'])
+
+        return Response(stream_with_context(generator()),
+                        mimetype='text/json-stream')
     except SearchBackendException as exc:
         kwargs = {}
         if exc.server_error:
@@ -353,6 +378,29 @@ def message_search_api():
                                                 offset=args['offset'],
                                                 limit=args['limit'])
         return g.encoder.jsonify(results)
+    except SearchBackendException as exc:
+        kwargs = {}
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
+
+
+@app.route('/messages/search/streaming', methods=['GET'])
+def message_streaming_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    if not args['q']:
+        err_string = ('GET HTTP method must include query'
+                      ' url parameter')
+        g.log.error(err_string)
+        return err(400, err_string)
+
+    try:
+        search_client = get_search_client(g.namespace.account)
+        generator = search_client.stream_messages(args['q'])
+
+        return Response(stream_with_context(generator()),
+                        mimetype='text/json-stream')
     except SearchBackendException as exc:
         kwargs = {}
         if exc.server_error:

@@ -3,9 +3,11 @@ from sqlalchemy import desc
 from inbox.basicauth import OAuthError
 from inbox.search.base import SearchBackendException
 from inbox.auth.oauth import OAuthRequestsWrapper
-from inbox.models import Message, Thread
+from inbox.models import Message, Thread, Account
 from inbox.models.backends.gmail import g_token_manager
 from nylas.logging import get_logger
+from inbox.api.kellogs import APIEncoder
+from inbox.models.session import session_scope
 
 log = get_logger()
 
@@ -16,7 +18,17 @@ SEARCH_CLS = 'GmailSearchClient'
 class GmailSearchClient(object):
 
     def __init__(self, account):
-        self.account = account
+        self.account_id = int(account.id)
+        try:
+            with session_scope(self.account_id) as db_session:
+                self.account = db_session.query(Account).get(self.account_id)
+                self.auth_token = g_token_manager.get_token_for_email(self.account)
+                db_session.expunge_all()
+        except OAuthError:
+            raise SearchBackendException(
+                "This search can't be performed because the account's "
+                "credentials are out of date. Please reauthenticate and try "
+                "again.", 403)
 
     def search_messages(self, db_session, search_query, offset=0, limit=40):
         g_msgids = self._search(search_query, limit=limit)
@@ -34,6 +46,17 @@ class GmailSearchClient(object):
             query = query.limit(limit)
 
         return query.all()
+
+    # We're only issuing a single request to the Gmail API so there's
+    # no need to stream it.
+    def stream_messages(self, search_query):
+        def g():
+            encoder = APIEncoder()
+
+            with session_scope(self.account_id) as db_session:
+                yield encoder.cereal(self.search_messages(db_session, search_query)) + '\n'
+
+        return g
 
     def search_threads(self, db_session, search_query, offset=0, limit=40):
         g_msgids = self._search(search_query, limit=limit)
@@ -54,19 +77,21 @@ class GmailSearchClient(object):
 
         return query.all()
 
+    def stream_threads(self, search_query):
+        def g():
+            encoder = APIEncoder()
+
+            with session_scope(self.account_id) as db_session:
+                yield encoder.cereal(self.search_threads(db_session, search_query)) + '\n'
+
+        return g
+
     def _search(self, search_query, limit):
-        try:
-            token = g_token_manager.get_token_for_email(self.account)
-        except OAuthError:
-            raise SearchBackendException(
-                "This search can't be performed because the account's "
-                "credentials are out of date. Please reauthenticate and try "
-                "again.", 403)
         ret = requests.get(
             u'https://www.googleapis.com/gmail/v1/users/me/messages',
             params={'q': search_query,
                     'maxResults': limit},
-            auth=OAuthRequestsWrapper(token))
+            auth=OAuthRequestsWrapper(self.auth_token))
         log.info('Gmail API search request completed',
                  elapsed=ret.elapsed.total_seconds())
         if ret.status_code != 200:

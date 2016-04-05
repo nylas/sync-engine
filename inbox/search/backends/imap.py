@@ -3,11 +3,13 @@ from inbox.crispin import CrispinClient, FolderMissingError
 from inbox.providers import provider_info
 from inbox.basicauth import NotSupportedError
 from inbox.models import Message, Folder, Account, Thread
+from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.basicauth import ValidationError
 from inbox.search.base import SearchBackendException
 from inbox.mailsync.backends.imap.generic import UidInvalid
+from inbox.api.kellogs import APIEncoder
 
 from sqlalchemy import desc
 from imaplib import IMAP4
@@ -20,6 +22,7 @@ PROVIDER = 'imap'
 class IMAPSearchClient(object):
 
     def __init__(self, account):
+        self.account = account
         self.account_id = account.id
         self.log = get_logger().new(account_id=account.id,
                                     component='search')
@@ -61,7 +64,10 @@ class IMAPSearchClient(object):
                       offset=offset,
                       limit=limit)
 
-        imap_uids = self._search(db_session, search_query)
+        imap_uids = []
+        for uids in self._search(db_session, search_query):
+            imap_uids.extend(uids)
+
         query = db_session.query(Message) \
             .join(ImapUid) \
             .filter(ImapUid.account_id == self.account_id,
@@ -76,6 +82,22 @@ class IMAPSearchClient(object):
 
         return query.all()
 
+    def stream_messages(self, search_query):
+        def g():
+            encoder = APIEncoder()
+
+            with session_scope(self.account_id) as db_session:
+                for imap_uids in self._search(db_session, search_query):
+                    query = db_session.query(Message) \
+                        .join(ImapUid) \
+                        .filter(ImapUid.account_id == self.account_id,
+                                ImapUid.msg_uid.in_(imap_uids))\
+                        .order_by(desc(Message.received_date))\
+
+                    yield encoder.cereal(query.all()) + '\n'
+
+        return g
+
     def search_threads(self, db_session, search_query, offset=0, limit=40):
         self.log.info('Searching account for threads',
                       account_id=self.account_id,
@@ -83,7 +105,10 @@ class IMAPSearchClient(object):
                       offset=offset,
                       limit=limit)
 
-        imap_uids = self._search(db_session, search_query)
+        imap_uids = []
+        for uids in self._search(db_session, search_query):
+            imap_uids.extend(uids)
+
         query = db_session.query(Thread) \
             .join(Message) \
             .join(ImapUid) \
@@ -99,6 +124,24 @@ class IMAPSearchClient(object):
             query = query.limit(limit)
 
         return query.all()
+
+    def stream_threads(self, search_query):
+        def g():
+            encoder = APIEncoder()
+
+            with session_scope(self.account_id) as db_session:
+                for imap_uids in self._search(db_session, search_query):
+                    query = db_session.query(Thread) \
+                        .join(Message) \
+                        .join(ImapUid) \
+                        .filter(ImapUid.account_id == self.account_id,
+                                ImapUid.msg_uid.in_(imap_uids),
+                                Thread.id == Message.thread_id)\
+                        .order_by(desc(Message.received_date))
+
+                    yield encoder.cereal(query.all()) + '\n'
+
+        return g
 
     def _search(self, db_session, search_query):
         self._open_crispin_connection(db_session)
@@ -131,13 +174,10 @@ class IMAPSearchClient(object):
 
         folders = folders + account_folders.all()
 
-        imap_uids = set()
         for folder in folders:
-            imap_uids.update(self._search_folder(folder,
-                                                 criteria,
-                                                 charset))
+            yield self._search_folder(folder, criteria, charset)
+
         self._close_crispin_connection()
-        return imap_uids
 
     def _search_folder(self, folder, criteria, charset):
         try:
