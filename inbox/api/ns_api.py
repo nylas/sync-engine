@@ -1304,10 +1304,13 @@ def draft_send_api():
     request_started = time.time()
     account = g.namespace.account
     if request.content_type == "message/rfc822":
-        msg = create_draft_from_mime(account, request.data,
-                                     g.db_session)
-        validate_draft_recipients(msg)
-        resp = send_raw_mime(account, g.db_session, msg)
+        draft = create_draft_from_mime(account, request.data,
+                                       g.db_session)
+        validate_draft_recipients(draft)
+        if isinstance(account, GenericAccount):
+            schedule_action('save_sent_email', draft, draft.namespace.id,
+                            g.db_session)
+        resp = send_raw_mime(account, g.db_session, draft)
         return resp
 
     data = request.get_json(force=True)
