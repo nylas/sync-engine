@@ -50,8 +50,8 @@ def get_sendmail_client(account):
 def create_draft_from_mime(account, raw_mime, db_session):
     our_uid = generate_public_id()  # base-36 encoded string
     new_headers = ('X-INBOX-ID: {0}-0\r\n'
-                   'Message-Id: <{0}-0@mailer.nylas.com>\r\n'
                    'User-Agent: NylasMailer/{1}\r\n').format(our_uid, VERSION)
+                   #'Message-Id: {1}\r\n' # TODO does this need to be set here?
     new_body = new_headers + raw_mime
 
     with db_session.no_autoflush:
@@ -110,6 +110,7 @@ def create_message_from_json(data, namespace, db_session, is_draft):
     subject = data.get('subject')
     if subject is not None and not isinstance(subject, basestring):
         raise InputError('"subject" should be a string')
+
     body = data.get('body', '')
     if not isinstance(body, basestring):
         raise InputError('"body" should be a string')
@@ -123,6 +124,9 @@ def create_message_from_json(data, namespace, db_session, is_draft):
             raise InputError('Message {} is not in thread {}'.
                              format(reply_to_message.public_id,
                                     reply_to_thread.public_id))
+
+    message_id_header = data.get('message_id_header', '')
+    # TODO validation?
 
     with db_session.no_autoflush:
         account = namespace.account
@@ -165,6 +169,7 @@ def create_message_from_json(data, namespace, db_session, is_draft):
         message.is_read = True
         message.is_sent = False
         message.public_id = uid
+        message.message_id_header = message_id_header
         message.version = 0
         message.regenerate_inbox_uid()
 
@@ -225,7 +230,8 @@ def create_message_from_json(data, namespace, db_session, is_draft):
 
 def update_draft(db_session, account, draft, to_addr=None,
                  subject=None, body=None, blocks=None, cc_addr=None,
-                 bcc_addr=None, from_addr=None, reply_to=None):
+                 bcc_addr=None, from_addr=None, reply_to=None,
+                 message_id_header=None):
     """
     Update draft with new attributes.
     """
@@ -248,6 +254,7 @@ def update_draft(db_session, account, draft, to_addr=None,
     update('subject', subject if subject else None)
     update('body', body if body else None)
     update('received_date', datetime.utcnow())
+    update('message_id_header', message_id_header)
 
     # Remove any attachments that aren't specified
     new_block_ids = [b.id for b in blocks]
@@ -297,8 +304,7 @@ def delete_draft(db_session, account, draft):
 
     # Delete remotely.
     schedule_action('delete_draft', draft, draft.namespace.id, db_session,
-                    inbox_uid=draft.inbox_uid,
-                    message_id_header=draft.message_id_header)
+                    inbox_uid=draft.inbox_uid)
 
     db_session.delete(draft)
 
@@ -322,10 +328,10 @@ def generate_attachments(blocks):
 def _set_reply_headers(new_message, previous_message):
     """When creating a draft in reply to a thread, set the In-Reply-To and
     References headers appropriately, if possible."""
-    if previous_message.message_id_header:
-        new_message.in_reply_to = previous_message.message_id_header
+    if previous_message.inbox_uid:
+        new_message.in_reply_to = previous_message.inbox_uid
         if previous_message.references:
             new_message.references = (previous_message.references +
-                                      [previous_message.message_id_header])
+                                      [previous_message.inbox_uid])
         else:
-            new_message.references = [previous_message.message_id_header]
+            new_message.references = [previous_message.inbox_uid]

@@ -675,38 +675,38 @@ class CrispinClient(object):
 
         return results
 
-    def delete_draft(self, message_id_header):
+    def delete_draft(self, inbox_uid):
         """
-        Delete a draft, as identified by its Message-Id header. We first delete
+        Delete a draft, as identified by its X-INBOX-ID header. We first delete
         the message from the Drafts folder,
         and then also delete it from the Trash folder if necessary.
 
         """
-        log.info('Trying to delete draft', message_id_header=message_id_header)
+        log.info('Trying to delete draft', inbox_uid=inbox_uid)
         drafts_folder_name = self.folder_names()['drafts'][0]
         self.conn.select_folder(drafts_folder_name)
-        draft_deleted = self._delete_message(message_id_header)
+        draft_deleted = self._delete_message(inbox_uid)
         if draft_deleted:
             trash_folder_name = self.folder_names()['trash'][0]
             self.conn.select_folder(trash_folder_name)
-            self._delete_message(message_id_header)
+            self._delete_message(inbox_uid)
         return draft_deleted
 
-    def _delete_message(self, message_id_header):
+    def _delete_message(self, inbox_uid):
         """
         Delete a message from the selected folder, using the Message-Id header
         to locate it. Does nothing if no matching messages are found, or if
         more than one matching message is found.
 
         """
-        matching_uids = self.find_by_header('Message-Id', message_id_header)
+        matching_uids = self.find_by_header('X-INBOX-ID', inbox_uid)
         if not matching_uids:
             log.error('No remote messages found to delete',
-                      message_id_header=message_id_header)
+                      inbox_uid=inbox_uid)
             return False
         if len(matching_uids) > 1:
             log.error('Multiple remote messages found to delete',
-                      message_id_header=message_id_header,
+                      inbox_uid=inbox_uid,
                       uids=matching_uids)
             return False
         self.conn.delete_messages(matching_uids)

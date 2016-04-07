@@ -132,9 +132,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         provider, we regenerate it on each draft revision so that we can delete
         the old draft and add the new one on the remote."""
 
-        from inbox.sendmail.message import generate_message_id_header
         self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
-        self.message_id_header = generate_message_id_header(self.inbox_uid)
 
     categories = association_proxy(
         'messagecategories', 'category',

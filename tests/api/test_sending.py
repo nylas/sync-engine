@@ -389,6 +389,7 @@ def test_reply_headers_set(db, patch_smtp, api_client, example_draft, thread,
                                    'thread_id': thread_id})
     _, msg = patch_smtp[-1]
     parsed = mime.from_string(msg)
+    print(parsed.headers)
     assert 'In-Reply-To' in parsed.headers
     assert 'References' in parsed.headers
 
@@ -516,7 +517,8 @@ def test_sending_raw_mime(patch_smtp, api_client):
     assert parsed.headers['X-My-Custom-Header'] == 'Random'
     assert 'Bcc' not in parsed.headers
     assert 'X-INBOX-ID' in parsed.headers
-    assert 'Message-Id' in parsed.headers
+    # Message-Id should not be auto-added
+    assert 'Message-Id' not in parsed.headers
     assert 'User-Agent' in parsed.headers
 
 

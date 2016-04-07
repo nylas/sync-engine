@@ -261,7 +261,7 @@ def _choose_existing_thread_for_gmail(message, db_session):
         # If no header, add the new message to the most recent thread.
         return prior_threads[0]
     for prior_thread in prior_threads:
-        prior_message_ids = [m.message_id_header for m in
+        prior_message_ids = [m.inbox_uid for m in
                              prior_thread.messages]
         if message.in_reply_to in prior_message_ids:
             return prior_thread

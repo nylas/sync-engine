@@ -121,7 +121,7 @@ def before_remote_request():
 
 @app.after_request
 def finish(response):
-    if response.status_code == 200 and hasattr(g, 'db_session'):  # be cautions
+    if response.status_code == 200 and hasattr(g, 'db_session'):  # be cautious
         g.db_session.commit()
     if hasattr(g, 'db_session'):
         g.db_session.close()
@@ -304,6 +304,7 @@ def message_query_api():
     g.parser.add_argument('unread', type=strict_bool, location='args')
     g.parser.add_argument('starred', type=strict_bool, location='args')
     g.parser.add_argument('view', type=view, location='args')
+    g.parser.add_argument('message_id_header', type=str, location='args')
 
     args = strict_parse_args(g.parser, request.args)
 
@@ -330,6 +331,7 @@ def message_query_api():
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
+        message_id_header=args['message_id_header'],
         db_session=g.db_session)
 
     # Use a new encoder object with the expand parameter set.
@@ -1158,8 +1160,13 @@ def draft_query_api():
     g.parser.add_argument('unread', type=strict_bool, location='args')
     g.parser.add_argument('starred', type=strict_bool, location='args')
     g.parser.add_argument('view', type=view, location='args')
+    g.parser.add_argument('message_id_header', type=str, location='args')
 
     args = strict_parse_args(g.parser, request.args)
+
+    # Use a new encoder object with the expand parameter set.
+    # encoder = APIEncoder(g.namespace.public_id,
+    #                      args['view'] == 'expanded')
 
     drafts = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
@@ -1184,6 +1191,7 @@ def draft_query_api():
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
+        message_id_header=args['message_id_header'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(drafts)
@@ -1268,8 +1276,7 @@ def draft_send_api():
         draft = get_draft(draft_public_id, data.get('version'),
                           g.namespace.id, g.db_session)
         schedule_action('delete_draft', draft, draft.namespace.id,
-                        g.db_session, inbox_uid=draft.inbox_uid,
-                        message_id_header=draft.message_id_header)
+                        g.db_session, inbox_uid=draft.inbox_uid)
     else:
         draft = create_message_from_json(data, g.namespace,
                                          g.db_session, is_draft=False)

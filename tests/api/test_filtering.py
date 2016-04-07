@@ -16,6 +16,7 @@ def test_filtering(db, api_client, default_namespace):
     message = add_fake_message(db.session, default_namespace.id, thread,
                                to_addr=[('Bob', 'bob@foocorp.com')],
                                from_addr=[('Alice', 'alice@foocorp.com')],
+                               message_id_header="test_msg_id_header",
                                subject='some subject')
     message.categories.add(
         Category(namespace_id=message.namespace_id,
@@ -54,6 +55,15 @@ def test_filtering(db, api_client, default_namespace):
 
     results = api_client.get_data('/messages?bcc={}'
                                   .format(message.bcc_addr))
+    assert len(results) == 0
+
+    # test querying by the message_id_header field
+    results = api_client.get_data('/messages?message_id_header={}'
+                                  .format(message.message_id_header))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?message_id_header={}'
+                                  .format('some_random_junk_or_whatever'))
     assert len(results) == 0
 
     results = api_client.get_data('/threads?filename=test')

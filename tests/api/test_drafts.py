@@ -107,6 +107,22 @@ def test_create_and_get_draft(api_client, example_draft):
     assert all(saved_draft[k] == v for k, v in example_draft.iteritems())
 
 
+# TODO fix this - view=expanded doesn't seem to work with the api_client
+# def test_setting_draft_message_id_header(api_client, example_draft):
+#     example_draft['message_id_header'] = 'test_msg_id_header'
+#     r = api_client.post_data('/drafts', example_draft)
+#     assert r.status_code == 200
+#
+#     public_id = json.loads(r.data)['id']
+#
+#     r = api_client.get_data('/drafts?view=expanded')
+#     matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
+#     assert len(matching_saved_drafts) == 1
+#     saved_draft = matching_saved_drafts[0]
+#
+#     assert saved_draft['message_id_header'] == 'test_msg_id_header'
+
+
 def test_create_draft_replying_to_thread(api_client, thread, message):
     thread = api_client.get_data('/threads')[0]
     thread_id = thread['id']

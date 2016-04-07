@@ -188,13 +188,8 @@ def add_inbox_headers(msg, inbox_uid):
 
     # Set our own custom header for tracking in `Sent Mail` folder
     msg.headers['X-INBOX-ID'] = inbox_uid
-    msg.headers['Message-Id'] = generate_message_id_header(inbox_uid)
     # Potentially also use `X-Mailer`
     msg.headers['User-Agent'] = 'NylasMailer/{0}'.format(VERSION)
-
-
-def generate_message_id_header(uid):
-    return '<{}@mailer.nylas.com>'.format(uid)
 
 
 def _rfc_transform(msg):

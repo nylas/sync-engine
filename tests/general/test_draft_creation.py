@@ -7,7 +7,7 @@ def test_headers_presence(default_namespace, db):
                                      False)
 
     assert draft.inbox_uid is not None
-    assert draft.message_id_header is not None
+    assert draft.message_id_header is None
 
     old_uid = draft.inbox_uid
 
@@ -15,5 +15,5 @@ def test_headers_presence(default_namespace, db):
                  body="updated body", blocks=[])
 
     assert draft.inbox_uid is not None
-    assert draft.message_id_header is not None
+    assert draft.message_id_header is None
     assert draft.inbox_uid != old_uid

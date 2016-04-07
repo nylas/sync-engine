@@ -181,7 +181,7 @@ def remote_update_draft(account_id, message_id):
     with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
         message = db_session.query(Message).get(message_id)
-        message_id_header = message.message_id_header
+        inbox_uid = message.inbox_uid
         message_public_id = message.public_id
         version = message.version
         mimemsg = _create_email(account, message)
@@ -194,32 +194,32 @@ def remote_update_draft(account_id, message_id):
         folder_name = crispin_client.folder_names()['drafts'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         existing_copy = crispin_client.find_by_header(
-            'Message-Id', message_id_header)
+            'X-INBOX-ID', inbox_uid)
         if not existing_copy:
             crispin_client.save_draft(mimemsg)
         else:
             log.info('Not saving draft; copy already exists on remote',
-                     message_id_header=message_id_header)
+                     inbox_uid=inbox_uid)
 
         # Check for an older version and delete it. (We can stop once we find
         # one, to reduce the latency of this operation.)
         for old_version in reversed(range(0, version)):
-            message_id_header = '<{}-{}@mailer.nylas.com>'.format(
+            inbox_uid = '<{}-{}@mailer.nylas.com>'.format(
                 message_public_id, old_version)
             old_version_deleted = crispin_client.delete_draft(
-                message_id_header)
+                inbox_uid)
             if old_version_deleted:
                 break
 
 
-def remote_delete_draft(account_id, inbox_uid, message_id_header):
+def remote_delete_draft(account_id, inbox_uid, message_uid):
     with writable_connection_pool(account_id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
             log.info(
                 'Account has no detected drafts folder; not deleting draft',
                 account_id=account_id)
             return
-        crispin_client.delete_draft(message_id_header)
+        crispin_client.delete_draft(message_uid)
 
 
 def remote_save_sent(account_id, message_id):

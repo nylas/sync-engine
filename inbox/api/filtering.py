@@ -141,8 +141,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                        cc_addr, bcc_addr, any_email, thread_public_id,
                        started_before, started_after, last_message_before,
                        last_message_after, received_before, received_after,
-                       filename, in_, unread, starred, limit, offset, view,
-                       db_session):
+                       filename, in_, unread, starred, message_id_header,
+                       limit, offset, view, db_session):
     # Warning: complexities ahead. This function sets up the query that gets
     # results for the /messages API. It loads from several tables, supports a
     # variety of views and filters, and is performance-critical for the API. As
@@ -175,6 +175,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         'in_': in_,
         'unread': unread,
         'starred': starred,
+        'message_id_header': message_id_header,
         'limit': limit,
         'offset': offset
     }
@@ -202,6 +203,10 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if thread_public_id is not None:
         query += lambda q: q.filter(
             Thread.public_id == bindparam('thread_public_id'))
+
+    if message_id_header is not None:
+        query += lambda q: q.filter(
+            Message.message_id_header == bindparam('message_id_header'))
 
     # TODO: deprecate thread-oriented date filters on message endpoints.
     if started_before is not None:

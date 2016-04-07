@@ -25,10 +25,11 @@ def test_draft_updates(db, default_account, mock_imapclient):
 
     pool = writable_connection_pool(default_account.id)
 
-    draft = create_message_from_json({'subject': 'Test draft'},
+    draft = create_message_from_json({'subject': 'Test draft', 'message_id_header': 'message-ID-test-1234'},
                                      default_account.namespace, db.session,
                                      True)
 
+    #draft.message_id_header = 'message-ID-test-1234',
     draft.is_draft = True
     draft.version = 0
     db.session.commit()
@@ -57,9 +58,7 @@ def test_draft_updates(db, default_account, mock_imapclient):
         assert len(all_uids) == 1
         data = conn.uids(all_uids)[0]
         parsed = mime.from_string(data.body)
-        expected_message_id = '<{}-{}@mailer.nylas.com>'.format(
-            draft.public_id, draft.version)
-        assert parsed.headers.get('Message-Id') == expected_message_id
+        assert parsed.headers.get('Message-Id') == 'message-ID-test-1234'
 
     delete_draft(default_account.id, draft.id,
                  {'message_id_header': draft.message_id_header,
