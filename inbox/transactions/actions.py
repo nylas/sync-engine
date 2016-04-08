@@ -22,7 +22,6 @@ from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import ActionLog
 from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
-                                save_draft, update_draft, delete_draft,
                                 save_sent_email, create_folder, create_label,
                                 update_folder, update_label, delete_folder,
                                 delete_label)
@@ -34,9 +33,6 @@ ACTION_FUNCTION_MAP = {
     'mark_starred': mark_starred,
     'move': move,
     'change_labels': change_labels,
-    'save_draft': save_draft,
-    'update_draft': update_draft,
-    'delete_draft': delete_draft,
     'save_sent_email': save_sent_email,
     'create_event': create_event,
     'delete_event': delete_event,

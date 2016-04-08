@@ -23,11 +23,10 @@ ACTIONS MUST BE IDEMPOTENT! We are going to have task workers guarantee
 at-least-once semantics.
 
 """
+from nylas.logging import get_logger
+log = get_logger()
 from inbox.actions.backends.generic import (set_remote_unread,
                                             set_remote_starred, remote_move,
-                                            remote_save_draft,
-                                            remote_update_draft,
-                                            remote_delete_draft,
                                             remote_save_sent,
                                             remote_create_folder,
                                             remote_update_folder,
@@ -36,11 +35,6 @@ from inbox.actions.backends.gmail import (remote_change_labels,
                                           remote_create_label,
                                           remote_update_label,
                                           remote_delete_label)
-
-from inbox.models import Message
-from inbox.models.session import session_scope
-from nylas.logging import get_logger
-log = get_logger()
 
 
 def mark_unread(account_id, message_id, args):
@@ -91,64 +85,10 @@ def update_label(account_id, category_id, args):
     remote_update_label(account_id, category_id, old_name)
 
 
-def save_draft(account_id, message_id, args):
-    """ Sync a new draft back to the remote backend. """
-    with session_scope(account_id) as db_session:
-        message = db_session.query(Message).get(message_id)
-        version = args.get('version')
-        if message is None:
-            log.info('tried to save nonexistent message as draft',
-                     message_id=message_id, account_id=account_id)
-            return
-        if not message.is_draft:
-            log.warning('tried to save non-draft message as draft',
-                        message_id=message_id,
-                        account_id=account_id)
-            return
-        if version != message.version:
-            log.warning('tried to save outdated version of draft')
-            return
-
-    remote_save_draft(account_id, message_id)
-
-
-def update_draft(account_id, message_id, args):
-    """ Sync an updated draft back to the remote backend. """
-    with session_scope(account_id) as db_session:
-        message = db_session.query(Message).get(message_id)
-        version = args.get('version')
-        if message is None:
-            log.info('tried to save nonexistent message as draft',
-                     message_id=message_id, account_id=account_id)
-            return
-        if not message.is_draft:
-            log.warning('tried to save non-draft message as draft',
-                        message_id=message_id,
-                        account_id=account_id)
-            return
-        if version != message.version:
-            log.warning('tried to save outdated version of draft')
-            return
-
-    remote_update_draft(account_id, message_id)
-
-
-def delete_draft(account_id, draft_id, args):
-    """
-    Delete a draft from the remote backend. `args` should contain an
-    `inbox_uid` or a `message_id_header` key. This is used to find the draft on
-    "the backend.
-
-    """
-    inbox_uid = args.get('inbox_uid')
-    message_id_header = args.get('message_id_header')
-    assert inbox_uid or message_id_header, 'Need at least one header value'
-    remote_delete_draft(account_id, inbox_uid, message_id_header)
-
-
 def save_sent_email(account_id, message_id):
     """
-    Create an email on the remote backend. Generic providers expect
-    us to create a copy of the message in the sent folder.
+    Create an email on the remote backend. Generic providers expect us to
+    create a copy of the message in the sent folder.
+
     """
     remote_save_sent(account_id, message_id)

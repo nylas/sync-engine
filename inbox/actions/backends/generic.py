@@ -19,8 +19,8 @@ log = get_logger()
 PROVIDER = 'generic'
 
 __all__ = ['set_remote_starred', 'set_remote_unread', 'remote_move',
-           'remote_save_draft', 'remote_delete_draft', 'remote_create_folder',
-           'remote_update_folder', 'remote_delete_folder']
+           'remote_save_draft', 'remote_update_draft', 'remote_delete_draft',
+           'remote_create_folder', 'remote_update_folder', 'remote_delete_folder']
 
 # STOPSHIP(emfree):
 # * should update local UID state here after action succeeds, instead of
@@ -161,35 +161,57 @@ def remote_delete_folder(account_id, category_id):
         db_session.commit()
 
 
-def remote_save_draft(account_id, message_id):
+def remote_save_sent(account_id, message_id):
     with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
         message = db_session.query(Message).get(message_id)
+        if message is None:
+            log.info('tried to create nonexistent message',
+                     message_id=message_id, account_id=account_id)
+            return
         mimemsg = _create_email(account, message)
 
     with writable_connection_pool(account_id).get() as crispin_client:
-        if 'drafts' not in crispin_client.folder_names():
-            log.info('Account has no detected drafts folder; not saving draft',
+        if 'sent' not in crispin_client.folder_names():
+            log.info('Account has no detected sent folder; not saving message',
                      account_id=account_id)
+            return
+
+        folder_name = crispin_client.folder_names()['sent'][0]
+        crispin_client.select_folder(folder_name, uidvalidity_cb)
+        crispin_client.create_message(mimemsg)
+
+### DRAFT ACTIONS ###
+# Are performed synchronously within the scope of an API request.
+
+
+def remote_save_draft(db_session, account_id, draft):
+    """ Sync a new draft back to the remote backend. """
+    account = db_session.query(Account).get(account_id)
+    mimemsg = _create_email(account, draft)
+
+    with writable_connection_pool(account_id).get() as crispin_client:
+        if 'drafts' not in crispin_client.folder_names():
+            log.warning('Account has no detected drafts folder; not saving draft',
+                        account_id=account_id)
             return
         folder_name = crispin_client.folder_names()['drafts'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         crispin_client.save_draft(mimemsg)
 
 
-def remote_update_draft(account_id, message_id):
-    with session_scope(account_id) as db_session:
-        account = db_session.query(Account).get(account_id)
-        message = db_session.query(Message).get(message_id)
-        message_id_header = message.message_id_header
-        message_public_id = message.public_id
-        version = message.version
-        mimemsg = _create_email(account, message)
+def remote_update_draft(db_session, account_id, draft):
+    """ Sync an updated draft back to the remote backend. """
+    account = db_session.query(Account).get(account_id)
+    message_id_header = draft.message_id_header
+    message_public_id = draft.public_id
+    version = draft.version
+    mimemsg = _create_email(account, draft)
 
     with writable_connection_pool(account_id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
-            log.info('Account has no detected drafts folder; not saving draft',
-                     account_id=account_id)
+            log.warning('Account has no detected drafts folder; not saving draft',
+                        account_id=account_id)
             return
         folder_name = crispin_client.folder_names()['drafts'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
@@ -212,32 +234,19 @@ def remote_update_draft(account_id, message_id):
                 break
 
 
-def remote_delete_draft(account_id, inbox_uid, message_id_header):
+def remote_delete_draft(account_id, draft_id, inbox_uid, message_id_header):
+    """
+    Delete a draft from the remote backend. One of `inbox_uid` or
+    `message_id_header` must be provided. This is used to find the draft on
+    the backend.
+
+    """
+    assert inbox_uid or message_id_header, 'Need at least one header value'
+
     with writable_connection_pool(account_id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
-            log.info(
+            log.warning(
                 'Account has no detected drafts folder; not deleting draft',
                 account_id=account_id)
             return
         crispin_client.delete_draft(message_id_header)
-
-
-def remote_save_sent(account_id, message_id):
-    with session_scope(account_id) as db_session:
-        account = db_session.query(Account).get(account_id)
-        message = db_session.query(Message).get(message_id)
-        if message is None:
-            log.info('tried to create nonexistent message',
-                     message_id=message_id, account_id=account_id)
-            return
-        mimemsg = _create_email(account, message)
-
-    with writable_connection_pool(account_id).get() as crispin_client:
-        if 'sent' not in crispin_client.folder_names():
-            log.info('Account has no detected sent folder; not saving message',
-                     account_id=account_id)
-            return
-
-        folder_name = crispin_client.folder_names()['sent'][0]
-        crispin_client.select_folder(folder_name, uidvalidity_cb)
-        crispin_client.create_message(mimemsg)

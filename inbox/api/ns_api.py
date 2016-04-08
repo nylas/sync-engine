@@ -21,6 +21,8 @@ from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.models.backends.generic import GenericAccount
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
+from inbox.api.drafts import (create_draft_on_remote, update_draft_on_remote,
+                              delete_draft_on_remote)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (valid_account, get_attachments, get_calendar,
@@ -1253,20 +1255,20 @@ def draft_create_api():
     data = request.get_json(force=True)
     draft = create_message_from_json(data, g.namespace, g.db_session,
                                      is_draft=True)
+    assert draft.id is not None
+    create_draft_on_remote(g.db_session, g.namespace.account_id, draft)
     return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['PUT', 'PATCH'])
 def draft_update_api(public_id):
     data = request.get_json(force=True)
+    # Validate draft id, status, version, etc.
     original_draft = get_draft(public_id, data.get('version'), g.namespace.id,
                                g.db_session)
-
     # TODO(emfree): what if you try to update a draft on a *thread* that's been
     # deleted?
-
     data = request.get_json(force=True)
-
     to = get_recipients(data.get('to'), 'to')
     cc = get_recipients(data.get('cc'), 'cc')
     bcc = get_recipients(data.get('bcc'), 'bcc')
@@ -1285,18 +1287,27 @@ def draft_update_api(public_id):
     draft = update_draft(g.db_session, g.namespace.account, original_draft,
                          to, subject, body, files, cc, bcc, from_addr,
                          reply_to)
+
+    update_draft_on_remote(g.db_session, g.namespace.account_id, draft)
     return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
     data = request.get_json(force=True)
-    # Validate draft id, version, etc.
+    # Validate draft id, status, version, etc.
     draft = get_draft(public_id, data.get('version'), g.namespace.id,
                       g.db_session)
 
-    result = delete_draft(g.db_session, g.namespace.account, draft)
-    return g.encoder.jsonify(result)
+    # Hold on to the draft attributes needed to delete it on the remote
+    # before deleting it locally.
+    inbox_uid = draft.inbox_uid
+    message_id_header = draft.message_id_header
+
+    delete_draft(g.db_session, g.namespace.account, draft)
+
+    delete_draft_on_remote(g.namespace.account_id, inbox_uid, message_id_header)
+    return g.encoder.jsonify(None)
 
 
 @app.route('/send', methods=['POST'])

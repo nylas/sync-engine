@@ -6,7 +6,6 @@ from inbox.api.validation import (
 from inbox.api.err import InputError
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
-from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 
@@ -90,9 +89,12 @@ def create_draft_from_mime(account, raw_mime, db_session):
 
 
 def create_message_from_json(data, namespace, db_session, is_draft):
-    """ Construct a Message instance from `data`, a dictionary representing the
+    """
+    Construct a Message instance from `data`, a dictionary representing the
     POST body of an API request. All new objects are added to the session, but
-    not committed."""
+    not committed.
+
+    """
 
     # Validate the input and get referenced objects (thread, attachments)
     # as necessary.
@@ -216,9 +218,6 @@ def create_message_from_json(data, namespace, db_session, is_draft):
         message.thread = thread
 
     db_session.add(message)
-    if is_draft:
-        schedule_action('save_draft', message, namespace.id, db_session,
-                        version=message.version)
     db_session.flush()
     return message
 
@@ -226,10 +225,7 @@ def create_message_from_json(data, namespace, db_session, is_draft):
 def update_draft(db_session, account, draft, to_addr=None,
                  subject=None, body=None, blocks=None, cc_addr=None,
                  bcc_addr=None, from_addr=None, reply_to=None):
-    """
-    Update draft with new attributes.
-    """
-
+    """ Update draft with new attributes. """
     def update(attr, value=None):
         if value is not None:
             setattr(draft, attr, value)
@@ -283,30 +279,20 @@ def update_draft(db_session, account, draft, to_addr=None,
     draft.version += 1
     draft.regenerate_inbox_uid()
 
-    # Sync to remote
-    schedule_action('update_draft', draft, draft.namespace.id, db_session,
-                    version=draft.version)
     db_session.commit()
     return draft
 
 
 def delete_draft(db_session, account, draft):
     """ Delete the given draft. """
+    # Get the draft's thread before deleting the draft
     thread = draft.thread
-    assert draft.is_draft
-
-    # Delete remotely.
-    schedule_action('delete_draft', draft, draft.namespace.id, db_session,
-                    inbox_uid=draft.inbox_uid,
-                    message_id_header=draft.message_id_header)
 
     db_session.delete(draft)
 
     # Delete the thread if it would now be empty.
     if not thread.messages:
         db_session.delete(thread)
-
-    db_session.commit()
 
 
 def generate_attachments(blocks):
@@ -320,8 +306,11 @@ def generate_attachments(blocks):
 
 
 def _set_reply_headers(new_message, previous_message):
-    """When creating a draft in reply to a thread, set the In-Reply-To and
-    References headers appropriately, if possible."""
+    """
+    When creating a draft in reply to a thread, set the In-Reply-To and
+    References headers appropriately, if possible.
+
+    """
     if previous_message.message_id_header:
         new_message.in_reply_to = previous_message.message_id_header
         if previous_message.references:
