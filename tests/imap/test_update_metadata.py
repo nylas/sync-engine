@@ -1,5 +1,7 @@
 import pytest
+import json
 from inbox.crispin import GmailFlags, Flags
+from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.common import (update_metadata,
                                                  update_message_metadata)
 from tests.util.base import (add_fake_message, add_fake_imapuid,
@@ -56,3 +58,21 @@ def test_update_categories_when_actionlog_entry_missing(
     db.session.commit()
     update_message_metadata(db.session, imapuid.account, message, False)
     assert message.categories == {imapuid.folder.category}
+
+
+def test_truncate_imapuid_extra_flags(db, default_account, message, folder):
+
+    imapuid = ImapUid(message=message, account_id=default_account.id,
+                      msg_uid=2222, folder=folder)
+    imapuid.update_flags(['We', 'the', 'People', 'of', 'the', 'United',
+                          'States', 'in', 'Order', 'to', 'form', 'a', 'more',
+                          'perfect', 'Union', 'establish', 'Justice',
+                          'insure', 'domestic', 'Tranquility', 'provide',
+                          'for', 'the', 'common', 'defence', 'promote', 'the',
+                          'general', 'Welfare', 'and', 'secure', 'the',
+                          'Blessings', 'of', 'Liberty', 'to', 'ourselves',
+                          'and', 'our', 'Posterity', 'do', 'ordain', 'and',
+                          'establish', 'this', 'Constitution', 'for', 'the',
+                          'United', 'States', 'of', 'America'])
+
+    assert len(json.dumps(imapuid.extra_flags)) < 255

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
@@ -135,9 +136,17 @@ class ImapUid(MailSyncBase):
                 changed = True
                 setattr(self, col, new_flag_value)
             new_flags.discard(flag)
+
         extra_flags = sorted(new_flags)
+
         if extra_flags != self.extra_flags:
             changed = True
+
+        # Sadly, there's a limit of 255 chars for this
+        # column.
+        while len(json.dumps(extra_flags)) > 255:
+            extra_flags.pop()
+
         self.extra_flags = extra_flags
         return changed
 
