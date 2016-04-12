@@ -1,4 +1,5 @@
 """Provide Google Calendar events."""
+import time
 import datetime
 import json
 import random
@@ -300,10 +301,18 @@ class GoogleEventsProvider(object):
         token = self._get_access_token_for_push_notifications(account)
         receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(
             urllib.quote(account.public_id))
+
+        one_week = datetime.timedelta(weeks=1)
+        in_a_week = datetime.datetime.utcnow() + one_week
+
+        # * 1000 because google uses Unix timestamps with an ms precision.
+        expiration_date = int(time.mktime(in_a_week.timetuple())) * 1000
+
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
             "address": receiving_url,
+            "expiration": expiration_date,
         }
         headers = {
             'content-type': 'application/json'
@@ -339,10 +348,18 @@ class GoogleEventsProvider(object):
         watch_url = WATCH_EVENTS_URL.format(urllib.quote(calendar.uid))
         receiving_url = EVENTS_LIST_WEHOOK_URL.format(
             urllib.quote(calendar.public_id))
+
+        one_week = datetime.timedelta(weeks=1)
+        in_a_week = datetime.datetime.utcnow() + one_week
+
+        # * 1000 because google uses Unix timestamps with an ms precision.
+        expiration_date = int(time.mktime(in_a_week.timetuple())) * 1000
+
         data = {
             "id": uuid.uuid4().hex,
             "type": "web_hook",
             "address": receiving_url,
+            "expiration": expiration_date,
         }
         headers = {
             'content-type': 'application/json'
