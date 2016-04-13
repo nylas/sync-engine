@@ -28,7 +28,8 @@ class Label(MailSyncBase):
 
     name = Column(String(MAX_LABEL_NAME_LENGTH, collation='utf8mb4_bin'),
                   nullable=False)
-    canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=True)
+    canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=False,
+                            default='')
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
@@ -50,7 +51,8 @@ class Label(MailSyncBase):
     def find_or_create(cls, session, account, name, role=None):
         q = session.query(cls).filter(cls.account_id == account.id)
 
-        if role is not None:
+        role = role or ''
+        if role:
             q = q.filter(cls.canonical_name == role)
         else:
             # g_label may not have unicode type (in particular for a numeric

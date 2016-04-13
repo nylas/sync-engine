@@ -53,7 +53,7 @@ def add_custom_label(db, default_account, message):
     existing = [c.name for c in imapuid.categories][0]
     imapuid.update_labels(['<3'])
     db.session.commit()
-    assert set([c.name for c in imapuid.categories]) == set([existing, None])
+    assert set([c.name for c in imapuid.categories]) == set([existing, ''])
     update_message_metadata(db.session, default_account, message, False)
     db.session.commit()
     return message
@@ -242,7 +242,7 @@ def test_adding_a_custom_label_preserves_other_labels(
         {'label_ids': [custom_label.category.public_id, existing_label]})
     labels = json.loads(response.data)['labels']
     assert len(labels) == 2
-    assert set([l['name'] for l in labels]) == set([label, None])
+    assert set([l['name'] for l in labels]) == set([label, ''])
     assert '<3' in [l['display_name'] for l in labels]
 
 
@@ -267,5 +267,5 @@ def test_removing_a_mutually_exclusive_label_does_not_orphan_a_message(
         {'label_ids': [custom_label.category.public_id]})
     labels = json.loads(response.data)['labels']
     assert len(labels) == 2
-    assert set([l['name'] for l in labels]) == set([label, None])
+    assert set([l['name'] for l in labels]) == set([label, ''])
     assert '<3' in [l['display_name'] for l in labels]

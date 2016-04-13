@@ -2,6 +2,7 @@ from inbox.crispin import RawFolder
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.gmail import GmailSyncMonitor
 from inbox.models import Folder, Label, Category
+from inbox.models.category import EPOCH
 
 
 def test_imap_save_generic_folder_names(db, default_account):
@@ -11,9 +12,9 @@ def test_imap_save_generic_folder_names(db, default_account):
         ('Sent Mail', 'sent'),
         ('Sent Messages', 'sent'),
         ('Drafts', 'drafts'),
-        ('Miscellania', None),
-        ('miscellania', None),
-        ('Recipes', None),
+        ('Miscellania', ''),
+        ('miscellania', ''),
+        ('Recipes', ''),
     }
     raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
     monitor.save_folder_names(db.session, raw_folders)
@@ -123,8 +124,8 @@ def test_save_gmail_folder_names(db, default_account):
         ('[Gmail]/All Mail', 'all'),
         ('[Gmail]/Trash', 'trash'),
         ('[Gmail]/Spam', 'spam'),
-        ('Miscellania', None),
-        ('Recipes', None),
+        ('Miscellania', ''),
+        ('Recipes', ''),
     }
     raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
     monitor.save_folder_names(db.session, raw_folders)
@@ -145,26 +146,26 @@ def test_save_gmail_folder_names(db, default_account):
         ('[Gmail]/All Mail', 'all'),
         ('[Gmail]/Trash', 'trash'),
         ('[Gmail]/Spam', 'spam'),
-        ('Miscellania', None),
-        ('Recipes', None),
+        ('Miscellania', ''),
+        ('Recipes', ''),
     }
-
     saved_label_data = set(
         db.session.query(Label.name, Label.canonical_name).filter(
             Label.account_id == default_account.id)
     )
+    assert saved_label_data == expected_saved_names_and_roles
+
     saved_category_data = set(
         db.session.query(Category.display_name, Category.name).filter(
             Category.namespace_id == default_account.namespace.id)
     )
-    assert saved_label_data == expected_saved_names_and_roles
     assert saved_category_data == expected_saved_names_and_roles
 
 
 def test_handle_trailing_whitespace(db, default_account):
     raw_folders = [
-        RawFolder('Miscellania', None),
-        RawFolder('Miscellania  ', None),
+        RawFolder('Miscellania', ''),
+        RawFolder('Miscellania  ', ''),
         RawFolder('Inbox', 'inbox')
     ]
     monitor = ImapSyncMonitor(default_account)
@@ -173,7 +174,7 @@ def test_handle_trailing_whitespace(db, default_account):
         db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id)
     )
-    assert saved_folder_data == {('Miscellania', None), ('Inbox', 'inbox')}
+    assert saved_folder_data == {('Miscellania', ''), ('Inbox', 'inbox')}
 
 
 def test_imap_remote_delete(db, default_account):
@@ -181,7 +182,7 @@ def test_imap_remote_delete(db, default_account):
     folders = {
         ('All', 'inbox'),
         ('Trash', 'trash'),
-        ('Applications', None),
+        ('Applications', ''),
     }
 
     new_folders = {
@@ -245,4 +246,6 @@ def test_not_deleting_canonical_folders(empty_db, default_account):
     monitor.save_folder_names(empty_db.session, raw_folders)
 
     label = empty_db.session.query(Label).get(label.id)
-    assert label.deleted_at is None
+    assert label.deleted_at == None
+    assert label.category.deleted_at == EPOCH
+

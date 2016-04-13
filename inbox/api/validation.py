@@ -4,8 +4,10 @@ from arrow.parser import ParserError
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
+
 from inbox.models import Calendar, Thread, Block, Message, Category, Event
 from inbox.models.when import parse_as_when
+from inbox.models.category import EPOCH
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import (InputError, NotFoundError, ConflictError,
                            AccountInvalidError, AccountStoppedError)
@@ -376,7 +378,9 @@ def valid_display_name(namespace_id, category_type, display_name, db_session):
 
     if db_session.query(Category).filter(
             Category.namespace_id == namespace_id,
-            Category.lowercase_name == display_name).first() is not None:
+            Category.lowercase_name == display_name,
+            Category.type_ == category_type,
+            Category.deleted_at == EPOCH).first() is not None:
         raise InputError('{} with name "{}" already exists'.format(
                          category_type, display_name))
 

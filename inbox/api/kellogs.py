@@ -22,7 +22,7 @@ def format_address_list(addresses):
 def format_categories(categories):
     if categories is None:
         return []
-    return [{'id': category.public_id, 'name': category.name,
+    return [{'id': category.public_id, 'name': category.name or None,
              'display_name': category.api_display_name} for category in
             categories]
 
@@ -335,7 +335,7 @@ def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
             'id': obj.public_id,
             'object': obj.type,
             'account_id': _get_namespace_public_id(obj),
-            'name': obj.name,
+            'name': obj.name or None,
             'display_name': obj.api_display_name
         }
         return resp

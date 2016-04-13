@@ -18,6 +18,7 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache, Category, MessageCategory)
 from inbox.models.event import RecurringEvent, RecurringEventOverride
+from inbox.models.category import EPOCH
 from inbox.models.backends.generic import GenericAccount
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
@@ -468,7 +469,7 @@ def folders_labels_query_api():
         results = g.db_session.query(Category)
 
     results = results.filter(Category.namespace_id == g.namespace.id,
-                             Category.deleted_at == None)  # noqa
+                             Category.deleted_at == EPOCH)  # noqa
     results = results.order_by(asc(Category.id))
 
     if args['view'] == 'count':
@@ -499,7 +500,7 @@ def folders_labels_api_impl(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()  # noqa
+            Category.deleted_at == EPOCH).one()  # noqa
     except NoResultFound:
         raise NotFoundError('Object not found')
     return g.encoder.jsonify(category)
@@ -514,32 +515,23 @@ def folders_labels_create_api():
     data = request.get_json(force=True)
     display_name = data.get('display_name')
 
+    # Validates the display_name and checks if there is a non-deleted Category
+    # with this display_name already. If so, we do not allow creating a duplicate.
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
-
-    # We do not allow creating a category with the same name as a
-    # deleted category /until/ the corresponding folder/label
-    # delete syncback is performed. This is a limitation but is the
-    # simplest way to prevent the creation of categories with duplicate
-    # names; it also hinders creation in the one case only (namely,
-    # delete category with display_name "x" via the API -> quickly
-    # try to create a category with the same display_name).
-    category = g.db_session.query(Category).filter(
-        Category.namespace_id == g.namespace.id,
-        Category.name == None,  # noqa
-        Category.display_name == display_name,
-        Category.type_ == category_type).first()
-
-    if category:
-        return err(403, "{} with name {} already exists".
-                        format(category_type, display_name))
 
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
                                        type_=category_type)
-    if category.deleted_at:
-        category = Category(namespace_id=g.namespace.id, name=None,
-                            display_name=display_name, type_=category_type)
+    if category.is_deleted:
+        # The existing category is soft-deleted and will be hard-deleted,
+        # so it is okay to create a new category with the same (display_name, name).
+        # NOTE: We do not simply "undelete" the existing category, by setting
+        # its `deleted_at`=EPOCH, because doing so would be consistent with the
+        # API's semantics -- we want the newly created object to have a different ID.
+        category = Category.create(g.db_session, namespace_id=g.namespace.id,
+                                   name=None, display_name=display_name,
+                                   type_=category_type)
         g.db_session.add(category)
     g.db_session.flush()
 
@@ -563,11 +555,11 @@ def folder_label_update_api(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()  # noqa
+            Category.deleted_at == EPOCH).one()  # noqa
     except NoResultFound:
         raise InputError("Couldn't find {} {}".format(
             category_type, public_id))
-    if category.name is not None:
+    if category.name:
         raise InputError("Cannot modify a standard {}".format(category_type))
 
     data = request.get_json(force=True)
@@ -603,11 +595,11 @@ def folder_label_delete_api(public_id):
         category = g.db_session.query(Category).filter(
             Category.namespace_id == g.namespace.id,
             Category.public_id == public_id,
-            Category.deleted_at == None).one()  # noqa
+            Category.deleted_at == EPOCH).one()  # noqa
     except NoResultFound:
         raise InputError("Couldn't find {} {}".format(
             category_type, public_id))
-    if category.name is not None:
+    if category.name:
         raise InputError("Cannot modify a standard {}".format(category_type))
 
     if category.type_ == 'folder':
