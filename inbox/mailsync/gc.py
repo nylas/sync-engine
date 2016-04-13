@@ -6,7 +6,7 @@ from sqlalchemy.orm import load_only
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.models import Message
-from inbox.models.category import Category
+from inbox.models.category import Category, EPOCH
 from inbox.models.message import MessageCategory
 from inbox.models.folder import Folder
 from inbox.models.session import session_scope
@@ -128,18 +128,18 @@ class DeleteHandler(gevent.Greenlet):
         # Go through all the categories and check if there are messages
         # associated with it. If not, delete it.
         with session_scope(self.namespace_id) as db_session:
-            cats = db_session.query(Category).filter(
+            categories = db_session.query(Category).filter(
                 Category.namespace_id == self.namespace_id,
-                Category.deleted_at != None)
+                Category.deleted_at > EPOCH)
 
-            for cat in cats:
+            for category in categories:
                 # Check if no message is associated with the category. If yes,
                 # delete it.
                 count = db_session.query(func.count(MessageCategory.id)).filter(
-                    MessageCategory.category_id == cat.id).scalar()
+                    MessageCategory.category_id == category.id).scalar()
 
                 if count == 0:
-                    db_session.delete(cat)
+                    db_session.delete(category)
                     db_session.commit()
 
 

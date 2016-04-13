@@ -1,5 +1,10 @@
 import json
+from datetime import datetime
+
 import pytest
+from freezegun import freeze_time
+
+from inbox.models.category import Category, EPOCH
 
 from tests.util.base import (add_fake_message, thread, add_fake_thread,
                              generic_account, gmail_account)
@@ -41,12 +46,30 @@ def test_folder_post(db, generic_account):
                                    {"display_name": "Test_Folder"})
     assert po_data.status_code == 200
 
+    category_id = json.loads(po_data.data)['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.display_name == 'Test_Folder'
+    assert category.name == ''
+    assert category.type == 'folder'
+    assert category.deleted_at == EPOCH
+    assert category.is_deleted is False
+
 
 def test_label_post(db, gmail_account):
     api_client = new_api_client(db, gmail_account.namespace)
     po_data = api_client.post_data('/labels/',
                                    {"display_name": "Test_Label"})
     assert po_data.status_code == 200
+
+    category_id = json.loads(po_data.data)['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.display_name == 'Test_Label'
+    assert category.name == ''
+    assert category.type == 'label'
+    assert category.deleted_at == EPOCH
+    assert category.is_deleted is False
 
 
 def test_folder_get(folder_client):
@@ -67,7 +90,7 @@ def test_label_get(label_client):
     assert gid_data.status_code == 200
 
 
-def test_folder_put(folder_client):
+def test_folder_put(db, folder_client):
     # GET request for the folder ID
     g_data = folder_client.get_raw('/folders/')
     gen_folder = json.loads(g_data.data)[0]
@@ -77,8 +100,14 @@ def test_folder_put(folder_client):
     assert pu_data.status_code == 200
     assert json.loads(pu_data.data)['display_name'] == 'Test_Folder_Renamed'
 
+    category_id = gen_folder['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.display_name == 'Test_Folder_Renamed'
+    assert category.name == ''
 
-def test_label_put(label_client):
+
+def test_label_put(db, label_client):
     # GET request for the label ID
     g_data = label_client.get_raw('/labels/')
     gmail_label = json.loads(g_data.data)[0]
@@ -87,6 +116,12 @@ def test_label_put(label_client):
                                     {"display_name": "Test_Label_Renamed"})
     assert pu_data.status_code == 200
     assert json.loads(pu_data.data)['display_name'] == 'Test_Label_Renamed'
+
+    category_id = gmail_label['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.display_name == 'Test_Label_Renamed'
+    assert category.name == ''
 
 
 def test_folder_delete(db, generic_account, folder_client):
@@ -113,6 +148,12 @@ def test_folder_delete(db, generic_account, folder_client):
     d_data = folder_client.delete('/folders/{}'.format(empty_folder['id']))
     assert d_data.status_code == 200
 
+    category_id = empty_folder['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.deleted_at != EPOCH
+    assert category.is_deleted is True
+
 
 def test_label_delete(db, gmail_account, label_client):
     # Make a new message
@@ -128,6 +169,12 @@ def test_label_delete(db, gmail_account, label_client):
     # DELETE requests should work on labels whether or not messages have them
     d_data = label_client.delete('/labels/{}'.format(gmail_label['id']))
     assert d_data.status_code == 200
+
+    category_id = gmail_label['id']
+    category = db.session.query(Category).filter(
+        Category.public_id == category_id).one()
+    assert category.deleted_at != EPOCH
+    assert category.is_deleted is True
 
 
 def test_folder_exclusivity(folder_client):
@@ -164,3 +211,57 @@ def test_label_exclusivity(label_client):
     assert gid_data.status_code == 404
     d_data = label_client.delete('/folders/{}'.format(gmail_label['id']))
     assert d_data.status_code == 404
+
+
+def test_duplicate_folder_create(folder_client):
+    # Creating a folder with an existing, non-deleted folder's name
+    # returns an HTTP 400.
+    data = folder_client.get_raw('/folders/')
+    folder = json.loads(data.data)[0]
+    data = folder_client.post_data('/folders/',
+                                   {"display_name": folder['display_name']})
+    assert data.status_code == 400
+
+    # Deleting the folder and re-creating (with the same name) succeeds.
+    # Doing so repeatedly succeeds IFF the delete/ re-create requests are
+    # spaced >= 1 second apart (MySQL rounds up microseconds).
+    initial_ts = datetime.utcnow()
+    with freeze_time(initial_ts) as frozen_ts:
+        data = folder_client.delete('/folders/{}'.format(folder['id']))
+        assert data.status_code == 200
+
+        data = folder_client.post_data('/folders/',
+                                       {"display_name": folder['display_name']})
+        assert data.status_code == 200
+        new_folder = json.loads(data.data)
+        assert new_folder['display_name'] == folder['display_name']
+        assert new_folder['id'] != folder['id']
+
+        folder = new_folder
+        frozen_ts.tick()
+
+
+def test_duplicate_label_create(label_client):
+    data = label_client.get_raw('/labels/')
+    label = json.loads(data.data)[0]
+    data = label_client.post_data('/labels/',
+                                   {"display_name": label['display_name']})
+    assert data.status_code == 400
+
+    # Deleting the label and re-creating (with the same name) succeeds.
+    # Doing so repeatedly succeeds IFF the delete/ re-create requests are
+    # spaced >= 1 second apart (MySQL rounds up microseconds).
+    initial_ts = datetime.utcnow()
+    with freeze_time(initial_ts) as frozen_ts:
+        data = label_client.delete('/labels/{}'.format(label['id']))
+        assert data.status_code == 200
+
+        data = label_client.post_data('/labels/',
+                                      {"display_name": label['display_name']})
+        assert data.status_code == 200
+        new_label = json.loads(data.data)
+        assert new_label['display_name'] == label['display_name']
+        assert new_label['id'] != label['id']
+
+        label = new_label
+        frozen_ts.tick()

@@ -31,6 +31,7 @@ from inbox.util.debug import bind_context
 from nylas.logging import get_logger
 from gevent.lock import Semaphore
 from inbox.models import Message, Folder, Namespace, Account, Label, Category
+from inbox.models.category import EPOCH
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
@@ -119,8 +120,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
             # Don't mark canonical labels such as Inbox, Important, etc.
             if deleted_label.canonical_name is None:
                 deleted_label.deleted_at = datetime.now()
-                cat = deleted_label.category
-                cat.deleted_at = datetime.now()
+                category = deleted_label.category
+                category.deleted_at = datetime.now()
 
     def save_folder_names(self, db_session, raw_folders):
         """
@@ -173,7 +174,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 log.info('Deleted label recreated on remote',
                          name=raw_folder.display_name)
                 label.deleted_at = None
-                label.category.deleted_at = None
+                label.category.deleted_at = EPOCH
 
             current_labels.add(label)
 
