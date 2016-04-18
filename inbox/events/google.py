@@ -170,7 +170,7 @@ class GoogleEventsProvider(object):
 
             except requests.exceptions.SSLError:
                 self.log.warning(
-                    'SSLError making Google Calendar API requestl retrying',
+                    'SSLError making Google Calendar API request, retrying.',
                     url=url, exc_info=True)
                 gevent.sleep(30 + random.randrange(0, 60))
                 continue
