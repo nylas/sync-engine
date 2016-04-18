@@ -49,6 +49,15 @@ class GoogleEventsProvider(object):
         self.namespace_id = namespace_id
         self.log = log.new(account_id=account_id)
 
+        # HACK HACK
+        # Most accounts have sync_events set to True. Some N1
+        # accounts have it set to '2' (let MySQL be praised)
+        # because we only want to sync the last month of events.
+        # @karim: Remove when we've fixed this scaling issue.
+        with session_scope(account_id) as db_session:
+            acc = db_session.query(Account).get(account_id)
+            self.sync_events_bit = acc.sync_events
+
         # A hash to store whether a calendar is read-only or not.
         # This is a bit of a hack because this isn't exposed at the event level
         # by the Google Event API.
@@ -93,6 +102,17 @@ class GoogleEventsProvider(object):
         A list of uncommited Event instances.
         """
         updates = []
+
+        # Is this an N1 account which we've never synced before?
+        # Then only sync the first month.
+        # FIXME: Revert this hack.
+        if sync_from_time is None and self.sync_events_bit == 2:
+            one_month = datetime.timedelta(weeks=4)
+            sync_from_time = datetime.datetime.utcnow() - one_month
+            log.warning('Only syncing the last month for N1 account',
+                        sync_from_time=sync_from_time,
+                        account=self.account_id, sync_events=self.sync_events_bit)
+
         items = self._get_raw_events(calendar_uid, sync_from_time)
         read_only_calendar = self.calendars_table.get(calendar_uid, True)
         for item in items:

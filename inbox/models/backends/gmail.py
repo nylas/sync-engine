@@ -252,7 +252,7 @@ class GmailAccount(OAuthAccount, ImapAccount):
             valid_scopes = valid_scopes.union(set(auth_creds.scopes))
 
         if GOOGLE_CALENDAR_SCOPE not in valid_scopes:
-            self.sync_events = False
+            self.sync_events = 0
         if GOOGLE_CONTACTS_SCOPE not in valid_scopes:
             self.sync_contacts = False
         if GOOGLE_EMAIL_SCOPE not in valid_scopes:
