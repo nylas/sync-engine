@@ -47,7 +47,7 @@ class GoogleEventsProvider(object):
     def __init__(self, account_id, namespace_id):
         self.account_id = account_id
         self.namespace_id = namespace_id
-        self.log = log.new(account_id=account_id)
+        self.log = log.new(account_id=account_id, component='calendar sync')
 
         # A hash to store whether a calendar is read-only or not.
         # This is a bit of a hack because this isn't exposed at the event level

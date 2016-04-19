@@ -33,6 +33,7 @@ class EventSync(BaseSyncMonitor):
         bind_context(self, 'eventsync', account_id)
         # Only Google for now, can easily parametrize by provider later.
         self.provider = GoogleEventsProvider(account_id, namespace_id)
+        self.log = logger.new(account_id=account_id, component='calendar sync')
 
         BaseSyncMonitor.__init__(self,
                                  account_id,
