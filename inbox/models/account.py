@@ -6,7 +6,6 @@ from sqlalchemy import (Column, BigInteger, String, DateTime, Boolean,
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import false
 
-from sqlalchemy.dialects import mysql
 from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
 
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
@@ -77,10 +76,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
     # NOTE: these columns are meaningless for EAS accounts
     sync_email = Column(Boolean, nullable=False, default=True)
     sync_contacts = Column(Boolean, nullable=False, default=False)
-
-    # Temporary hack. Revert immediately after solving those scaling
-    # issues.
-    sync_events = Column(mysql.TINYINT, nullable=False, default=False)
+    sync_events = Column(Boolean, nullable=False, default=False)
 
     last_synced_contacts = Column(DateTime, nullable=True)
 
@@ -222,7 +218,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
         """
         if scope == 'calendar':
-            self.sync_events = 0
+            self.sync_events = False
         elif scope == 'contacts':
             self.sync_contacts = False
         else:

@@ -43,7 +43,7 @@ def account_with_multiple_auth_creds(db):
         'client_secret': 'client_secret_1',
         'scope': all_scopes,
         'sync_contacts': True,
-        'sync_events': 1
+        'sync_events': True
     }
 
     second_auth_args = {
@@ -52,7 +52,7 @@ def account_with_multiple_auth_creds(db):
         'client_secret': 'client_secret_2',
         'scope': GOOGLE_EMAIL_SCOPE,
         'sync_contacts': False,
-        'sync_events': 0
+        'sync_events': False
     }
 
     g = GmailAuthHandler('gmail')
@@ -93,7 +93,7 @@ def account_with_single_auth_creds(db):
             'client_secret': 'client_secret_1',
             'scope': ' '.join([GOOGLE_CALENDAR_SCOPE, GOOGLE_EMAIL_SCOPE]),
             'sync_contacts': False,
-            'sync_events': 1
+            'sync_events': True
             }
 
     g = GmailAuthHandler('gmail')
@@ -142,7 +142,7 @@ def test_auth_revoke(
     assert len(account.auth_credentials) == 2
     assert len(account.valid_auth_credentials) == 2
     assert account.sync_contacts is True
-    assert account.sync_events == 1
+    assert account.sync_events is True
     assert account.sync_state != 'invalid'
     assert account.sync_should_run is True
 
@@ -157,7 +157,7 @@ def test_auth_revoke(
     assert len(account.auth_credentials) == 2
     assert len(account.valid_auth_credentials) == 1
     assert account.sync_contacts is False
-    assert account.sync_events == 0
+    assert account.sync_events is False
     assert account.sync_state != 'invalid'
     assert account.sync_should_run is True
 
@@ -185,7 +185,7 @@ def test_auth_revoke_different_order(
     assert len(account.auth_credentials) == 2
     assert len(account.valid_auth_credentials) == 2
     assert account.sync_contacts is True
-    assert account.sync_events == 1
+    assert account.sync_events is True
     assert account.sync_state != 'invalid'
     assert account.sync_should_run is True
 
@@ -197,7 +197,7 @@ def test_auth_revoke_different_order(
     account.verify_all_credentials()
     assert len(account.auth_credentials) == 2
     assert account.sync_contacts is True
-    assert account.sync_events == 1
+    assert account.sync_events is True
     assert account.sync_state != 'invalid'
     assert account.sync_should_run is True
     assert len(account.valid_auth_credentials) == 1
@@ -214,7 +214,7 @@ def test_auth_revoke_different_order(
     assert len(account.auth_credentials) == 2
     assert len(account.valid_auth_credentials) == 0
     assert account.sync_contacts is False
-    assert account.sync_events == 0
+    assert account.sync_events is False
     assert account.sync_state == 'invalid'
     assert account.sync_should_run is False
 
