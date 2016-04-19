@@ -63,10 +63,10 @@ def backfix_shard(shard_id, dry_run):
         # into the master
         grouped_categories.sort()
         master_id = grouped_categories[0]
+	categories_affected += len(grouped_categories)
 
         # Iterate over all of the duplicate categories except master
         for category_id in grouped_categories[1:]:
-            categories_affected += 1
             with session_scope_by_shard_id(shard_id) as db_session:
                 associated_messages = db_session.query(exists().where(
                     MessageCategory.category_id == category_id)).scalar()
@@ -114,7 +114,7 @@ def backfix_shard(shard_id, dry_run):
                                 # and the current category, so we can delete
                                 # the current category
                                 if mc_exists:
-                                    mc.delete()
+                                    db_session.query(MessageCategory).filter_by(id=mc.id).delete()
                                 else:
                                     # Master does not have a MessageCategory
                                     # for this message. Update this one to
