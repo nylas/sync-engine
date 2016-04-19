@@ -23,7 +23,7 @@ log = get_logger()
 def reconcile_message(new_message, session):
     """
     Check to see if the (synced) Message instance new_message was originally
-    created/sent via the Inbox API (based on the X-Inbox-Uid header. If so,
+    created/sent via the Nylas API (based on the X-Inbox-Uid header. If so,
     update the existing message with new attributes from the synced message
     and return it.
 

@@ -52,7 +52,7 @@ def encode(obj, namespace_public_id=None, expand=False, is_n1=False):
 
 def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
     """
-    Returns a dictionary representation of an Inbox model object obj, or
+    Returns a dictionary representation of a Nylas model object obj, or
     None if there is no such representation defined. If the optional
     namespace_public_id parameter is passed, it will used instead of fetching
     the namespace public id for each object. This improves performance when
@@ -150,7 +150,7 @@ def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
         else:
             resp['labels'] = categories
 
-        # If the message is a draft (Inbox-created or otherwise):
+        # If the message is a draft (Nylas-created or otherwise):
         if obj.is_draft:
             resp['object'] = 'draft'
             resp['version'] = obj.version
@@ -355,7 +355,7 @@ def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
 
 class APIEncoder(object):
     """
-    Provides methods for serializing Inbox objects. If the optional
+    Provides methods for serializing Nylas objects. If the optional
     namespace_public_id parameter is passed, it will be bound and used instead
     of fetching the namespace public id for each object. This improves
     performance when serializing large numbers of objects, but also means that

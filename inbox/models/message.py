@@ -75,7 +75,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     is_read = Column(Boolean, server_default=false(), nullable=False)
     is_starred = Column(Boolean, server_default=false(), nullable=False)
 
-    # For drafts (both Inbox-created and otherwise)
+    # For drafts (both Nylas-created and otherwise)
     is_draft = Column(Boolean, server_default=false(), nullable=False)
     is_sent = Column(Boolean, server_default=false(), nullable=False)
 
@@ -299,7 +299,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         # more details.
         self.received_date = self.received_date.replace(microsecond=0)
 
-        # Custom Inbox header
+        # Custom Nylas header
         self.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
         # In accordance with JWZ (http://www.jwz.org/doc/threading.html)

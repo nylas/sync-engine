@@ -43,7 +43,7 @@ def test_api_when_as_str(db, api_client, calendar, default_namespace):
         'title': 'Friday Office Party',
         'when': {'time': '1407542195'},
         'calendar_id': calendar.public_id,
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp_data = _verify_create(default_namespace.public_id, api_client,
@@ -56,7 +56,7 @@ def test_api_time(db, api_client, calendar, default_namespace):
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'calendar_id': calendar.public_id,
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp_data = _verify_create(default_namespace.public_id, api_client,
@@ -69,7 +69,7 @@ def test_api_timespan(db, api_client, calendar, default_namespace):
         'title': 'Friday Office Party',
         'calendar_id': calendar.public_id,
         'when': {'start_time': 1407542195, 'end_time': 1407548195},
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp_data = _verify_create(default_namespace.public_id, api_client,
@@ -82,7 +82,7 @@ def test_api_date(db, api_client, calendar, default_namespace):
         'title': 'Friday Office Party',
         'calendar_id': calendar.public_id,
         'when': {'date': '2014-08-27'},
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp_data = _verify_create(default_namespace.public_id, api_client,
@@ -95,7 +95,7 @@ def test_api_datespan(db, api_client, calendar, default_namespace):
         'title': 'Friday Office Party',
         'calendar_id': calendar.public_id,
         'when': {'start_date': '2014-08-27', 'end_date': '2014-08-28'},
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp_data = _verify_create(default_namespace.public_id, api_client,

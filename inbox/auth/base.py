@@ -36,7 +36,7 @@ def handler_from_provider(provider_name):
                 auth_mod = module_registry.get('generic')
 
     if auth_mod is None:
-        raise NotSupportedError('Inbox does not support the email provider.')
+        raise NotSupportedError('Nylas does not support the email provider.')
 
     auth_handler_class = getattr(auth_mod, auth_mod.AUTH_HANDLER_CLS)
     auth_handler = auth_handler_class(provider_name=provider_name)

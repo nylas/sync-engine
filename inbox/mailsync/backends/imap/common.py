@@ -191,7 +191,7 @@ def create_imap_message(db_session, account, folder, msg):
                                              body_string=msg.body)
 
     # Check to see if this is a copy of a message that was first created
-    # by the Inbox API. If so, don't create a new object; just use the old one.
+    # by the Nylas API. If so, don't create a new object; just use the old one.
     existing_copy = reconcile_message(new_message, db_session)
     if existing_copy is not None:
         new_message = existing_copy

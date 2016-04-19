@@ -1,7 +1,7 @@
 import pytest
 
 from inbox.models.session import session_scope
-from client import InboxTestClient
+from client import NylasTestClient
 from conftest import (timeout_loop, credentials, create_account, API_BASE)
 
 try:
@@ -33,7 +33,7 @@ def wait_for_auth(client):
 def test_account_auth(account_credentials):
     email, password = account_credentials
     create_account(email, password)
-    client = InboxTestClient(email, API_BASE)
+    client = NylasTestClient(email, API_BASE)
     wait_for_auth(client)
 
     # wait for sync to start. tests rely on things setup at beginning

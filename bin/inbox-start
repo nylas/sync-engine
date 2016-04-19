@@ -20,7 +20,7 @@ import setproctitle
 try:
     from inbox.config import config as inbox_config
 except ImportError:
-    sys.exit("Could not find Inbox installation. "
+    sys.exit("Could not find 'inbox' Python package installation. "
              "Maybe the Vagrant box provisioning didn't succeed?\n"
              "Try running sudo ./setup.sh")
 

@@ -100,7 +100,7 @@ class GoogleContactsProvider(object):
         Returns
         -------
         ..models.tables.base.Contact
-            A corresponding Inbox Contact instance.
+            A corresponding Nylas Contact instance.
 
         Raises
         ------

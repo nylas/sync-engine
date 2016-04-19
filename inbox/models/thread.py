@@ -15,7 +15,7 @@ from inbox.util.misc import cleanup_subject
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
     """
-    Threads are a first-class object in Inbox. This thread aggregates
+    Threads are a first-class object in Nylas. This thread aggregates
     the relevant thread metadata from elsewhere so that clients can only
     query on threads.
 

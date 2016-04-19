@@ -42,7 +42,7 @@ def test_add_to_specific_calendar(db, default_namespace, api_client):
 
     e_data = {'calendar_id': cal_id,
               'title': 'subj', 'description': 'body1',
-              'when': {'time': 1}, 'location': 'InboxHQ'}
+              'when': {'time': 1}, 'location': 'NylasHQ'}
     r = api_client.post_data('/events', e_data)
     assert r.status_code == 200
 
@@ -61,7 +61,7 @@ def test_add_to_read_only_calendar(db, api_client):
 
     e_data = {'calendar_id': ro_cal['id'],
               'title': 'subj', 'description': 'body1',
-              'when': {'time': 1}, 'location': 'InboxHQ'}
+              'when': {'time': 1}, 'location': 'NylasHQ'}
     resp = api_client.post_data('/events', e_data)
     assert resp.status_code == 400
 

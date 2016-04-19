@@ -2,7 +2,7 @@ import os
 from inbox import APIClient
 
 
-class InboxTestClient(APIClient):
+class NylasTestClient(APIClient):
 
     def __init__(self, email_address=None, api_base=os.getenv("INBOX_API_PORT_5555_TCP_ADDR","http://localhost:5555")):
         self.email_address = email_address
@@ -10,7 +10,7 @@ class InboxTestClient(APIClient):
 
     @property
     def namespaces(self):
-        all_ns = super(InboxTestClient, self).namespaces
+        all_ns = super(NylasTestClient, self).namespaces
         if self.email_address:
             return all_ns.where(email_address=self.email_address)
         else:

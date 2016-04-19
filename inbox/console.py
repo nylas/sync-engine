@@ -49,10 +49,10 @@ def start_console(user_email_address=None):
 
 def start_client_console(user_email_address=None):
     try:
-        from tests.system.client import InboxTestClient
+        from tests.system.client import NylasTestClient
     except ImportError:
         sys.exit("You need to have the Nylas Python SDK installed to use this"
                  " option.")
-    client = InboxTestClient(user_email_address)  # noqa
+    client = NylasTestClient(user_email_address)  # noqa
     IPython.embed(banner1=("You can access a Nylas API client "
                            "using the 'client' variable."))

@@ -10,7 +10,7 @@ from nylas.logging import get_logger
 log = get_logger()
 
 doc = """
-This is the Inbox console - you can use it to interact with mailsync and track memory leaks.
+This is the Nylas console - you can use it to interact with mailsync and track memory leaks.
 
 Guppy is installed. To start tracking leaks, you probably want to setup guppy like this:
 >>> from guppy import hpy
@@ -126,7 +126,7 @@ def break_to_interpreter(host="localhost", port=None):
     sock.bind((host, port))
     sock.listen(1)
     address = sock.getsockname()
-    log.debug("Inbox console waiting", address=address)
+    log.debug("Nylas console waiting", address=address)
     while True:
         (clientsocket, address) = sock.accept()
         console = RemoteConsole(clientsocket, locals())

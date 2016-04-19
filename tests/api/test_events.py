@@ -11,10 +11,10 @@ __all__ = ['api_client', 'calendar', 'db']
 def test_create_event(db, api_client, calendar):
     e_data = {'title': 'subj', 'description': 'body1',
               'calendar_id': calendar.public_id,
-              'when': {'time': 1}, 'location': 'InboxHQ'}
+              'when': {'time': 1}, 'location': 'NylasHQ'}
     e_data2 = {'title': 'subj2', 'description': 'body2',
                'calendar_id': calendar.public_id,
-               'when': {'time': 1}, 'location': 'InboxHQ'}
+               'when': {'time': 1}, 'location': 'NylasHQ'}
     api_client.post_data('/events', e_data)
     api_client.post_data('/events', e_data2)
     db.session.commit()
@@ -23,10 +23,10 @@ def test_create_event(db, api_client, calendar):
 def test_api_list(db, api_client, calendar):
     e_data = {'title': 'subj', 'description': 'body1',
               'calendar_id': calendar.public_id,
-              'when': {'time': 1}, 'location': 'InboxHQ'}
+              'when': {'time': 1}, 'location': 'NylasHQ'}
     e_data2 = {'title': 'subj2', 'description': 'body2',
                'calendar_id': calendar.public_id,
-               'when': {'time': 1}, 'location': 'InboxHQ'}
+               'when': {'time': 1}, 'location': 'NylasHQ'}
     api_client.post_data('/events', e_data)
     api_client.post_data('/events', e_data2)
 
@@ -49,9 +49,9 @@ def test_api_list(db, api_client, calendar):
 
 def test_api_get(db, api_client, calendar):
     e_data = {'title': 'subj', 'when': {'time': 1},
-              'calendar_id': calendar.public_id, 'location': 'InboxHQ'}
+              'calendar_id': calendar.public_id, 'location': 'NylasHQ'}
     e_data2 = {'title': 'subj2', 'when': {'time': 1},
-               'calendar_id': calendar.public_id, 'location': 'InboxHQ'}
+               'calendar_id': calendar.public_id, 'location': 'NylasHQ'}
     api_client.post_data('/events', e_data)
     api_client.post_data('/events', e_data2)
 
@@ -79,7 +79,7 @@ def test_api_create(db, api_client, calendar, default_account):
         'title': 'Friday Office Party',
         'calendar_id': calendar.public_id,
         'when': {'time': 1407542195},
-        'location': 'Inbox HQ',
+        'location': 'Nylas HQ',
     }
 
     e_resp = api_client.post_data('/events', e_data)

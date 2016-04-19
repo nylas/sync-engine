@@ -16,7 +16,7 @@ from inbox.console import start_console, start_client_console
 @click.option('-c', '--client', is_flag=True,
               help='Start a repl with an APIClient')
 def console(email_address, client):
-    """ REPL for Inbox. """
+    """ REPL for Nylas. """
     if client:
         start_client_console(email_address)
     else:

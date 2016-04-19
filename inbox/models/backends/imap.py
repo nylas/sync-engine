@@ -251,7 +251,7 @@ def _choose_existing_thread_for_gmail(message, db_session):
     object; otherwise return None.
 
     If a thread in Gmail (as identified by g_thrid) is split among multiple
-    Inbox threads, try to choose which thread to put the new message in based
+    Nylas threads, try to choose which thread to put the new message in based
     on the In-Reply-To header. If that doesn't succeed because the In-Reply-To
     header is missing or doesn't match existing synced messages, return the
     most recent thread.
