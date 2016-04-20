@@ -27,11 +27,13 @@ def get_zone_for_instance(hostname):
 
 @click.command()
 @click.option('--dry-run', is_flag=True, default=False)
+@click.option('--number', type=int, help='how many accounts to unschedule')
 @click.argument('hostname')
-def main(dry_run, hostname):
+def main(dry_run, number, hostname):
     """
     Unschedule all accounts assigned to a given sync host.
-    Intended primarily for use when decomissioning sync instances.
+    Intended primarily for use when decomissioning sync instances or for
+    manually unloading an overloaded sync instance.
 
     """
     zone = get_zone_for_instance(hostname)
@@ -39,6 +41,8 @@ def main(dry_run, hostname):
     # hosts in redis are of the format hostname:<cpu_id>
     to_unschedule = [(account_id, host) for account_id, host in
                      qc.assigned().items() if host.startswith(hostname)]
+    if number:
+        to_unschedule = to_unschedule[:number]
 
     if to_unschedule:
         if dry_run:
