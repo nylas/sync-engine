@@ -200,8 +200,8 @@ class SyncService(object):
                 acc = db_session.query(Account).get(account_id)
                 if not acc.sync_should_run:
                     clear_heartbeat_status(acc.id)
-                self.log.info('sync stopped', account_id=account_id)
-                acc.sync_stopped()
+                if acc.sync_stopped(self.process_identifier):
+                    self.log.info('sync stopped', account_id=account_id)
 
             r = self.queue_client.unassign(account_id, self.process_identifier)
             return r

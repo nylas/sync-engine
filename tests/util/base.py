@@ -114,7 +114,7 @@ def make_default_account(db, config):
 
     ns = Namespace()
     account = GmailAccount(
-        sync_host=platform.node(),
+        sync_host='{}:{}'.format(platform.node(), 0),
         email_address='inboxapptest@gmail.com')
     account.namespace = ns
     account.create_emailed_events_calendar()
