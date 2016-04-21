@@ -11,7 +11,7 @@ from inbox.models.session import global_session_scope
 
 
 @click.command()
-@click.argument('--fix', is_flag=True, default=False, help='use with caution')
+@click.option('--fix', is_flag=True, default=False, help='use with caution')
 def main(fix):
     """
     Detects accounts with sync_state and sync_host inconsistent with
