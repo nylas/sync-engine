@@ -257,7 +257,8 @@ class GoogleEventSync(EventSync):
                     if exc.response.status_code == 404:
                         self.log.warning(
                             'Tried to subscribe to push notifications'
-                            'for a deleted calendar. Deleting local calendar',
+                            ' for a deleted or inaccessible calendar. Deleting'
+                            ' local calendar',
                             calendar_id=cal.id,
                             calendar_uid=cal.uid)
                         db_session.delete(cal)
