@@ -87,7 +87,8 @@ setup(
              'bin/backfix-generic-imap-separators.py',
              'bin/backfix-duplicate-categories.py',
              'bin/correct-autoincrements',
-             'bin/update-categories'
+             'bin/update-categories',
+             'bin/detect-broken-accounts'
              ],
 
     # See:
