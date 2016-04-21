@@ -18,6 +18,7 @@ from inbox.sendmail.message import create_email
 from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
 from inbox.util.blockstore import get_from_blockstore
+from util import SMTP_ERRORS
 
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
 AUTH_EXTNS = {'oauth2': 'XOAUTH2',
@@ -349,24 +350,23 @@ class SMTPClient(object):
             # Distinguish between permanent failures due to message
             # content or recipients, and temporary failures for other reasons.
             # In particular, see https://support.google.com/a/answer/3726730
-            if (err.smtp_code == 550 and (
-                    err.smtp_error.startswith('5.4.5') or
-                    err.smtp_error.startswith('5.7.1'))):
-                message = 'Daily sending quota exceeded'
-                http_code = 429
-            elif (err.smtp_code == 552 and
-                  (err.smtp_error.startswith('5.2.3') or
-                   err.smtp_error.startswith('5.3.4'))):
-                message = 'Message too large'
-                http_code = 402
-            elif err.smtp_code == 552 and err.smtp_error.startswith('5.7.0'):
-                message = 'Message content rejected for security reasons'
-                http_code = 402
-            else:
-                message = 'Sending failed'
-                http_code = 503
+
+            message = 'Sending failed'
+            http_code = 503
+
+            if err.smtp_code in SMTP_ERRORS:
+                for stem in SMTP_ERRORS[err.smtp_code]:
+                    if stem in err.smtp_error:
+                        res = SMTP_ERRORS[err.smtp_code][stem]
+                        http_code = res[0]
+                        message = res[1]
+                        break
 
             server_error = '{} : {}'.format(err.smtp_code, err.smtp_error)
+
+            self.log.error('Sending failed', message=message,
+                           http_code=http_code, server_error=server_error)
+
             raise SendMailException(message, http_code=http_code,
                                     server_error=server_error)
         else:
