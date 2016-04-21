@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import click
 import requests
 
@@ -61,12 +62,14 @@ def main(dry_run, number, hostname):
 
                 resp = requests.post(
                     unassign_url,
-                    data={'account_id': account_id})
+                    data=json.dumps({'account_id': account_id}),
+                    headers={'content-type': 'application/json'})
                 if resp.status_code == 200:
                     print "Unassigned", account_id
                 else:
                     print "Couldn't unassign {}. Received HTTP code {} "\
-                          "from process.".format(account_id, resp.status_code)
+                          "from {}.".format(
+                              account_id, resp.status_code, unassign_url)
     else:
         print "No syncs to unschedule for", hostname
 
