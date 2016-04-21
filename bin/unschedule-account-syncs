@@ -57,16 +57,16 @@ def main(dry_run, number, hostname):
                 hostname, cpu_id = host.split(':')
                 host_ip = hostname.replace('sync-', '').replace('-', '.')
                 port = HTTP_FRONTEND_PORT_BASE + int(cpu_id)
-                unassign_url = ':'.join([host_ip, str(port)]) + '/unassign'
+                unassign_url = 'http://' + ':'.join([host_ip, str(port)]) + '/unassign'
 
                 resp = requests.post(
                     unassign_url,
                     data={'account_id': account_id})
-                if resp.code != 200:
+                if resp.status_code != 200:
                     print "Unassigned", account_id
                 else:
                     print "Couldn't unassign {}. Received HTTP code {} "\
-                          "from process.".format(account_id, resp.code)
+                          "from process.".format(account_id, resp.status_code)
     else:
         print "No syncs to unschedule for", hostname
 
