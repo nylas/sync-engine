@@ -62,7 +62,7 @@ def main(dry_run, number, hostname):
                 resp = requests.post(
                     unassign_url,
                     data={'account_id': account_id})
-                if resp.status_code != 200:
+                if resp.status_code == 200:
                     print "Unassigned", account_id
                 else:
                     print "Couldn't unassign {}. Received HTTP code {} "\
