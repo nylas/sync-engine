@@ -88,7 +88,8 @@ setup(
              'bin/backfix-duplicate-categories.py',
              'bin/correct-autoincrements',
              'bin/update-categories',
-             'bin/detect-missing-sync-host'
+             'bin/detect-missing-sync-host',
+             'bin/purge-transaction-log'
              ],
 
     # See:
