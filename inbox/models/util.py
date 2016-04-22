@@ -319,3 +319,39 @@ def check_throttle():
         return True
     else:
         return False
+
+
+def purge_transactions(shard_id, days_ago=60, limit=1000, throttle=False,
+                       dry_run=False):
+    # Delete all items from the transaction table that are older than
+    # `days_ago` days.
+    if dry_run:
+        offset = 0
+        query = ("SELECT id FROM transaction where created_at < "
+                 "DATE_SUB(now(), INTERVAL {} day) LIMIT {}".
+                 format(days_ago, limit))
+    else:
+        query = ("DELETE FROM transaction where created_at < DATE_SUB(now(),"
+                 " INTERVAL {} day) LIMIT {}".format(days_ago, limit))
+    try:
+        # delete from rows until there are no more rows affected
+        rowcount = 1
+        while rowcount > 0:
+            while throttle and check_throttle():
+                log.info("Throttling deletion")
+                gevent.sleep(60)
+            with session_scope_by_shard_id(shard_id, versioned=False) as \
+                    db_session:
+                if dry_run:
+                    rowcount = db_session.execute("{} OFFSET {}".
+                                                  format(query, offset)).\
+                                                    rowcount
+                    offset += rowcount
+                else:
+                    rowcount = db_session.execute(query).rowcount
+            log.info("Deleted batch from transaction table", batch_size=limit,
+                     rowcount=rowcount)
+        log.info("Finished purging transaction table for shard",
+                 shard_id=shard_id, date_delta=days_ago)
+    except Exception as e:
+        log.critical("Exception encountered during deletion", exception=e)
