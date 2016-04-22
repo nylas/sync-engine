@@ -52,7 +52,7 @@ def check_tz():
         sys.exit(_TZ_ERROR_TEXT)
 
 
-def load_overrides(file_path):
+def load_overrides(file_path, loaded_config=config):
     """
     Convenience function for overriding default configuration.
 
@@ -70,7 +70,7 @@ def load_overrides(file_path):
             return
         assert isinstance(overrides, dict), \
             'overrides must be dictionary'
-        config.update(overrides)
+        loaded_config.update(overrides)
         log.debug('Imported config overrides {}'.format(
             overrides.keys()))
 
