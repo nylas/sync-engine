@@ -88,7 +88,7 @@ setup(
              'bin/backfix-duplicate-categories.py',
              'bin/correct-autoincrements',
              'bin/update-categories',
-             'bin/detect-broken-accounts'
+             'bin/detect-missing-sync-host'
              ],
 
     # See:
