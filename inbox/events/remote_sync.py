@@ -4,8 +4,6 @@ from requests.exceptions import HTTPError
 from nylas.logging import get_logger
 logger = get_logger()
 
-from gevent import sleep
-
 from inbox.basicauth import AccessNotEnabledError, OAuthError
 from inbox.config import config
 from inbox.sync.base_sync import BaseSyncMonitor
@@ -89,18 +87,19 @@ class EventSync(BaseSyncMonitor):
 
 def handle_calendar_deletes(namespace_id, deleted_calendar_uids, log,
                             db_session):
-    """Delete any local Calendar rows with uid in `deleted_calendar_uids`. This
+    """
+    Delete any local Calendar rows with uid in `deleted_calendar_uids`. This
     delete cascades to associated events (if the calendar is gone, so are all
-    of its events)."""
+    of its events).
+
+    """
     deleted_count = 0
     for uid in deleted_calendar_uids:
         local_calendar = db_session.query(Calendar).filter(
             Calendar.namespace_id == namespace_id,
             Calendar.uid == uid).first()
         if local_calendar is not None:
-            # Cascades to associated events via SQLAlchemy 'delete' cascade
-            db_session.delete(local_calendar)
-            db_session.commit()
+            _delete_calendar(db_session, local_calendar)
             deleted_count += 1
     log.info('deleted calendars', deleted=deleted_count)
 
@@ -261,7 +260,7 @@ class GoogleEventSync(EventSync):
                             ' local calendar',
                             calendar_id=cal.id,
                             calendar_uid=cal.uid)
-                        db_session.delete(cal)
+                        _delete_calendar(db_session, cal)
                     else:
                         raise exc
 
@@ -286,12 +285,9 @@ class GoogleEventSync(EventSync):
                             'Deleting local calendar.',
                             calendar_id=cal.id,
                             calendar_uid=cal.uid)
-                        db_session.delete(cal)
-                        db_session.commit()
+                        _delete_calendar(db_session, cal)
                     else:
                         raise exc
-
-                sleep(1)
 
     def _sync_calendar_list(self, account, db_session):
         sync_timestamp = datetime.utcnow()
@@ -316,3 +312,29 @@ class GoogleEventSync(EventSync):
                              event_changes, self.log, db_session)
         calendar.last_synced = sync_timestamp
         db_session.commit()
+
+
+def _delete_calendar(db_session, calendar):
+    """
+    Delete the calendar after deleting its events in batches.
+
+    Note we deliberately do not rely on the configured delete cascade -- doing
+    so for a calendar with many events can result in the session post-flush
+    processing (Transaction record creation) blocking the event loop.
+
+    """
+    count = 0
+    for e in calendar.events:
+        db_session.delete(e)
+        count += 1
+        if count % 100 == 0:
+            # Issue a DELETE for every 100 events.
+            # This will ensure that when the DELETE for the calendar is issued,
+            # the number of objects in the session and for which to create
+            # Transaction records is small.
+            db_session.commit()
+    db_session.commit()
+
+    # Delete the calendar
+    db_session.delete(calendar)
+    db_session.commit()
