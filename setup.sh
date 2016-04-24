@@ -90,6 +90,7 @@ apt-get -y install git \
                    libxslt-dev \
                    lib32z1-dev \
                    libffi-dev \
+                   libssl-dev \
                    pkg-config \
                    python-lxml \
                    tmux \

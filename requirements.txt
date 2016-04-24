@@ -66,3 +66,4 @@ git+https://github.com/mjs/imapclient.git@77047bafd9a82f3bb1faa5e909d776b7a2e1b4
 tldextract==1.7.5
 tox==2.3.1
 nylas==1.2.3
+cffi>=1.6
