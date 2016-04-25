@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import asc, desc
+from sqlalchemy import asc
+from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload
 from gevent import Greenlet, sleep
 
@@ -60,66 +61,77 @@ class ContactSearchIndexService(Greenlet):
         for metric in metric_names:
             statsd_client.incr(metric)
 
+    def _set_transaction_pointers(self):
+        for key in engine_manager.engines:
+            with session_scope_by_shard_id(key) as db_session:
+                pointer = db_session.query(
+                    ContactSearchIndexCursor).first()
+                if pointer:
+                    self.transaction_pointers[key] = pointer.transaction_id
+                else:
+                    # Never start from 0; if the service hasn't run before
+                    # start from the latest transaction, with the expectation
+                    # that a backfill will be run separately.
+                    max_id = db_session.query(
+                        func.max(Transaction.id)).scalar() or 0
+                    latest_transaction = \
+                        db_session.query(Transaction).get(max_id)
+                    if latest_transaction:
+                        self.transaction_pointers[
+                            key] = latest_transaction.id
+                    else:
+                        self.transaction_pointers[key] = 0
+
+    def _index_transactions(self, namespace_ids=[]):
+        """ index with filter """
+        # index 'em
+        for key in engine_manager.engines:
+            with session_scope_by_shard_id(key) as db_session:
+                txn_query = db_session.query(Transaction).filter(
+                    Transaction.id > self.transaction_pointers[key],
+                    Transaction.object_type == 'contact')
+                if namespace_ids:
+                    txn_query = txn_query.filter(
+                        Transaction.namespace_id.in_(
+                            namespace_ids))
+                transactions = txn_query\
+                    .order_by(asc(Transaction.id)) \
+                    .limit(self.chunk_size).all()
+
+                # index up to chunk_size transactions
+                should_sleep = False
+                if transactions:
+                    self.index(transactions, db_session)
+                    oldest_transaction = min(
+                        transactions, key=lambda t: t.created_at)
+                    current_timestamp = datetime.utcnow()
+                    latency = (current_timestamp -
+                                oldest_transaction.created_at).seconds
+                    self._report_transactions_latency(latency)
+                    new_pointer = transactions[-1].id
+                    self.update_pointer(new_pointer, key, db_session)
+                    db_session.commit()
+                else:
+                    should_sleep = True
+            if should_sleep:
+                log.info('sleeping')
+                sleep(self.poll_interval)
+
     def _run(self):
         """
         Index into CloudSearch the contacts of all namespaces.
 
         """
         try:
-            for key in engine_manager.engines:
-                with session_scope_by_shard_id(key) as db_session:
-                    pointer = db_session.query(
-                        ContactSearchIndexCursor).first()
-                    if pointer:
-                        self.transaction_pointers[key] = pointer.transaction_id
-                    else:
-                        # Never start from 0; if the service hasn't
-                        # run before start from the latest
-                        # transaction, with the expectation that a
-                        # backfill will be run separately.
-                        latest_transaction = db_session.query(Transaction). \
-                            order_by(desc(Transaction.created_at)).first()
-                        if latest_transaction:
-                            self.transaction_pointers[
-                                key] = latest_transaction.id
-                        else:
-                            self.transaction_pointers[key] = 0
+            self._set_transaction_pointers()
 
             self.log.info('Starting contact-search-index service',
                           transaction_pointers=self.transaction_pointers)
 
             while True:
-                for key in engine_manager.engines:
-                    with session_scope_by_shard_id(key) as db_session:
-                        transactions = db_session.query(Transaction). filter(
-                            Transaction.id > self.transaction_pointers[key],
-                            Transaction.object_type == 'contact') \
-                            .with_hint(
-                                Transaction,
-                                "USE INDEX (ix_transaction_table_name)") \
-                            .order_by(asc(Transaction.id)) \
-                            .limit(self.chunk_size) \
-                            .options(joinedload(Transaction.namespace)).all()
+                self._publish_heartbeat()
+                self._index_transactions()
 
-                        # index up to chunk_size transactions
-                        should_sleep = False
-                        if transactions:
-                            self.index(transactions, db_session)
-                            oldest_transaction = min(
-                                transactions, key=lambda t: t.created_at)
-                            current_timestamp = datetime.utcnow()
-                            latency = (current_timestamp -
-                                       oldest_transaction.created_at).seconds
-                            self._report_transactions_latency(latency)
-                            new_pointer = transactions[-1].id
-                            self.update_pointer(new_pointer, key, db_session)
-                            db_session.commit()
-                        else:
-                            should_sleep = True
-                    if should_sleep:
-                        log.info('sleeping')
-                        sleep(self.poll_interval)
-                    self._publish_heartbeat()
         except Exception:
             log_uncaught_errors(log)
 
