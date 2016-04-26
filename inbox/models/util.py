@@ -243,21 +243,18 @@ def _batch_delete(engine, table, xxx_todo_changeme, throttle=False,
 
     query = 'DELETE FROM {} WHERE {}={} LIMIT 2000;'.format(table, column, id_)
 
-    pruned_messages = False
     for i in range(0, batches):
         if throttle and check_throttle():
             log.info("Throttling deletion")
             gevent.sleep(60)
         if dry_run is False:
-            if table == "message" and not pruned_messages:
-                if engine.execute("SELECT EXISTS(SELECT id FROM message WHERE "
-                                  "{}={} AND reply_to_message_id IS NOT NULL);"
-                                  .format(column, id_)).scalar():
-                    query = ('DELETE FROM message WHERE {}={} AND '
-                             'reply_to_message_id IS NOT NULL LIMIT 2000;'
-                             .format(column, id_))
-                else:
-                    pruned_messages = True
+            if table == "message":
+                # messages must be order by the foreign key `received_date`
+                # otherwise MySQL will raise an error when deleting
+                # from the message table
+                query = ('DELETE FROM message WHERE {}={} '
+                         'ORDER BY received_date desc LIMIT 2000;'
+                         .format(column, id_))
             engine.execute(query)
         else:
             log.debug(query)
