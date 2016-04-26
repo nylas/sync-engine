@@ -233,7 +233,6 @@ class GoogleEventSync(EventSync):
                 'bypassing sync')
 
     def _refresh_gpush_subscriptions(self):
-
         with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
 
@@ -258,15 +257,17 @@ class GoogleEventSync(EventSync):
                             'Tried to subscribe to push notifications'
                             ' for a deleted or inaccessible calendar. Deleting'
                             ' local calendar',
-                            calendar_id=cal.id,
-                            calendar_uid=cal.uid)
+                            calendar_id=cal.id, calendar_uid=cal.uid)
                         _delete_calendar(db_session, cal)
                     else:
+                        self.log.error(
+                            'Error while updating calendar push notification '
+                            'subscription', cal_id=cal.id, calendar_uid=cal.uid,
+                            status_code=exc.response.status_code)
                         raise exc
 
     def _sync_data(self):
         with session_scope(self.namespace_id) as db_session:
-
             account = db_session.query(Account).get(self.account_id)
             if account.should_update_calendars(MAX_TIME_WITHOUT_SYNC):
                 self._sync_calendar_list(account, db_session)
@@ -283,10 +284,13 @@ class GoogleEventSync(EventSync):
                         self.log.warning(
                             'Tried to sync a deleted calendar.'
                             'Deleting local calendar.',
-                            calendar_id=cal.id,
-                            calendar_uid=cal.uid)
+                            calendar_id=cal.id, calendar_uid=cal.uid)
                         _delete_calendar(db_session, cal)
                     else:
+                        self.log.error(
+                            'Error while syncing calendar',
+                            cal_id=cal.id, calendar_uid=cal.uid,
+                            status_code=exc.response.status_code)
                         raise exc
 
     def _sync_calendar_list(self, account, db_session):

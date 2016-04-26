@@ -9,10 +9,11 @@ import requests
 import uuid
 import arrow
 
+from nylas.logging import get_logger
+log = get_logger()
 from inbox.auth.oauth import OAuthRequestsWrapper
 from inbox.basicauth import AccessNotEnabledError
 from inbox.config import config
-from nylas.logging import get_logger
 from inbox.models import Calendar, Account
 from inbox.models.event import Event, EVENT_STATUSES
 from inbox.models.session import session_scope
@@ -21,7 +22,6 @@ from inbox.events.util import (google_to_event_time, parse_google_time,
                                parse_datetime, CalendarSyncResponse)
 
 
-log = get_logger()
 CALENDARS_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
 STATUS_MAP = {'accepted': 'yes', 'needsAction': 'noreply',
               'declined': 'no', 'tentative': 'maybe'}
@@ -297,6 +297,7 @@ class GoogleEventsProvider(object):
         set up push notifications for this account.
 
         Raises an AccessNotEnabled error if calendar sync is not enabled
+
         """
         token = self._get_access_token_for_push_notifications(account)
         receiving_url = CALENDAR_LIST_WEBHOOK_URL.format(
@@ -326,8 +327,8 @@ class GoogleEventsProvider(object):
             data = r.json()
             return data.get('expiration')
         else:
+            # Handle error and return None
             self.handle_watch_errors(r)
-            return None
 
     def watch_calendar(self, account, calendar):
         """
@@ -343,6 +344,7 @@ class GoogleEventsProvider(object):
 
         Raises an HTTPError if google gives us a 404 (which implies the
         calendar was deleted)
+
         """
         token = self._get_access_token_for_push_notifications(account)
         watch_url = WATCH_EVENTS_URL.format(urllib.quote(calendar.uid))
@@ -379,41 +381,43 @@ class GoogleEventsProvider(object):
             data = r.json()
             return data.get('expiration')
         else:
+            # Handle error and return None
             self.handle_watch_errors(r)
-            return
 
     def handle_watch_errors(self, r):
         self.log.warning(
-            'Error subscribing to Google push notifications', url=r.url,
-            response=r.content, status=r.status_code)
+            'Error subscribing to Google push notifications',
+            url=r.url, response=r.content, status=r.status_code)
 
-        if r.status_code == 401:
-            self.log.warning(
-                'Invalid: could be invalid auth credentials',
-                url=r.url, response=r.content, status=r.status_code)
-
+        if r.status_code == 400:
+            reason = r.json()['error']['errors'][0]['reason']
+            self.log.warning('Invalid request',
+                             status=r.status_code, reason=reason)
+            if reason == 'pushNotSupportedForRequestedResource':
+                raise AccessNotEnabledError()
+        elif r.status_code == 401:
+            self.log.warning('Invalid: could be invalid auth credentials',
+                             url=r.url, response=r.content, status=r.status_code)
         elif r.status_code in (500, 503):
-            log.warning('Backend error in calendar API; retrying')
-            gevent.sleep(30 + random.randrange(0, 60))
-
+            self.log.warning('Backend error in calendar API', status=r.status_code)
         elif r.status_code == 403:
             try:
                 reason = r.json()['error']['errors'][0]['reason']
             except (KeyError, ValueError):
-                log.error("Couldn't parse API error response",
-                          response=r.content, status=r.status_code)
-
+                self.log.error("Couldn't parse API error response",
+                               response=r.content, status=r.status_code)
             if reason == 'userRateLimitExceeded':
-                log.warning('API request was rate-limited; retrying')
+                # Sleep before proceeding (naive backoff)
                 gevent.sleep(30 + random.randrange(0, 60))
+                self.log.warning('API request was rate-limited')
             elif reason == 'accessNotConfigured':
-                log.warning('API not enabled; returning empty result')
+                self.log.warning('API not enabled.')
                 raise AccessNotEnabledError()
-
         elif r.status_code == 404:
-            # resource deleted!
+            # Resource deleted!
+            self.log.warning('Raising exception for status',
+                             status_code=r.status_code, response=r.content)
             r.raise_for_status()
-
         else:
             self.log.warning('Unexpected error', response=r.content,
                              status=r.status_code)
