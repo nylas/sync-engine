@@ -218,6 +218,7 @@ def index_namespace(namespace_id):
                 contentType='application/json')
 
         log.info("namespace index complete",
+                 namespace_id=namespace_id,
                  total_contacts_indexed=indexed,
                  total_contacts_deleted=len(deleted_records))
 
