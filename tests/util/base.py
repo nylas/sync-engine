@@ -60,12 +60,6 @@ def empty_db(config):
     engine.session.close()
 
 
-@fixture(autouse=True)
-def mock_redis(monkeypatch):
-    monkeypatch.setattr("inbox.heartbeat.store.HeartbeatStore.__init__",
-                        lambda *args, **kwargs: None)
-
-
 @yield_fixture
 def test_client(db):
     from inbox.api.srv import app
@@ -135,7 +129,6 @@ def make_default_account(db, config):
     db.session.add(auth_creds)
     db.session.commit()
     return account
-
 
 
 @fixture(scope='function')

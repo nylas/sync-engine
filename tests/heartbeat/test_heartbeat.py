@@ -7,6 +7,7 @@ from inbox.heartbeat.store import (HeartbeatStore, HeartbeatStatusProxy,
                                    HeartbeatStatusKey)
 from inbox.heartbeat.status import (clear_heartbeat_status,
                                     get_ping_status)
+import inbox.heartbeat.config as heartbeat_config
 from inbox.heartbeat.config import ALIVE_EXPIRY
 from inbox.config import config
 
@@ -44,7 +45,6 @@ def test_heartbeat_store_singleton():
     # Test we don't unnecessarily create multiple instances of HeartbeatStore
     store_one = HeartbeatStore.store()
     store_two = HeartbeatStore.store()
-    assert isinstance(store_one.client, MockRedis)
     assert id(store_one) == id(store_two)
 
 
@@ -71,32 +71,35 @@ def test_proxy_publish_doesnt_break_everything(monkeypatch):
 def test_folder_publish_in_index(redis_client):
     proxy = proxy_for(1, 2)
     proxy.publish()
-    assert '1' in redis_client.keys()
+    client = heartbeat_config.get_redis_client()
+    assert '1' in client.keys()
 
     # Check the per-account folder-list index was populated correctly: it
     # should be a sorted set of all folder IDs for that account, with the
     # folder's last heartbeat timestamp.
-    acct_folder_index = redis_client.zrange('1', 0, -1, withscores=True)
+    acct_folder_index = client.zrange('1', 0, -1, withscores=True)
     assert len(acct_folder_index) == 1
     key, timestamp = acct_folder_index[0]
     assert key == '2'
     assert fuzzy_equals(proxy.heartbeat_at, timestamp)
 
 
-def test_kill_device_multiple(store):
+def test_kill_device_multiple():
     # If we kill a device and the folder has multiple devices, don't clear
     # the heartbeat status
+    local_store = HeartbeatStore().store()
+
     proxy_for(1, 2, device_id=2).publish()
     proxy_for(1, 2, device_id=3).publish()
     clear_heartbeat_status(1, device_id=2)
-    folders = store.get_account_folders(1)
-    (f, ts) = folders[0]
+    folders = local_store.get_account_folders(1)
+
+    assert len(folders) == 1
+    f, ts = folders[0]
     assert f == '2'
 
 
 # Test querying heartbeats
-
-
 @pytest.fixture
 def random_heartbeats():
     # generate some random heartbeats for accounts 1..10 and folders -2..2

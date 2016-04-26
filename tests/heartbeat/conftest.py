@@ -23,7 +23,7 @@ def mock_client():
     return mock_client
 
 
-@pytest.yield_fixture()
+@pytest.yield_fixture(scope='function')
 def redis_client(monkeypatch):
     client = mock_client()
     yield client
@@ -37,22 +37,13 @@ def redis_mock(redis_client, monkeypatch):
         # Ensure the same 'redis' client is returned across HeartbeatStore
         # calls and direct checks. Mocking StrictRedis() directly causes
         # different clients to be initialized, so we can't check contents.
-        self.client = redis_client
+        self.host = None
+        self.port = 6379
 
+    def fake_redis_client(host=None, port=6379, db=1):
+        return redis_client
+
+    monkeypatch.setattr("inbox.heartbeat.config.get_redis_client",
+                        fake_redis_client)
     monkeypatch.setattr("inbox.heartbeat.store.HeartbeatStore.__init__",
                         set_self_client)
-
-
-@pytest.fixture(scope='function', autouse=True)
-def store(monkeypatch):
-    local_store = HeartbeatStore()
-
-    @classmethod
-    def scoped_store(*args, **kwargs):
-        return local_store
-
-    # Circumvent singleton behaviour for tests
-    monkeypatch.setattr("inbox.heartbeat.store.HeartbeatStore.store",
-                        scoped_store)
-
-    return HeartbeatStore.store()
