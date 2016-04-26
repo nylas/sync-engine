@@ -19,8 +19,8 @@ def main(namespace_ids):
 
     """
     for namespace_id in namespace_ids:
-        log.info("indexing namespace {namespace_id}",
-                 namespace_id=namespace_id)
+        log.info("indexing namespace {namespace_id}".format(
+                 namespace_id=namespace_id))
         index_namespace(namespace_id)
 
 if __name__ == '__main__':
