@@ -96,7 +96,7 @@ def erring_smtp_connection(exc_type, *args):
 # Different providers use slightly different errors, so parametrize this test
 # fixture to imitate them.
 @pytest.fixture(params=[
-    "5.4.5 Daily sending quota exceeded"
+    "5.4.5 Daily sending quota exceeded",
     "5.7.1 You have exceeded your daily sending limits"])
 @pytest.fixture
 def quota_exceeded(patch_token_manager, monkeypatch, request):
@@ -112,18 +112,22 @@ def connection_closed(patch_token_manager, monkeypatch):
                         erring_smtp_connection(smtplib.SMTPServerDisconnected))
 
 
-@pytest.fixture
-def recipients_refused(patch_token_manager, monkeypatch):
+@pytest.fixture(params=[
+    "User unknown",
+    "5.1.1 <noreply@example.com>: Recipient address rejected: "
+    "User unknown in virtual mailbox table"
+])
+def recipients_refused(patch_token_manager, monkeypatch, request):
     monkeypatch.setattr('inbox.sendmail.smtp.postel.SMTPConnection',
                         erring_smtp_connection(smtplib.SMTPRecipientsRefused,
-                                               {'foo@foocorp.com': (
-                                                   550, 'User unknown')}))
+                                               {'foo@foocorp.com':
+                                                (550, request.param)}))
 
 
 # Different providers use slightly different errors, so parametrize this test
 # fixture to imitate them.
 @pytest.fixture(params=[
-    "5.2.3 Your message exceeded Google's message size limits"
+    "5.2.3 Your message exceeded Google's message size limits",
     "5.3.4 Message size exceeds fixed maximum message size"])
 def message_too_large(patch_token_manager, monkeypatch, request):
     monkeypatch.setattr(

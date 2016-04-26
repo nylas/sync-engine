@@ -44,12 +44,15 @@ SMTP_ERRORS = {
         "5.4.5": (429, "Daily sending quota exceeded"),
         "5.4.6": (429, "Mail server temporarily rejected message."),
         "5.7.0": (402, "Mail relay denied."),
-        "5.7.1": (402, "Daily sending quota exceeded"),
+        "5.7.1": (429, "Daily sending quota exceeded"),
 
         "This message was classified as SPAM and may not be delivered.": (402,
             "Message blocked due to spam content in the message."),
         "exceeded recipient rate limit": (429, "Daily email quota for this "
-                                               "address exceeded.")
+                                               "address exceeded."),
+        "has exceeded its 24-hour sending limit.": (429, "Daily email quota for this "
+                                                         "address exceeded.")
+
     },
     552: {
         "5.2.3": (402, "Message too large"),
