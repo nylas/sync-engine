@@ -26,6 +26,8 @@ from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
 
+from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
+
 
 def _trim_filename(s, namespace_id, max_len=64):
     if s and len(s) > max_len:
@@ -82,6 +84,17 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # REPURPOSED
     state = Column(Enum('draft', 'sending', 'sending failed', 'sent',
                         'actions_pending', 'actions_committed'))
+
+    @property
+    def is_sending(self):
+        return self.version == MAX_MYSQL_INTEGER and not self.is_draft
+
+    def mark_as_sending(self):
+        if self.is_sent:
+            raise ValueError('Cannot mark a sent message as sending')
+        self.version = MAX_MYSQL_INTEGER
+        self.is_draft = False
+        self.regenerate_inbox_uid()
 
     @property
     def categories_changes(self):

@@ -176,7 +176,8 @@ class SMTPConnection(object):
         """
         # If STARTTLS is available, always use it -- irrespective of the
         # `self.ssl_required`. If it's not or it fails, use `self.ssl_required`
-        # to determine whether to fail or continue with plaintext authentication.
+        # to determine whether to fail or continue with plaintext
+        # authentication.
         self.connection.ehlo()
         if self.connection.has_extn('starttls'):
             try:
@@ -377,6 +378,44 @@ class SMTPClient(object):
         # A tiny wrapper over _send because the API differs
         # between SMTP and EAS.
         return self._send(recipients, raw_message)
+
+    def send_custom(self, draft, body, recipients):
+        """
+        Turn a draft object into a MIME message, replacing the body with
+        the provided body, and send it only to the provided recipients.
+
+        Parameters
+        ----------
+        draft: models.message.Message object
+            the draft message to send.
+        body: string
+            message body to send in place of the existing body attribute in
+            the draft.
+        recipient_emails: email addresses to send copies of this message to.
+        """
+        blocks = [p.block for p in draft.attachments]
+        attachments = generate_attachments(blocks)
+        from_addr = draft.from_addr[0]
+        msg = create_email(from_name=from_addr[0],
+                           from_email=from_addr[1],
+                           reply_to=draft.reply_to,
+                           inbox_uid=draft.inbox_uid,
+                           to_addr=draft.to_addr,
+                           cc_addr=draft.cc_addr,
+                           bcc_addr=None,
+                           subject=draft.subject,
+                           html=body,
+                           in_reply_to=draft.in_reply_to,
+                           references=draft.references,
+                           attachments=attachments)
+
+        recipient_emails = [email for name, email in recipients]
+
+        self._send(recipient_emails, msg)
+
+        # Sent successfully
+        self.log.info('Sending successful', sender=from_addr[1],
+                      recipients=recipient_emails)
 
     def send(self, draft):
         """

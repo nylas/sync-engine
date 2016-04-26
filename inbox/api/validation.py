@@ -138,6 +138,22 @@ def strict_parse_args(parser, raw_args):
     return args
 
 
+def get_sending_draft(draft_public_id, namespace_id, db_session):
+    valid_public_id(draft_public_id)
+    try:
+        draft = db_session.query(Message).filter(
+            Message.public_id == draft_public_id,
+            Message.namespace_id == namespace_id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find multi-send draft {}"
+                            .format(draft_public_id))
+
+    if draft.is_sent or not draft.is_sending:
+        raise InputError('Message {} is not a multi-send draft'
+                         .format(draft_public_id))
+    return draft
+
+
 def get_draft(draft_public_id, version, namespace_id, db_session):
     valid_public_id(draft_public_id)
     if version is None:

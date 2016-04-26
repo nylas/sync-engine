@@ -4,6 +4,7 @@ import uuid
 import gevent
 import time
 from datetime import datetime
+import itertools
 
 from flask import (request, g, Blueprint, make_response, Response,
                    stream_with_context)
@@ -20,7 +21,8 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.models.category import EPOCH
 from inbox.models.backends.generic import GenericAccount
-from inbox.api.sending import send_draft, send_raw_mime
+from inbox.api.sending import (send_draft, send_raw_mime, send_draft_copy,
+                               update_draft_on_send)
 from inbox.api.update import update_message, update_thread
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
@@ -32,7 +34,8 @@ from inbox.api.validation import (valid_account, get_attachments, get_calendar,
                                   strict_bool, validate_draft_recipients,
                                   valid_delta_object_types, valid_display_name,
                                   noop_event_update, valid_category_type,
-                                  comma_separated_email_list)
+                                  comma_separated_email_list,
+                                  get_sending_draft)
 from inbox.config import config
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
@@ -51,6 +54,7 @@ from inbox.api.err import err, APIException, NotFoundError, InputError
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.util.blockstore import get_from_blockstore
+from inbox.actions.backends.generic import remote_delete_sent
 
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
@@ -516,7 +520,8 @@ def folders_labels_create_api():
     display_name = data.get('display_name')
 
     # Validates the display_name and checks if there is a non-deleted Category
-    # with this display_name already. If so, we do not allow creating a duplicate.
+    # with this display_name already. If so, we do not allow creating a
+    # duplicate.
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
 
@@ -525,10 +530,12 @@ def folders_labels_create_api():
                                        type_=category_type)
     if category.is_deleted:
         # The existing category is soft-deleted and will be hard-deleted,
-        # so it is okay to create a new category with the same (display_name, name).
+        # so it is okay to create a new category with the same (display_name,
+        # name).
         # NOTE: We do not simply "undelete" the existing category, by setting
         # its `deleted_at`=EPOCH, because doing so would be consistent with the
-        # API's semantics -- we want the newly created object to have a different ID.
+        # API's semantics -- we want the newly created object to have a
+        # different ID.
         category = Category.create(g.db_session, namespace_id=g.namespace.id,
                                    name=None, display_name=display_name,
                                    type_=category_type)
@@ -1328,6 +1335,98 @@ def draft_send_api():
 
     resp = send_draft(account, draft, g.db_session)
     return resp
+
+
+@app.route('/send-multiple', methods=['POST'])
+def multi_send_create():
+    """Initiates a multi-send session by creating a new multi-send draft."""
+    account = g.namespace.account
+
+    if account.discriminator == 'easaccount':
+        return err(400, 'Multiple send is not supported for this provider.')
+
+    data = request.get_json(force=True)
+
+    # Make a new draft and don't save it to the remote (by passing
+    # is_draft=False)
+    draft = create_message_from_json(data, g.namespace,
+                                     g.db_session, is_draft=False)
+    validate_draft_recipients(draft)
+
+    # Mark the draft as sending, which ensures that it cannot be modified.
+    draft.mark_as_sending()
+    g.db_session.add(draft)
+    return g.encoder.jsonify(draft)
+
+
+@app.route('/send-multiple/<draft_id>', methods=['POST'])
+def multi_send(draft_id):
+    """Performs a single send operation in an individualized multi-send
+    session. Sends a copy of the draft at draft_id to the specified address
+    with the specified body, and ensures that a corresponding sent message is
+    either not created in the user's Sent folder or is immediately
+    deleted from it."""
+    request_started = time.time()
+    account = g.namespace.account
+
+    if account.discriminator == 'easaccount':
+        return err(400, 'Multiple send is not supported for this provider.')
+
+    data = request.get_json(force=True)
+    valid_public_id(draft_id)
+
+    body = data.get('body')
+    send_to = get_recipients([data.get('send_to')], 'to')[0]
+    draft = get_sending_draft(draft_id, g.namespace.id, g.db_session)
+
+    if not draft.is_sending:
+        return err(400, 'Invalid draft, not part of a multi-send transaction')
+
+    emails = {email for name, email in itertools.chain(draft.to_addr,
+                                                       draft.cc_addr,
+                                                       draft.bcc_addr)}
+    if send_to[1] not in emails:
+        return err(400, 'Invalid send_to, not present in message recipients')
+
+    if time.time() - request_started > SEND_TIMEOUT:
+        # Preemptively time out the request if we got stuck doing database work
+        # -- we don't want clients to disconnect and then still send the
+        # message.
+        return err(504, 'Request timed out.')
+
+    # Send a copy of the draft with the new body to the send_to address
+    resp = send_draft_copy(account, draft, body, send_to)
+
+    # Immediately delete the message from the sent folder if it got put there.
+    remote_delete_sent(account.id, draft.message_id_header)
+
+    # Return the response from sending
+    return resp
+
+
+@app.route('/send-multiple/<draft_id>', methods=['DELETE'])
+def multi_send_finish(draft_id):
+    """Closes out a multi-send session by marking the sending draft as sent
+    and moving it to the user's Sent folder."""
+
+    account = g.namespace.account
+
+    if account.discriminator == 'easaccount':
+        return err(400, 'Multiple send is not supported for this provider.')
+
+    valid_public_id(draft_id)
+
+    draft = get_sending_draft(draft_id, g.namespace.id, g.db_session)
+    if not draft.is_sending:
+        return err(400, 'Invalid draft, not part of a multi-send transaction')
+
+    # Mark the draft as sent in our database
+    update_draft_on_send(account, draft, g.db_session)
+
+    # Save the sent message with its existing body to the user's sent folder
+    schedule_action('save_sent_email', draft, draft.namespace.id, g.db_session)
+
+    return g.encoder.jsonify(draft)
 
 
 ##

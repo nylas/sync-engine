@@ -24,7 +24,7 @@ log = get_logger()
 
 MAX_SANE_QUERIES_PER_SESSION = 100
 MAX_TEXT_LENGTH = 65535
-
+MAX_MYSQL_INTEGER = 2147483647
 
 bakery = baked.bakery()
 

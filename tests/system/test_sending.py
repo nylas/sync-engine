@@ -4,6 +4,7 @@ from time import strftime
 from conftest import timeout_loop, all_accounts
 from random_words import random_words
 from inbox.util.url import provider_from_address
+import json
 
 
 @timeout_loop('send')
@@ -55,6 +56,54 @@ def test_sending(client):
     wait_for_send(client, subject)
 
     # Archive the message
+    thread = client.threads.where(subject=subject, tag='inbox').first()
+    thread.archive()
+    wait_for_archive(client, thread.id)
+
+    # Trash the message
+    # Remove guard when working
+    if False:
+        client.threads.first().trash()
+        wait_for_trash(client, thread.id)
+
+
+# TODO: do these tests even get run??
+@pytest.mark.parametrize("client", all_accounts)
+def test_multi_sending(client):
+    # Create a message and send it to ourselves, with a different body
+    subject = "%s (Self Multi Send Test)" % strftime("%Y-%m-%d %H:%M:%S")
+    sent_body = subject + "Test email."
+    draft = client.drafts.create(to=[{"email": client.email_address}],
+                                 subject=subject,
+                                 body=sent_body)
+    recv_body = subject + "Different body"
+
+    resp = client.session.post('{}/send-multiple'.format(client.api_server))
+    assert resp.status_code == 200
+
+    resp = client.session.post('{}/send-multiple/{}'.format(client.api_server,
+                                                            draft.id),
+                               data=json.dumps({"body": recv_body,
+                                                "send_to": [
+                                                    {"email":
+                                                        client.email_address}
+                                                ]}))
+    assert resp.status_code == 200
+    wait_for_send(client, subject)
+
+    resp = client.session.delete('{}/send-multiple/{}'
+                                 .format(client.api_server, draft.id))
+    assert resp.status_code == 200
+    wait_for_send(client, subject)
+
+    # Check that there are two messages, one sent and one recieved, with
+    # different bodies.
+    thread = client.threads.where(subject=subject, tag='inbox').first()
+    assert len(thread.messages) == 2
+    assert thread.messages[0].body == recv_body
+    assert thread.messages[1].body == sent_body
+
+    # Archive the thread
     thread = client.threads.where(subject=subject, tag='inbox').first()
     thread.archive()
     wait_for_archive(client, thread.id)

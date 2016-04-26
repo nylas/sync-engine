@@ -25,7 +25,7 @@ from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 save_draft, update_draft, delete_draft,
                                 save_sent_email, create_folder, create_label,
                                 update_folder, update_label, delete_folder,
-                                delete_label)
+                                delete_label, delete_sent_email)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 
@@ -38,6 +38,7 @@ ACTION_FUNCTION_MAP = {
     'update_draft': update_draft,
     'delete_draft': delete_draft,
     'save_sent_email': save_sent_email,
+    'delete_sent_email': delete_sent_email,
     'create_event': create_event,
     'delete_event': delete_event,
     'update_event': update_event,
@@ -102,7 +103,8 @@ class SyncbackService(gevent.Greenlet):
                                             action_log_id=log_entry.id,
                                             record_id=log_entry.record_id,
                                             account_id=namespace.account_id,
-                                            provider=namespace.account.verbose_provider,
+                                            provider=namespace.account.
+                                            verbose_provider,
                                             retry_interval=self.retry_interval,
                                             extra_args=log_entry.extra_args)
                     self.workers.add(worker)
