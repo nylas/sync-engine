@@ -1,9 +1,13 @@
+import gevent
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm import load_only
 from inbox.basicauth import ValidationError
+
 from nylas.logging import get_logger
+log = get_logger()
+from inbox.basicauth import ValidationError
 from inbox.crispin import retry_crispin, connection_pool
 from inbox.models import Account, Folder, Category
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
@@ -12,7 +16,7 @@ from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.s3 import S3FolderSyncEngine
 from inbox.mailsync.gc import DeleteHandler
-log = get_logger()
+from inbox.syncback.base import SyncbackHandler
 
 
 class ImapSyncMonitor(BaseMailSyncMonitor):
@@ -26,10 +30,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         Seconds to wait between checking on folder sync threads.
     refresh_frequency: Integer
         Seconds to wait between checking for new folders to sync.
-    """
 
-    def __init__(self, account,
-                 heartbeat=1, refresh_frequency=30):
+    """
+    def __init__(self, account, heartbeat=1, refresh_frequency=30):
         self.refresh_frequency = refresh_frequency
         self.syncmanager_lock = BoundedSemaphore(1)
         self.saved_remote_folders = None
@@ -37,6 +40,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         self.folder_monitors = Group()
         self.delete_handler = None
+        self.syncback_handler = None
 
         BaseMailSyncMonitor.__init__(self, account, heartbeat)
 
@@ -45,6 +49,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         """
         Gets and save Folder objects for folders on the IMAP backend. Returns a
         list of folder names for the folders we want to sync (in order).
+
         """
         with connection_pool(self.account_id).get() as crispin_client:
             # Get a fresh list of the folder names from the remote
@@ -56,7 +61,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             with session_scope(self.namespace_id) as db_session:
                 self.save_folder_names(db_session, remote_folders)
                 self.saved_remote_folders = remote_folders
-
         return sync_folders
 
     def save_folder_names(self, db_session, raw_folders):
@@ -138,6 +142,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                 self.syncmanager_lock)
                 self.folder_monitors.start(thread)
 
+<<<<<<< HEAD
                 if s3_resync:
                     log.info('Starting an S3 monitor',
                              account_id=self.account_id)
@@ -149,6 +154,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                    self.syncmanager_lock)
 
                     self.folder_monitors.start(s3_thread)
+=======
+>>>>>>> v0.fvckno
             while not thread.state == 'poll' and not thread.ready():
                 sleep(self.heartbeat)
 
@@ -157,6 +164,10 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                          account_id=self.account_id,
                          folder_name=folder_name,
                          error=thread.exception)
+
+    def stop_folder_sync_engines(self):
+        if self.folder_monitors:
+            gevent.killall(self.folder_monitors)
 
     def start_delete_handler(self):
         if self.delete_handler is None:
@@ -167,12 +178,25 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 uid_accessor=lambda m: m.imapuids)
             self.delete_handler.start()
 
+    def perform_syncback(self):
+        if self.syncback_handler == None:
+            self.syncback_handler = SyncbackHandler(self.account_id,
+                                                    self.namespace_id,
+                                                    self.provider_name)
+        self.syncback_handler.send_client_changes()
+
     def sync(self):
         try:
             self.start_delete_handler()
+            self.perform_syncback()
             self.start_new_folder_sync_engines()
             while True:
                 sleep(self.refresh_frequency)
+                # Pause sync to perform syncback --
+                # this stops running foldersyncs, performs syncback and
+                # resumes them.
+                self.stop_folder_sync_engines()
+                self.perform_syncback()
                 self.start_new_folder_sync_engines()
         except ValidationError as exc:
             log.error(
