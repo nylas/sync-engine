@@ -3,15 +3,6 @@ import os
 import sys
 import click
 
-# Check that the inbox package is installed. It seems Vagrant may sometimes
-# fail to provision the box appropriately; this check is a reasonable
-# approximation of "Did the setup script run?"
-try:
-    from inbox.config import config as inbox_config
-except ImportError:
-    sys.exit("Could not find Inbox installation. "
-             "Maybe the Vagrant box provisioning didn't succeed?\n"
-             "Try running sudo ./setup.sh")
 
 from setproctitle import setproctitle; setproctitle('inbox-api')
 from gevent import monkey; monkey.patch_all()
@@ -20,8 +11,6 @@ import gevent_openssl; gevent_openssl.monkey_patch()
 from gevent.pywsgi import WSGIServer
 
 from nylas.api.wsgi import NylasWSGIHandler
-from nylas.logging import get_logger, configure_logging
-from inbox.util.startup import preflight, load_overrides
 
 syncback = None
 http_server = None
@@ -38,18 +27,27 @@ http_server = None
 @click.option('-p', '--port', default=5555, help='Port to run flask app on.')
 def main(prod, start_syncback, config, port):
     """ Launch the Inbox API service. """
+
+    if config is not None:
+        from inbox.util.startup import load_overrides
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
+    from inbox.config import config as inbox_config
+    from nylas.logging import get_logger, configure_logging
+    from inbox.util.startup import preflight, load_overrides
+
     configure_logging(log_level=inbox_config.get('LOGLEVEL'))
 
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
 
-    if prod:
-        start(port, start_syncback)
-    else:
-        preflight()
-        from werkzeug.serving import run_with_reloader
-        run_with_reloader(lambda: start(port, start_syncback))
+    # if prod:
+    start(port, start_syncback)
+    # else:
+    #     # preflight()
+    #     from werkzeug.serving import run_with_reloader
+    #     run_with_reloader(lambda: start(port, start_syncback))
 
 
 def start(port, start_syncback):
@@ -57,6 +55,7 @@ def start(port, start_syncback):
     # ignition.engine, which has to happen *after* we read any config overrides
     # for the database parameters. Boo for imports with side-effects.
     from inbox.api.srv import app
+    from nylas.logging import get_logger
 
     if start_syncback:
         # start actions service

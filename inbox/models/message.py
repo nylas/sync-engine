@@ -7,7 +7,7 @@ from collections import defaultdict
 from flanker import mime
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Index, bindparam)
-from sqlalchemy.dialects.mysql import LONGBLOB
+from sqlalchemy.types import BLOB
 from sqlalchemy.orm import (relationship, backref, validates, joinedload,
                             subqueryload, load_only)
 from sqlalchemy.sql.expression import false
@@ -94,7 +94,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         else:
             self.state = 'actions_committed'
 
-    _compacted_body = Column(LONGBLOB, nullable=True)
+    _compacted_body = Column(BLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
     SNIPPET_LENGTH = 191
 

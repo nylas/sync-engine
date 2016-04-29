@@ -27,8 +27,7 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
 
     # STOPSHIP(emfree): need to index properly for API filtering performance.
     name = Column(String(MAX_INDEXABLE_LENGTH), nullable=True)
-    display_name = Column(String(MAX_INDEXABLE_LENGTH,
-                                 collation='utf8mb4_bin'), nullable=False)
+    display_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False)
 
     type_ = Column(Enum('folder', 'label'), nullable=False, default='folder')
 
@@ -96,4 +95,5 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name',
                                        'deleted_at'),
-                      UniqueConstraint('namespace_id', 'public_id'))
+                      UniqueConstraint('namespace_id', 'public_id'),
+                      {'sqlite_autoincrement': True})

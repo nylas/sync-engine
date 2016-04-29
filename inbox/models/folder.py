@@ -35,7 +35,7 @@ class Folder(MailSyncBase):
     # NOTE: this doesn't hold for EAS, which is case insensitive for non-Inbox
     # folders as per
     # https://msdn.microsoft.com/en-us/library/ee624913(v=exchg.80).aspx
-    name = Column(String(MAX_FOLDER_NAME_LENGTH, collation='utf8mb4_bin'),
+    name = Column(String(MAX_FOLDER_NAME_LENGTH),
                   nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 

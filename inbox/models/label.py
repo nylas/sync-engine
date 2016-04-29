@@ -26,7 +26,7 @@ class Label(MailSyncBase):
             passive_deletes=True),
         load_on_pending=True)
 
-    name = Column(String(MAX_LABEL_NAME_LENGTH, collation='utf8mb4_bin'),
+    name = Column(String(MAX_LABEL_NAME_LENGTH),
                   nullable=False)
     canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=True)
 
@@ -74,4 +74,5 @@ class Label(MailSyncBase):
         return obj
 
     __table_args__ = \
-        (UniqueConstraint('account_id', 'name', 'canonical_name'),)
+        (UniqueConstraint('account_id', 'name', 'canonical_name'),
+                      {'sqlite_autoincrement': True})

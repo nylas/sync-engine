@@ -7,7 +7,7 @@ from sqlalchemy import (Column, String, ForeignKey, Text, Boolean, Integer,
                         DateTime, Enum, Index, event)
 from sqlalchemy.orm import relationship, backref, validates, reconstructor
 from sqlalchemy.types import TypeDecorator
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy.types import TEXT
 
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, BigJSON, MutableList
 from inbox.models.base import MailSyncBase
@@ -85,7 +85,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                             load_on_pending=True)
 
     # A server-provided unique ID.
-    uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
+    uid = Column(String(767), nullable=False)
 
     # DEPRECATED
     # TODO(emfree): remove
@@ -98,7 +98,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     # The database column is named differently for legacy reasons.
     owner = Column('owner2', String(OWNER_MAX_LEN), nullable=True)
 
-    description = Column('_description', LONGTEXT, nullable=True)
+    description = Column('_description', TEXT, nullable=True)
     location = Column(String(LOCATION_MAX_LEN), nullable=True)
     busy = Column(Boolean, nullable=False, default=True)
     read_only = Column(Boolean, nullable=False)
@@ -456,7 +456,7 @@ class RecurringEventOverride(Event):
     __table_args__ = None
 
     master_event_id = Column(ForeignKey('event.id', ondelete='CASCADE'))
-    master_event_uid = Column(String(767, collation='ascii_general_ci'),
+    master_event_uid = Column(String(767),
                               index=True)
     original_start_time = Column(FlexibleDateTime)
     master = relationship(RecurringEvent, foreign_keys=[master_event_id],

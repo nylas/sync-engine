@@ -19,6 +19,7 @@ DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
 DB_POOL_TIMEOUT = config.get('DB_POOL_TIMEOUT') or 60
 
+SQLITE_DB = 'sqlite:///sync-engine.db'
 
 pool_tracker = weakref.WeakKeyDictionary()
 
@@ -32,6 +33,7 @@ def gevent_waiter(fd, hub=gevent.hub.get_hub()):
 def build_uri(username, password, hostname, port, database_name):
     uri_template = 'mysql+mysqldb://{username}:{password}@{hostname}' \
                    ':{port}/{database_name}?charset=utf8mb4'
+    uri_template = SQLITE_DB
     return uri_template.format(username=urlquote(username),
                                password=urlquote(password),
                                hostname=urlquote(hostname),
@@ -42,17 +44,29 @@ def build_uri(username, password, hostname, port, database_name):
 def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
            max_overflow=DB_POOL_MAX_OVERFLOW, pool_timeout=DB_POOL_TIMEOUT,
            echo=False):
-    engine = create_engine(database_uri,
-                           listeners=[ForceStrictMode()],
-                           isolation_level='READ COMMITTED',
-                           echo=False,
-                           pool_size=pool_size,
-                           pool_timeout=pool_timeout,
-                           pool_recycle=3600,
-                           max_overflow=max_overflow,
-                           connect_args={'charset': 'utf8mb4',
-                                         'waiter': gevent_waiter,
-                                         'connect_timeout': 60})
+
+    #Unix/Mac - 4 initial slashes in total
+    engine = create_engine(SQLITE_DB)
+    return engine
+
+    #Windows
+    # engine = create_engine('sqlite:///C:\\path\\to\\foo.db')
+    # #Windows alternative using raw string
+    # engine = create_engine(r'sqlite:///C:\path\to\foo.db')
+
+
+    # engine = create_engine(database_uri,
+    #                        listeners=[ForceStrictMode()],
+    #                        isolation_level='READ COMMITTED',
+    #                        echo=False,
+    #                        pool_size=pool_size,
+    #                        pool_timeout=pool_timeout,
+    #                        pool_recycle=3600,
+    #                        max_overflow=max_overflow,
+    #                        connect_args={'charset': 'utf8mb4',
+    #                                      'waiter': gevent_waiter,
+    #                                      'connect_timeout': 60})
+
 
     @event.listens_for(engine, 'checkout')
     def receive_checkout(dbapi_connection, connection_record,
@@ -158,11 +172,12 @@ def init_db(engine, key=0):
     # Hopefully setting auto_increment via an event listener will make it safe
     # to execute this function multiple times.
     # STOPSHIP(emfree): verify
-    increment = (key << 48) + 1
-    for table in MailSyncBase.metadata.tables.values():
-        event.listen(table, 'after_create',
-                     DDL('ALTER TABLE {tablename} AUTO_INCREMENT={increment}'.
-                         format(tablename=table, increment=increment)))
+
+    # increment = (key << 48) + 1
+    # for table in MailSyncBase.metadata.tables.values():
+    #     event.listen(table, 'after_create',
+    #                  DDL('ALTER TABLE {tablename} AUTO_INCREMENT={increment}'.
+    #                      format(tablename=table, increment=increment)))
 
     MailSyncBase.metadata.create_all(engine)
 

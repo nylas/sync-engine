@@ -25,7 +25,7 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions):
     description = Column(Text, nullable=True)
 
     # A server-provided unique ID.
-    uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
+    uid = Column(String(767), nullable=False)
 
     read_only = Column(Boolean, nullable=False, default=False)
 

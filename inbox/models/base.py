@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger
+from sqlalchemy import Column, Integer
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 from inbox.models.mixins import AutoTimestampMixin
@@ -10,7 +10,7 @@ class MailSyncBase(AutoTimestampMixin):
     Provides automated table name, primary key column, and audit timestamps.
 
     """
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @declared_attr
     def __tablename__(cls):
@@ -19,3 +19,5 @@ class MailSyncBase(AutoTimestampMixin):
     @declared_attr
     def __table_args__(cls):
         return {'extend_existing': True}
+
+    __table_args__ = {'sqlite_autoincrement': True}

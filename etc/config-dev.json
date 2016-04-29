@@ -8,31 +8,9 @@
                 "ID": 0,
                 "SCHEMA_NAME": "inbox",
                 "OPEN": true
-            },
-            {
-                "ID": 1,
-                "SCHEMA_NAME": "inbox_1",
-                "OPEN": true
             }
         ]
     },
-    {
-        "HOSTNAME": "127.0.0.1",
-        "PORT": 3306,
-        "SHARDS": [
-            {
-                "ID": 2,
-                "SCHEMA_NAME": "inbox_2",
-                "OPEN": true
-            },
-            {
-                "ID": 3,
-                "SCHEMA_NAME": "inbox_3",
-                "OPEN": true,
-                "DISABLED": true
-            }
-        ]
-    }
 ],
 
 "SYNC_STEAL_ACCOUNTS": true,
@@ -59,7 +37,7 @@
 "MS_LIVE_OAUTH_REDIRECT_URI": "https://login.live.com/oauth20_desktop.srf",
 
 "STORE_MESSAGES_ON_S3": false,
-"MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
+"MSG_PARTS_DIRECTORY": "./mail-blocks",
 
 "CALENDAR_POLL_FREQUENCY": 300,
 "EMAIL_EXCEPTIONS": false,

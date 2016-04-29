@@ -37,16 +37,15 @@ def main(target_hostname, host_ip):
                                  port=host['PORT'],
                                  database_name='')
             base_engine = sqlalchemy.create_engine(
-                base_uri, listeners=[ForceStrictMode()])
+                base_uri)
 
             schema_name = shard['SCHEMA_NAME']
             print 'Setting up database: {}'.format(schema_name)
 
             # Create the database IF needed.
-            base_engine.execute(
-                "CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
-                "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
-                format(schema_name))
+            # base_engine.execute(
+            #     "CREATE DATABASE IF NOT EXISTS {};".
+            #     format(schema_name))
 
             engine = engine_manager.engines[int(key)]
 
@@ -75,8 +74,8 @@ def main(target_hostname, host_ip):
                 alembic.command.stamp(alembic_cfg, "head")
 
             # Verify the database has been set up with correct auto_increments.
-            print 'Verifying database.'
-            verify_db(engine, schema_name, int(key))
+            # print 'Verifying database.'
+            # verify_db(engine, schema_name, int(key))
 
             print 'Finished setting up database.\n'
 

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.dialects.mysql import MEDIUMBLOB
+from sqlalchemy.types import BLOB
 from sqlalchemy import DateTime
 
 from inbox.models.base import MailSyncBase
@@ -16,8 +16,8 @@ class DataProcessingCache(MailSyncBase):
     """
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
-    _contact_rankings = Column('contact_rankings', MEDIUMBLOB)
-    _contact_groups = Column('contact_groups', MEDIUMBLOB)
+    _contact_rankings = Column('contact_rankings', BLOB)
+    _contact_groups = Column('contact_groups', BLOB)
     contact_rankings_last_updated = Column(DateTime)
     contact_groups_last_updated = Column(DateTime)
 
