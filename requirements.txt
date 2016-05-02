@@ -20,7 +20,7 @@ chardet==2.1.1
 setproctitle==1.1.8
 gdata==2.0.18
 git+https://github.com/nylas/dateutil.git@da336a366cd3#egg=python-dateutil
-git+https://github.com/mailgun/flanker.git@089914824023a6d33e7506c277ab12d016cf4947#egg=flanker
+git+https://github.com/khamidou/flanker.git@fix_chinese_subjects#egg=flanker
 alembic==0.6.5
 iconv==1.0
 pep8==1.4.6
