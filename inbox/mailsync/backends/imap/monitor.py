@@ -1,9 +1,10 @@
-import gevent
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm import load_only
 from inbox.basicauth import ValidationError
+
+from gevent.event import Event
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -37,10 +38,12 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.syncmanager_lock = BoundedSemaphore(1)
         self.saved_remote_folders = None
         self.sync_engine_class = FolderSyncEngine
-
         self.folder_monitors = Group()
+
         self.delete_handler = None
+
         self.syncback_handler = None
+        self.folder_sync_signals = {}
 
         BaseMailSyncMonitor.__init__(self, account, heartbeat)
 
@@ -132,14 +135,15 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 thread = running_monitors[folder_name]
             else:
                 log.info('Folder sync engine started',
-                         account_id=self.account_id,
-                         folder_name=folder_name)
+                         account_id=self.account_id, folder_name=folder_name)
+                self._add_sync_signal(folder_name)
                 thread = self.sync_engine_class(self.account_id,
                                                 self.namespace_id,
                                                 folder_name,
                                                 self.email_address,
                                                 self.provider_name,
-                                                self.syncmanager_lock)
+                                                self.syncmanager_lock,
+                                                self.folder_sync_signals[folder_name])
                 self.folder_monitors.start(thread)
 
 <<<<<<< HEAD
@@ -158,16 +162,14 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 >>>>>>> v0.fvckno
             while not thread.state == 'poll' and not thread.ready():
                 sleep(self.heartbeat)
+                self.perform_syncback()
 
             if thread.ready():
+                del self.folder_sync_signals[folder_name]
                 log.info('Folder sync engine exited',
                          account_id=self.account_id,
                          folder_name=folder_name,
                          error=thread.exception)
-
-    def stop_folder_sync_engines(self):
-        if self.folder_monitors:
-            gevent.killall(self.folder_monitors)
 
     def start_delete_handler(self):
         if self.delete_handler is None:
@@ -179,11 +181,16 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             self.delete_handler.start()
 
     def perform_syncback(self):
-        if self.syncback_handler == None:
-            self.syncback_handler = SyncbackHandler(self.account_id,
-                                                    self.namespace_id,
-                                                    self.provider_name)
-        self.syncback_handler.send_client_changes()
+        # Check that syncs have been paused.
+        if self._can_syncback():
+            if self.syncback_handler == None:
+                self.syncback_handler = SyncbackHandler(self.account_id,
+                                                        self.namespace_id,
+                                                        self.provider_name)
+            # Perform syncback.
+            self.syncback_handler.send_client_changes()
+            # Indicate syncs can proceed.
+            self._signal_syncs()
 
     def sync(self):
         try:
@@ -192,10 +199,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             self.start_new_folder_sync_engines()
             while True:
                 sleep(self.refresh_frequency)
-                # Pause sync to perform syncback --
-                # this stops running foldersyncs, performs syncback and
-                # resumes them.
-                self.stop_folder_sync_engines()
                 self.perform_syncback()
                 self.start_new_folder_sync_engines()
         except ValidationError as exc:
@@ -206,3 +209,16 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid()
                 account.update_sync_error(str(exc))
+
+    def _add_sync_signal(self, folder_name):
+        self.folder_sync_signals[folder_name] = Event()
+        self.folder_sync_signals[folder_name].set()
+
+    def _can_syncback(self):
+        return (not self.folder_sync_signals or
+                all(not signal.is_set() for signal in
+                    self.folder_sync_signals.values()))
+
+    def _signal_syncs(self):
+        for signal in self.folder_sync_signals.values():
+            signal.set()

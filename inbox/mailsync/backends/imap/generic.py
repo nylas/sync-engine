@@ -113,8 +113,8 @@ class FolderSyncEngine(Greenlet):
     """Base class for a per-folder IMAP sync engine."""
 
     def __init__(self, account_id, namespace_id, folder_name,
-                 email_address, provider_name, syncmanager_lock):
-
+                 email_address, provider_name, syncmanager_lock,
+                 sync_signal):
         with session_scope(namespace_id) as db_session:
             try:
                 folder = db_session.query(Folder). \
@@ -145,6 +145,8 @@ class FolderSyncEngine(Greenlet):
         self.last_fast_refresh = None
         self.flags_fetch_results = {}
         self.conn_pool = connection_pool(self.account_id)
+
+        self.sync_signal = sync_signal
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -284,6 +286,12 @@ class FolderSyncEngine(Greenlet):
             q = db_session.query(Folder).get(self.folder_id)
             q.initial_sync_end = datetime.utcnow()
 
+    def _signal_syncback(self):
+        self.sync_signal.clear()
+
+    def _wait_for_sync_signal(self):
+        self.sync_signal.wait()
+
     @retry_crispin
     def initial_sync(self):
         log.bind(state='initial')
@@ -300,8 +308,7 @@ class FolderSyncEngine(Greenlet):
                 try:
                     db_session.query(ImapFolderInfo). \
                         filter(ImapFolderInfo.account_id == self.account_id,
-                               ImapFolderInfo.folder_id == self.folder_id). \
-                        one()
+                               ImapFolderInfo.folder_id == self.folder_id).one()
                 except NoResultFound:
                     imapfolderinfo = ImapFolderInfo(
                         account_id=self.account_id, folder_id=self.folder_id,
@@ -316,13 +323,16 @@ class FolderSyncEngine(Greenlet):
             self._report_initial_sync_end()
             self.is_initial_sync = False
 
+        self._signal_syncback()
         return 'poll'
 
     @retry_crispin
     def poll(self):
         log.bind(state='poll')
         log.info('polling')
+        self._wait_for_sync_signal()
         self.poll_impl()
+        self._signal_syncback()
         return 'poll'
 
     @retry_crispin
@@ -451,7 +461,9 @@ class FolderSyncEngine(Greenlet):
         log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
             log.info('polling for changes')
+            self._wait_for_sync_signal()
             self.poll_impl()
+            self._signal_syncback()
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None

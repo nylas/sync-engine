@@ -151,6 +151,7 @@ def save_sent_email(account_id, message_id):
     """
     Create an email on the remote backend. Generic providers expect
     us to create a copy of the message in the sent folder.
+
     """
     remote_save_sent(account_id, message_id)
 
@@ -158,6 +159,7 @@ def save_sent_email(account_id, message_id):
 def delete_sent_email(account_id, message_id, args):
     """
     Delete an email on the remote backend, in the sent folder.
+
     """
     message_id_header = args.get('message_id_header')
     assert message_id_header, 'Need the message_id_header'

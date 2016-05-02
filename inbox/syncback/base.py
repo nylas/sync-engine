@@ -6,7 +6,7 @@ backend.
 from datetime import datetime
 
 from nylas.logging import get_logger
-logger = get_logger()
+log = get_logger()
 from nylas.logging.sentry import log_uncaught_errors
 from inbox.models.session import session_scope
 from inbox.models import ActionLog
@@ -48,8 +48,6 @@ class SyncbackHandler(object):
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.provider = provider
-
-        self.log = logger.new(component='syncback')
 
     def send_client_changes(self):
         with session_scope(self.namespace_id) as db_session:
@@ -106,8 +104,8 @@ class SyncbackHandler(object):
 
     def _log_to_statsd(self, action_log_status, latency=None):
         metric_names = [
-            "syncback.overall.{}".format(action_log_status),
-            "syncback.providers.{}.{}".format(self.provider, action_log_status)
+            'syncback.overall.{}'.format(action_log_status),
+            'syncback.providers.{}.{}'.format(self.provider, action_log_status)
         ]
 
         for metric in metric_names:
