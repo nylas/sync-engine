@@ -103,6 +103,9 @@ SLOW_FLAGS_REFRESH_LIMIT = 2000
 SLOW_REFRESH_INTERVAL = timedelta(seconds=3600)
 FAST_REFRESH_INTERVAL = timedelta(seconds=30)
 
+# Maximum number of uidinvalidity errors in a row.
+MAX_UIDINVALID_RESYNCS = 5
+
 CONDSTORE_FLAGS_REFRESH_BATCH_SIZE = 200
 
 
@@ -158,6 +161,13 @@ class FolderSyncEngine(Greenlet):
                                                      email_address,
                                                      self.provider_name)
 
+        # Some generic IMAP servers are throwing UIDVALIDITY
+        # errors forever. Instead of resyncing those servers
+        # ad vitam, we keep track of the number of consecutive
+        # times we got such an error and bail out if it's higher than
+        # MAX_UIDINVALID_RESYNCS.
+        self.uidinvalid_count = 0
+
     def _run(self):
         # Bind greenlet-local logging context.
         self.log = log.new(account_id=self.account_id, folder=self.folder_name,
@@ -189,7 +199,23 @@ class FolderSyncEngine(Greenlet):
                 self.heartbeat_status.publish(state=self.state)
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
+                self.uidinvalid_count += 1
                 self.heartbeat_status.publish(state=self.state)
+
+                # Check that we're not stuck in an endless uidinvalidity resync loop.
+                if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
+                    log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
+                              ' row. Stopping sync.')
+
+                    with session_scope(self.namespace_id) as db_session:
+                            account = db_session.query(Account).get(self.account_id)
+                            account.disable_sync('Detected endless uidvalidity '
+                                                 'resync loop')
+                            account.sync_state = 'stopped'
+                            db_session.commit()
+
+                    raise MailsyncDone()
+
             except FolderMissingError:
                 # Folder was deleted by monitor while its sync was running.
                 # TODO: Monitor should handle shutting down the folder engine.
@@ -216,6 +242,11 @@ class FolderSyncEngine(Greenlet):
                     db_session.add(saved_folder_status)
                     saved_folder_status.state = self.state
                     db_session.commit()
+
+            if self.state == old_state and self.state in ['initial', 'poll']:
+                # We've been through a normal state transition without raising any
+                # error. It's safe to reset the uidvalidity counter.
+                self.uidinvalid_count = 0
 
     def _load_state(self):
         with session_scope(self.namespace_id) as db_session:

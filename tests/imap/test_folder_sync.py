@@ -5,8 +5,10 @@ from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.models import Folder, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
                                         ImapFolderInfo)
-from inbox.mailsync.backends.imap.generic import (FolderSyncEngine, UidInvalid)
+from inbox.mailsync.backends.imap.generic import (FolderSyncEngine, UidInvalid,
+                                                  MAX_UIDINVALID_RESYNCS)
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
+from inbox.mailsync.backends.base import MailsyncDone
 from tests.imap.data import uids, uid_data, mock_imapclient  # noqa
 
 
@@ -175,6 +177,45 @@ def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
     assert new_state == 'initial'
     assert db.session.query(ImapUid).filter(
         ImapUid.folder_id == inbox_folder.id).all() == []
+
+
+def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
+                                 mock_imapclient, monkeypatch):
+
+    import inbox.mailsync.backends.imap.generic as generic_import
+
+    mock_imapclient.uidvalidity = 1
+
+    # We're using a list here because of weird monkeypatching shenanigans.
+    uidinvalid_count = []
+    def fake_poll_function(self):
+        uidinvalid_count.append(1)
+        raise UidInvalid
+
+    monkeypatch.setattr("inbox.mailsync.backends.imap.generic.FolderSyncEngine.poll",
+                        fake_poll_function)
+
+    uid_dict = uids.example()
+    mock_imapclient.add_folder_data(inbox_folder.name, uid_dict)
+    inbox_folder.imapfolderinfo = ImapFolderInfo(account=generic_account,
+                                                 uidvalidity=1,
+                                                 uidnext=1)
+    db.session.commit()
+    folder_sync_engine = generic_import.FolderSyncEngine(generic_account.id,
+                                                         generic_account.namespace.id,
+                                                         inbox_folder.name,
+                                                         generic_account.email_address,
+                                                         'custom',
+                                                         BoundedSemaphore(1))
+
+    folder_sync_engine.state = 'poll'
+
+    db.session.expunge(inbox_folder.imapsyncstatus)
+
+    with pytest.raises(MailsyncDone):
+        folder_sync_engine._run_impl()
+
+    assert len(uidinvalid_count) == MAX_UIDINVALID_RESYNCS + 1
 
 
 def test_gmail_initial_sync(db, default_account, all_mail_folder,
