@@ -44,10 +44,11 @@ def encode(obj, namespace_public_id=None, expand=False, is_n1=False):
         error_context = {
             "id": getattr(obj, "id", None),
             "cls": str(getattr(obj, "__class__", None)),
-            "exception": e
+            "exception": e,
+            "exc_info": True
         }
-        log.error("object encoding failure", **error_context,
-                  exc_info=True)
+
+        log.error("object encoding failure", **error_context)
         raise
 
 
