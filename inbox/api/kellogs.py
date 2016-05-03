@@ -46,7 +46,8 @@ def encode(obj, namespace_public_id=None, expand=False, is_n1=False):
             "cls": str(getattr(obj, "__class__", None)),
             "exception": e
         }
-        log.error("object encoding failure", **error_context)
+        log.error("object encoding failure", **error_context,
+                  exc_info=True)
         raise
 
 
