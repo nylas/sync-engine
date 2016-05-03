@@ -1,10 +1,10 @@
+from datetime import datetime
+
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
-from sqlalchemy.orm import load_only
-from inbox.basicauth import ValidationError
-
 from gevent.event import Event
+from sqlalchemy.orm import load_only
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -17,7 +17,6 @@ from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.s3 import S3FolderSyncEngine
 from inbox.mailsync.gc import DeleteHandler
-from inbox.syncback.base import SyncbackHandler
 
 
 class ImapSyncMonitor(BaseMailSyncMonitor):
@@ -33,7 +32,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         Seconds to wait between checking for new folders to sync.
 
     """
-    def __init__(self, account, heartbeat=1, refresh_frequency=30):
+    def __init__(self, account, heartbeat=1, refresh_frequency=30,
+                 syncback_frequency=5):
         self.refresh_frequency = refresh_frequency
         self.syncmanager_lock = BoundedSemaphore(1)
         self.saved_remote_folders = None
@@ -44,6 +44,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         self.syncback_handler = None
         self.folder_sync_signals = {}
+        self.syncback_timestamp = None
+        self.syncback_frequency = syncback_frequency
 
         BaseMailSyncMonitor.__init__(self, account, heartbeat)
 
@@ -146,7 +148,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                 self.folder_sync_signals[folder_name])
                 self.folder_monitors.start(thread)
 
-<<<<<<< HEAD
                 if s3_resync:
                     log.info('Starting an S3 monitor',
                              account_id=self.account_id)
@@ -158,14 +159,13 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                    self.syncmanager_lock)
 
                     self.folder_monitors.start(s3_thread)
-=======
->>>>>>> v0.fvckno
+
             while not thread.state == 'poll' and not thread.ready():
                 sleep(self.heartbeat)
                 self.perform_syncback()
 
             if thread.ready():
-                del self.folder_sync_signals[folder_name]
+                self._remove_sync_signal[folder_name]
                 log.info('Folder sync engine exited',
                          account_id=self.account_id,
                          folder_name=folder_name,
@@ -181,24 +181,49 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             self.delete_handler.start()
 
     def perform_syncback(self):
-        # Check that syncs have been paused.
-        if self._can_syncback():
-            if self.syncback_handler == None:
-                self.syncback_handler = SyncbackHandler(self.account_id,
-                                                        self.namespace_id,
-                                                        self.provider_name)
-            # Perform syncback.
-            self.syncback_handler.send_client_changes()
-            # Indicate syncs can proceed.
+        """
+        Perform syncback for the account.
+
+        Syncback is performed iff all folder syncs are paused, and the previous
+        syncback occurred more than syncback_frequency seconds ago.
+
+        The first condition is checked by the call to _can_syncback().
+        The second condition is needed because if there are a large number of
+        pending actions during initial sync, it could repeatedly get interrupted
+        and put on hold for seconds at a time.
+
+        """
+        from inbox.syncback.base import SyncbackHandler
+
+        if not self._can_syncback():
+            log.info('Skipping syncback', reason='folder syncs running')
+            return
+
+        if (self.syncback_timestamp and
+                (datetime.utcnow() - self.syncback_timestamp).seconds <
+                self.syncback_frequency):
+            log.info('Skipping syncback',
+                     reason='last syncback < syncback_frequency seconds ago',
+                     syncback_frequency=self.syncback_frequency)
+            # Reset here so syncs can proceed
             self._signal_syncs()
+            return
+
+        if self.syncback_handler is None:
+            self.syncback_handler = SyncbackHandler(self.account_id,
+                                                    self.namespace_id,
+                                                    self.provider_name)
+        self.syncback_handler.send_client_changes()
+        self.syncback_timestamp = datetime.utcnow()
+        # Reset here so syncs can proceed
+        self._signal_syncs()
 
     def sync(self):
         try:
             self.start_delete_handler()
-            self.perform_syncback()
             self.start_new_folder_sync_engines()
             while True:
-                sleep(self.refresh_frequency)
+                sleep(self.syncback_frequency)
                 self.perform_syncback()
                 self.start_new_folder_sync_engines()
         except ValidationError as exc:
@@ -214,11 +239,22 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.folder_sync_signals[folder_name] = Event()
         self.folder_sync_signals[folder_name].set()
 
+    def _remove_sync_signal(self, folder_name):
+        del self.folder_sync_signals[folder_name]
+
     def _can_syncback(self):
+        """
+        Determine if syncback can occur.
+
+        If all folder syncs are paused as indicated by the folder_sync_signals,
+        returns True. Else, returns False.
+
+        """
         return (not self.folder_sync_signals or
                 all(not signal.is_set() for signal in
                     self.folder_sync_signals.values()))
 
     def _signal_syncs(self):
+        """ Indicate that folder syncs can resume. """
         for signal in self.folder_sync_signals.values():
             signal.set()

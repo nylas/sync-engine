@@ -1369,11 +1369,14 @@ def multi_send_create():
 
 @app.route('/send-multiple/<draft_id>', methods=['POST'])
 def multi_send(draft_id):
-    """Performs a single send operation in an individualized multi-send
+    """
+    Performs a single send operation in an individualized multi-send
     session. Sends a copy of the draft at draft_id to the specified address
     with the specified body, and ensures that a corresponding sent message is
     either not created in the user's Sent folder or is immediately
-    deleted from it."""
+    deleted from it.
+
+    """
     request_started = time.time()
     account = g.namespace.account
 

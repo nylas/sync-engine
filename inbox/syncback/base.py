@@ -60,6 +60,7 @@ class SyncbackHandler(object):
             db_session.expunge_all()
 
         if not actions:
+            log.info('No actions to syncback')
             return
 
         log.info('Performing syncback', num_actions=len(actions))

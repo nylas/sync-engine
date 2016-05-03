@@ -61,10 +61,11 @@ sessions reduce scalability.
 
 """
 from __future__ import division
-
 from datetime import datetime, timedelta
-from gevent import Greenlet, kill, spawn, sleep
+import contextlib
 import imaplib
+
+from gevent import Greenlet, kill, spawn, sleep
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
 from sqlalchemy.exc import IntegrityError
@@ -286,12 +287,6 @@ class FolderSyncEngine(Greenlet):
             q = db_session.query(Folder).get(self.folder_id)
             q.initial_sync_end = datetime.utcnow()
 
-    def _signal_syncback(self):
-        self.sync_signal.clear()
-
-    def _wait_for_sync_signal(self):
-        self.sync_signal.wait()
-
     @retry_crispin
     def initial_sync(self):
         log.bind(state='initial')
@@ -323,16 +318,13 @@ class FolderSyncEngine(Greenlet):
             self._report_initial_sync_end()
             self.is_initial_sync = False
 
-        self._signal_syncback()
         return 'poll'
 
     @retry_crispin
     def poll(self):
         log.bind(state='poll')
         log.info('polling')
-        self._wait_for_sync_signal()
         self.poll_impl()
-        self._signal_syncback()
         return 'poll'
 
     @retry_crispin
@@ -400,7 +392,9 @@ class FolderSyncEngine(Greenlet):
 
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:
-            self.check_uid_changes(crispin_client)
+            with self.signal_watcher():
+                self.check_uid_changes(crispin_client)
+
             if self.should_idle(crispin_client):
                 crispin_client.select_folder(self.folder_name,
                                              self.uidvalidity_cb)
@@ -461,9 +455,7 @@ class FolderSyncEngine(Greenlet):
         log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
             log.info('polling for changes')
-            self._wait_for_sync_signal()
             self.poll_impl()
-            self._signal_syncback()
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
@@ -513,8 +505,11 @@ class FolderSyncEngine(Greenlet):
         return count
 
     def add_message_to_thread(self, db_session, message_obj, raw_message):
-        """Associate message_obj to the right Thread object, creating a new
-        thread if necessary."""
+        """
+        Associate message_obj to the right Thread object, creating a new
+        thread if necessary.
+
+        """
         with db_session.no_autoflush:
             # Disable autoflush so we don't try to flush a message with null
             # thread_id.
@@ -836,6 +831,20 @@ class FolderSyncEngine(Greenlet):
                                                 selected_uidvalidity,
                                                 self.uidvalidity))
         return select_info
+
+    @contextlib.contextmanager
+    def signal_watcher(self):
+        """
+        Implement signal-wait for the folder sync.
+        Blocks until a sync iteration can proceed and signals syncback after
+        the iteration.
+
+        """
+        # Wait for the sync signal
+        self.sync_signal.wait()
+        yield
+        # Signal syncback
+        self.sync_signal.clear()
 
 
 class UidInvalid(Exception):
