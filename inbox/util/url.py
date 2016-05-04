@@ -195,7 +195,7 @@ def matching_subdomains(new_value, old_value):
     if new_value is None and old_value is not None:
         return False
 
-    if new_value == old_value:
+    if new_value.lower() == old_value.lower():
         return True
 
     new_domain = naked_domain(new_value)
