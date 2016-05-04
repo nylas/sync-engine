@@ -111,7 +111,9 @@ def _transform_ssl_error(strerror):
     _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed  # noqa
 
     """
-    if strerror.endswith('certificate verify failed'):
+    if strerror is None:
+        return 'Unknown connection error'
+    elif strerror.endswith('certificate verify failed'):
         return 'SMTP server SSL certificate verify failed'
     else:
         return strerror
@@ -149,6 +151,8 @@ class SMTPConnection(object):
             self.connection.connect(host, port)
         except socket.error as e:
             # 'Connection refused', SSL errors for non-TLS connections, etc.
+            log.error('SMTP connection error', exc_info=True,
+                      server_error=e.strerror)
             msg = _transform_ssl_error(e.strerror)
             raise SendMailException(msg, 503)
 
