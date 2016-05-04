@@ -74,9 +74,11 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
 
 
 def _get_last_trx_id_for_namespace(namespace_id, db_session):
-    q = bakery(lambda session: session.query(func.max(Transaction.id)))
+    q = bakery(lambda session: session.query(Transaction.id))
     q += lambda q: q.filter(
         Transaction.namespace_id == bindparam('namespace_id'))
+    q += lambda q: q.order_by(desc(Transaction.created_at)).\
+        order_by(desc(Transaction.id)).limit(1)
     return q(db_session).params(namespace_id=namespace_id).one()[0]
 
 
