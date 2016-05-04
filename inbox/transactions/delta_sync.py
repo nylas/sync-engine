@@ -3,7 +3,7 @@ import gevent
 import collections
 from datetime import datetime
 
-from sqlalchemy import asc, desc, func, bindparam
+from sqlalchemy import asc, desc, bindparam
 from inbox.api.kellogs import APIEncoder, encode
 from inbox.models import Transaction, Message, Thread, Account, Namespace
 from inbox.models.session import session_scope
