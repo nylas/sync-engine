@@ -1,5 +1,5 @@
 from hashlib import sha256
-
+from flanker import mime
 from sqlalchemy import Column, Integer, String
 
 from nylas.logging import get_logger
@@ -28,6 +28,35 @@ class Blob(object):
             value = get_from_blockstore(self.data_sha256)
 
         if value is None:
+            log.warning("Couldn't find data on S3 for block with hash {}"
+                        .format(self.data_sha256))
+
+            from inbox.models.block import Block
+            if isinstance(self, Block):
+                if self.parts:
+                    # This block is an attachment of a message that was
+                    # accidentially deleted. We will attempt to fetch the raw
+                    # message and parse out the needed attachment.
+
+                    message = self.parts[0].message  # only grab one
+                    raw_mime = get_from_blockstore(message.data_sha256)
+
+                    parsed = mime.from_string(raw_mime)
+                    if parsed is not None:
+                        for mimepart in parsed.walk(
+                                with_self=parsed.content_type.is_singlepart()):
+                            if mimepart.content_type.is_multipart():
+                                continue  # TODO should we store relations?
+
+                            data = mimepart.body
+
+                            # Found it!
+                            if sha256(data).hexdigest() == self.data_sha256:
+                                log.info('Found subpart with hash {}'.format(
+                                    self.data_sha256))
+                                save_to_blockstore(self.data_sha256, data)
+                                return data
+
             log.error('No data returned!')
             return value
 
