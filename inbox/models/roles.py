@@ -41,6 +41,11 @@ class Blob(object):
                     message = self.parts[0].message  # only grab one
                     raw_mime = get_from_blockstore(message.data_sha256)
 
+                    if raw_mime is None:
+                        log.error("Don't have raw message for hash {}"
+                                  .format(message.data_sha256))
+                        return None
+
                     parsed = mime.from_string(raw_mime)
                     if parsed is not None:
                         for mimepart in parsed.walk(
