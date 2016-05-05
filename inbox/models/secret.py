@@ -3,10 +3,11 @@ from sqlalchemy.types import BLOB
 from sqlalchemy.orm import validates
 
 from inbox.models.base import MailSyncBase
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 from inbox.security.oracles import get_encryption_oracle, get_decryption_oracle
 
 
-class Secret(MailSyncBase):
+class Secret(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """Simple local secrets table."""
     _secret = Column(BLOB, nullable=False)
 

@@ -16,7 +16,6 @@ def get_latest_transaction(db_session, namespace_id):
 
 def create_transaction(db, created_at, namespace_id):
     t = Transaction(created_at=created_at,
-                    updated_at=datetime.now(),
                     namespace_id=namespace_id,
                     object_type='message',
                     command='insert',

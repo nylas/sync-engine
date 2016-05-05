@@ -21,7 +21,8 @@ from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
 from inbox.util.blockstore import save_to_blockstore
 from inbox.security.blobstorage import encode_blob, decode_blob
-from inbox.models.mixins import HasPublicID, HasRevisions
+from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
+                                 DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
@@ -38,7 +39,8 @@ def _trim_filename(s, namespace_id, max_len=64):
     return s
 
 
-class Message(MailSyncBase, HasRevisions, HasPublicID):
+class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
+              DeletedAtMixin):
 
     @property
     def API_OBJECT_NAME(self):

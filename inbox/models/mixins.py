@@ -135,16 +135,17 @@ class HasEmailAddress(object):
         self._canonicalized_address = canonicalize_address(value)
 
 
-class AutoTimestampMixin(object):
-    # We do all default/update in Python not SQL for these because MySQL
-    # < 5.6 doesn't support multiple TIMESTAMP cols per table, and can't
-    # do function defaults or update triggers on DATETIME rows.
+class CreatedAtMixin(object):
     created_at = Column(DateTime, default=datetime.utcnow,
                         nullable=False, index=True)
+
+
+class UpdatedAtMixin(object):
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False, index=True)
-    # MOSTLY DEPRECATED (but currently used for async deletion of Message
-    # objects).
+
+
+class DeletedAtMixin(object):
     deleted_at = Column(DateTime, nullable=True, index=True)
 
 

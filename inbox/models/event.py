@@ -11,7 +11,8 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, BigJSON, MutableList
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID, HasRevisions
+from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
+                                 DeletedAtMixin)
 from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
 from inbox.models.message import Message
@@ -64,7 +65,8 @@ class FlexibleDateTime(TypeDecorator):
         return x == y
 
 
-class Event(MailSyncBase, HasRevisions, HasPublicID):
+class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
+            DeletedAtMixin):
     """Data for events."""
     API_OBJECT_NAME = 'event'
     API_MODIFIABLE_FIELDS = ['title', 'description', 'location',

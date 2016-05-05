@@ -7,13 +7,13 @@ from sqlalchemy.orm import (relationship, backref, validates, object_session,
 
 from nylas.logging import get_logger
 log = get_logger()
-from inbox.models.mixins import HasPublicID, HasRevisions
+from inbox.models.mixins import HasPublicID, HasRevisions, UpdatedAtMixin
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.util.misc import cleanup_subject
 
 
-class Thread(MailSyncBase, HasPublicID, HasRevisions):
+class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin):
     """
     Threads are a first-class object in Nylas. This thread aggregates
     the relevant thread metadata from elsewhere so that clients can only
@@ -185,11 +185,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
 
-# The /threads API endpoint filters on namespace_id and deleted_at, then orders
-# by recentdate; add an explicit index to persuade MySQL to do this in a
-# somewhat performant manner.
-Index('ix_thread_namespace_id_recentdate_deleted_at',
-      Thread.namespace_id, Thread.recentdate, Thread.deleted_at)
 # Need to explicitly specify the index length for MySQL 5.6, because the
 # subject column is too long to be fully indexed with utf8mb4 collation.
 Index('ix_thread_subject', Thread.subject, mysql_length=191)

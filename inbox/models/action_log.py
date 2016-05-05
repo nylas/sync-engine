@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 
 from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 from inbox.models.namespace import Namespace
 
 
@@ -21,7 +22,7 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     db_session.add(log_entry)
 
 
-class ActionLog(MailSyncBase):
+class ActionLog(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False,
                           index=True)

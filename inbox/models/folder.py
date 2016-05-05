@@ -5,13 +5,14 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models.base import MailSyncBase
 from inbox.models.category import Category
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.sqlalchemy_ext.util import bakery
 from nylas.logging import get_logger
 log = get_logger()
 
 
-class Folder(MailSyncBase):
+class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """ Folders from the remote account backend (Generic IMAP/ Gmail). """
     # TOFIX this causes an import error due to circular dependencies
     # from inbox.models.account import Account

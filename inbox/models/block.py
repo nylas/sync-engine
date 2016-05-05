@@ -5,7 +5,8 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.expression import false
 
 from inbox.models.roles import Blob
-from inbox.models.mixins import HasPublicID, HasRevisions
+from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
+                                 DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.message import Message
 
@@ -28,7 +29,8 @@ COMMON_CONTENT_TYPES = ['text/plain',
                         'image/jpg']
 
 
-class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
+class Block(Blob, MailSyncBase, HasRevisions, HasPublicID,
+            UpdatedAtMixin, DeletedAtMixin):
     """ Metadata for any file that we store """
     API_OBJECT_NAME = 'file'
 
@@ -76,7 +78,7 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 
-class Part(MailSyncBase):
+class Part(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """ Part is a section of a specific message. This includes message bodies
         as well as attachments.
     """

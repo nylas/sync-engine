@@ -17,7 +17,7 @@ etc. right here.
 
 However, this file is part of a namespace package: the contents of
 inbox.models.backends may be extended by separately distributed projects.
-Thus, those projects also contain their own "inbox/models/__init__.py". If
+Thus, those projects also contain their own "inbox/models/". If
 its contents differ from this one, things break if the wrong __init__ file is
 loaded first. But it's painful to have to change all the __init__ files each
 time you add a model. So we hoist the actual importing out of this file and

@@ -17,7 +17,7 @@ from inbox.models.account import Account
 from inbox.models.thread import Thread
 from inbox.models.message import Message
 from inbox.models.folder import Folder
-from inbox.models.mixins import HasRunState
+from inbox.models.mixins import HasRunState, UpdatedAtMixin, DeletedAtMixin
 from inbox.models.label import Label
 from inbox.util.misc import cleanup_subject
 
@@ -70,7 +70,7 @@ class ImapAccount(Account):
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 
-class ImapUid(MailSyncBase):
+class ImapUid(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """
     Maps UIDs to their IMAP folders and per-UID flag metadata.
     This table is used solely for bookkeeping by the IMAP mail sync backends.
@@ -207,7 +207,7 @@ class ImapUid(MailSyncBase):
 Index('account_id_folder_id', ImapUid.account_id, ImapUid.folder_id)
 
 
-class ImapFolderInfo(MailSyncBase):
+class ImapFolderInfo(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """
     Per-folder UIDVALIDITY and (if applicable) HIGHESTMODSEQ.
 
@@ -330,7 +330,8 @@ class ImapThread(Thread):
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}
 
 
-class ImapFolderSyncStatus(MailSyncBase, HasRunState):
+class ImapFolderSyncStatus(MailSyncBase, HasRunState, UpdatedAtMixin,
+                           DeletedAtMixin):
     """ Per-folder status state saving for IMAP folders. """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
@@ -398,7 +399,7 @@ class ImapFolderSyncStatus(MailSyncBase, HasRunState):
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
 
-class LabelItem(MailSyncBase):
+class LabelItem(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """ Mapping between imapuids and labels. """
     imapuid_id = Column(ForeignKey(ImapUid.id, ondelete='CASCADE'),
                         nullable=False)

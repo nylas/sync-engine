@@ -2,11 +2,11 @@ from sqlalchemy import Column, BigInteger, ForeignKey, bindparam
 from sqlalchemy.orm import relationship, backref
 
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, UpdatedAtMixin, DeletedAtMixin
 from inbox.sqlalchemy_ext.util import bakery
 
 
-class Namespace(MailSyncBase, HasPublicID):
+class Namespace(MailSyncBase, HasPublicID, UpdatedAtMixin, DeletedAtMixin):
     account_id = Column(BigInteger,
                         ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=True)

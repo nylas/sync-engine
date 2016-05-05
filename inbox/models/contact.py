@@ -3,13 +3,15 @@ from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
-from inbox.models.mixins import HasPublicID, HasEmailAddress, HasRevisions
+from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRevisions,
+                                 UpdatedAtMixin, DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
 
 
-class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
+class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
+              UpdatedAtMixin, DeletedAtMixin):
     """Data for a user's contact."""
     API_OBJECT_NAME = 'contact'
 
@@ -57,7 +59,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
                 setattr(self, attr, getattr(new_contact, attr))
 
 
-class PhoneNumber(MailSyncBase):
+class PhoneNumber(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     STRING_LENGTH = 64
 
     contact_id = Column(ForeignKey(Contact.id, ondelete='CASCADE'), index=True)

@@ -14,6 +14,7 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import OAuthAccount
 from inbox.models.base import MailSyncBase
 from inbox.models.secret import Secret
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -316,7 +317,7 @@ class GmailAccount(OAuthAccount, ImapAccount):
                 self.gpush_calendar_list_expiration < datetime.utcnow())
 
 
-class GmailAuthCredentials(MailSyncBase):
+class GmailAuthCredentials(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """
     Associate a Gmail Account with a refresh token using a
     one-to-many relationship. Refresh token ids are actually

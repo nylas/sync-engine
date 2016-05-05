@@ -4,12 +4,13 @@ from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.base import MailSyncBase
 from inbox.models.category import Category
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 from inbox.models.constants import MAX_LABEL_NAME_LENGTH
 from nylas.logging import get_logger
 log = get_logger()
 
 
-class Label(MailSyncBase):
+class Label(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """ Labels from the remote account backend (Gmail). """
     # TOFIX this causes an import error due to circular dependencies
     # from inbox.models.account import Account

@@ -5,13 +5,14 @@ from sqlalchemy import DateTime
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
 
 import datetime
 import json
 import zlib
 
 
-class DataProcessingCache(MailSyncBase):
+class DataProcessingCache(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """Cached data used in data processing
     """
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),

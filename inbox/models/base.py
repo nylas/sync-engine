@@ -1,13 +1,13 @@
 from sqlalchemy import Column, BigInteger
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
-from inbox.models.mixins import AutoTimestampMixin
+from inbox.models.mixins import CreatedAtMixin
 
 
 @as_declarative()
-class MailSyncBase(AutoTimestampMixin):
+class MailSyncBase(CreatedAtMixin):
     """
-    Provides automated table name, primary key column, and audit timestamps.
+    Provides automated table name, primary key column, and created_at timestamp.
 
     """
     id = Column(BigInteger, primary_key=True, autoincrement=True)

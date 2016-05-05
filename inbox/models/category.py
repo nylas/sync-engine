@@ -8,7 +8,8 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import (HasRevisions, HasPublicID,
-                                 CaseInsensitiveComparator)
+                                 CaseInsensitiveComparator, DeletedAtMixin,
+                                 UpdatedAtMixin)
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from nylas.logging import get_logger
 from inbox.util.misc import fs_folder_path, is_imap_folder_path
@@ -17,7 +18,8 @@ log = get_logger()
 EPOCH = datetime.utcfromtimestamp(0)
 
 
-class Category(MailSyncBase, HasRevisions, HasPublicID):
+class Category(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
+               DeletedAtMixin):
     @property
     def API_OBJECT_NAME(self):
         return self.type_

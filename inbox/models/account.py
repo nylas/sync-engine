@@ -9,7 +9,8 @@ from sqlalchemy.sql.expression import false
 from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
 
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
-                                 HasRevisions)
+                                 HasRevisions, UpdatedAtMixin,
+                                 DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.calendar import Calendar
 from inbox.providers import provider_info
@@ -20,7 +21,7 @@ from inbox.providers import provider_info
 # GmailAccount
 
 class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
-              HasRevisions):
+              HasRevisions, UpdatedAtMixin, DeletedAtMixin):
     API_OBJECT_NAME = 'account'
 
     @property
