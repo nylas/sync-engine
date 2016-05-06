@@ -559,10 +559,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
             columns += ['message_id_header', 'in_reply_to', 'references']
         return (
             load_only(*columns),
-            subqueryload('parts').joinedload('block'),
+            subqueryload('parts'),
             subqueryload('thread').load_only('public_id', 'discriminator'),
             subqueryload('events').load_only('public_id', 'discriminator'),
-            subqueryload('messagecategories').joinedload('category')
+            subqueryload('messagecategories')
         )
 
 
