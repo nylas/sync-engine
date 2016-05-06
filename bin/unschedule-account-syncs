@@ -36,6 +36,13 @@ def main(dry_run, number, hostname):
     manually unloading an overloaded sync instance.
 
     """
+    if not number:
+        message = 'You have not provided a --number option. This will '\
+                  'unschedule ALL syncs on the host. Proceed? [Y/n] '
+        if raw_input(message).strip().lower() == 'n':
+            print 'Will not proceed'
+            return
+
     zone = get_zone_for_instance(hostname)
     qc = QueueClient(zone)
     # hosts in redis are of the format hostname:<cpu_id>
