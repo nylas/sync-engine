@@ -194,7 +194,7 @@ def cleanup_subject(subject_str):
         return ''
     # TODO consider expanding to all
     # http://en.wikipedia.org/wiki/List_of_email_subject_abbreviations
-    cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg):\s*)+"
+    cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg|undeliverable|undelivered):\s*)+"
     return re.sub(cleanup_regexp, "", subject_str)
 
 

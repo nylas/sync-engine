@@ -18,6 +18,10 @@ def test_message_cleanup():
     assert cleanup_subject("Aw:Re:wienerschnitzel") == "wienerschnitzel"
     assert cleanup_subject("Aw: wienerschnitzel") == "wienerschnitzel"
     assert cleanup_subject("aw: wg:wienerschnitzel") == "wienerschnitzel"
+    assert cleanup_subject(
+        "Undeliverable: Message returned to sender") == "Message returned to sender"
+    assert cleanup_subject(
+        "Undelivered: Message returned to sender") == "Message returned to sender"
 
 
 def test_basic_message_grouping(db, default_namespace):
