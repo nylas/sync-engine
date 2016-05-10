@@ -55,6 +55,9 @@ class Blob(object):
 
                             data = mimepart.body
 
+                            if isinstance(data, unicode):
+                                data = data.encode('utf-8', 'strict')
+
                             # Found it!
                             if sha256(data).hexdigest() == self.data_sha256:
                                 log.info('Found subpart with hash {}'.format(
