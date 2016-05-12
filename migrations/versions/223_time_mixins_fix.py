@@ -18,6 +18,15 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+    conn.execute(text("ALTER TABLE accounttransaction "
+                      " MODIFY COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'"))
+    conn.execute(text("ALTER TABLE messagecategory"
+                      " MODIFY COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'"))
+    conn.execute(text("ALTER TABLE messagecontactassociation"
+                      " MODIFY COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'"))
+    conn.execute(text("ALTER TABLE transaction"
+                      " MODIFY COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'"))
+
     conn.execute(text("ALTER TABLE accounttransaction DROP updated_at,"
                       "DROP deleted_at"))
     conn.execute(text("ALTER TABLE messagecategory DROP updated_at,"
@@ -30,6 +39,8 @@ def upgrade():
                       "DROP updated_at"))
     if conn.engine.has_table('easdevice'):
         # Run EAS specific migrations
+        conn.execute(text("ALTER TABLE easdevice"
+                          " MODIFY COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'"))
         conn.execute(text("ALTER TABLE easdevice DROP deleted_at,"
                           "DROP updated_at"))
 
@@ -45,12 +56,12 @@ def downgrade():
     op.create_index('ix_transaction_deleted_at', 'transaction', ['deleted_at'],
                     unique=False)
 
-    op.create_index('ix_thread_namespace_id_recentdate_deleted_at', 'thread',
-                    ['namespace_id', 'recentdate', 'deleted_at'], unique=False)
     op.add_column('thread', sa.Column('deleted_at', mysql.DATETIME(),
                   nullable=True))
     op.create_index('ix_thread_deleted_at', 'thread', ['deleted_at'],
                     unique=False)
+    op.create_index('ix_thread_namespace_id_recentdate_deleted_at', 'thread',
+                    ['namespace_id', 'recentdate', 'deleted_at'], unique=False)
 
     op.add_column('messagecontactassociation', sa.Column('updated_at',
                   mysql.DATETIME(), nullable=False))
