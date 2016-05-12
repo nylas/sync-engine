@@ -93,15 +93,18 @@ def transaction_objects():
     }
 
 
-def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
-    start = time.time()
-    deleted_count = 0
+def get_accounts_to_delete(shard_id):
     ids_to_delete = []
-
     with session_scope_by_shard_id(shard_id) as db_session:
         ids_to_delete = [(acc.id, acc.namespace.id) for acc
                          in db_session.query(Account) if acc.is_deleted]
+    return ids_to_delete
 
+
+def delete_marked_accounts(shard_id, ids_to_delete, throttle=False, dry_run=False):
+    start = time.time()
+
+    deleted_count = 0
     for account_id, namespace_id in ids_to_delete:
         try:
             with session_scope(namespace_id) as db_session:
@@ -131,6 +134,7 @@ def delete_marked_accounts(shard_id, throttle=False, dry_run=False):
             # Delete liveness data
             log.debug('Deleting liveness data', account_id=account_id)
             clear_heartbeat_status(account_id)
+
             deleted_count += 1
             statsd_client.timing('mailsync.account_deletion.queue.deleted',
                                  time.time() - start_time)
@@ -264,7 +268,8 @@ def _batch_delete(engine, table, xxx_todo_changeme, throttle=False,
 
 
 def check_throttle():
-    """ Returns True if deletions should be throttled and False otherwise.
+    """
+    Returns True if deletions should be throttled and False otherwise.
 
     The current logic throttles deletions if any production sync-mysql-node
     slaves are over 10 seconds behind their master, or if the average CPU load
@@ -272,8 +277,9 @@ def check_throttle():
 
     check_throttle is ignored entirely if the separate `throttle` flag is False
     (meaning that throttling is not done at all), but if throttling is enabled,
-    this method determines when."""
+    this method determines when.
 
+    """
     # Ensure replica lag is not spiking
     base_url = config["UMPIRE_BASE_URL"]
     replica_lag_url = ("https://{}/check?metric=maxSeries(servers.prod."
