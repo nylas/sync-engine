@@ -19,3 +19,6 @@ class MailSyncBase(CreatedAtMixin):
     @declared_attr
     def __table_args__(cls):
         return {'extend_existing': True}
+
+    def __repr__(self):
+        return "<{} (id: {})>".format(self.__module__ + "." + self.__class__.__name__, self.id)
