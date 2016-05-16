@@ -1,6 +1,8 @@
+from datetime import datetime
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
+from sqlalchemy.orm import load_only
 from inbox.basicauth import ValidationError
 from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
@@ -9,6 +11,7 @@ from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
+from inbox.mailsync.backends.imap.s3 import S3FolderSyncEngine
 from inbox.mailsync.gc import DeleteHandler
 log = get_logger()
 
@@ -116,6 +119,11 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
     def start_new_folder_sync_engines(self):
         running_monitors = {monitor.folder_name: monitor for monitor in
                             self.folder_monitors}
+        with session_scope(self.namespace_id) as db_session:
+            account = db_session.query(Account).options(
+                load_only('_sync_status')).get(self.account_id)
+            s3_resync = account._sync_status.get('s3_resync', False)
+
         for folder_name in self.prepare_sync():
             if folder_name in running_monitors:
                 thread = running_monitors[folder_name]
@@ -130,6 +138,18 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                 self.provider_name,
                                                 self.syncmanager_lock)
                 self.folder_monitors.start(thread)
+
+                if s3_resync:
+                    log.info('Starting an S3 monitor',
+                             account_id=self.account_id)
+                    s3_thread = S3FolderSyncEngine(self.account_id,
+                                                   self.namespace_id,
+                                                   folder_name,
+                                                   self.email_address,
+                                                   self.provider_name,
+                                                   self.syncmanager_lock)
+
+                    self.folder_monitors.start(s3_thread)
             while not thread.state == 'poll' and not thread.ready():
                 sleep(self.heartbeat)
 

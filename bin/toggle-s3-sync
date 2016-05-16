@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import click
+from datetime import datetime
+from inbox.crispin import connection_pool
+from sqlalchemy.orm.attributes import flag_modified
+
+from nylas.logging import get_logger, configure_logging
+from inbox.models.account import Account
+from inbox.models.session import (session_scope, global_session_scope,
+                                  session_scope_by_shard_id)
+
+configure_logging()
+log = get_logger(purpose='s3-sync')
+
+
+@click.command()
+@click.option('--min-id', type=int, default=None)
+@click.option('--max-id', type=int, default=None)
+@click.option('--shard-id', type=int, default=None)
+def main(min_id, max_id, shard_id):
+    accounts = []
+    failed = []
+
+    if min_id is not None or max_id is not None:
+        # Get the list of running accounts.
+        with global_session_scope() as db_session:
+            accounts = db_session.query(Account).filter(Account.sync_state == 'running')
+
+            if min_id is not None:
+                accounts = accounts.filter(
+                    Account.id > min_id)
+
+            if max_id is not None:
+                accounts = accounts.filter(
+                    Account.id <= max_id)
+
+            accounts = [acc.id for acc in accounts]
+
+            db_session.expunge_all()
+
+    elif shard_id is not None:
+        with session_scope_by_shard_id(shard_id) as db_session:
+            accounts = db_session.query(Account).filter(
+                Account.sync_state == 'running')
+
+            if min_id is not None:
+                accounts = accounts.filter(
+                    Account.id > min_id)
+
+            if max_id is not None:
+                accounts = accounts.filter(
+                    Account.id <= max_id)
+
+            accounts = [acc.id for acc in accounts]
+            db_session.expunge_all()
+
+    print "Total accounts: %d" % len(accounts)
+
+    for account_id in accounts:
+        try:
+            with session_scope(account_id) as db_session:
+                account = db_session.query(Account).get(account_id)
+
+                if account.created_at > datetime(year=2016, month=5, day=5):
+                    continue
+
+                print "Updating %s" % account.email_address
+
+                account._sync_status['s3_resync'] = True
+                flag_modified(account, '_sync_status')
+                db_session.commit()
+
+        except Exception:
+            failed.append(account_id)
+
+    print "Processed accounts:"
+    print accounts
+
+    print "Failed accounts:"
+    print failed
+
+if __name__ == '__main__':
+    main()

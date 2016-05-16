@@ -37,6 +37,13 @@ def save_to_blockstore(data_sha256, data):
         _save_to_disk(data_sha256, data)
 
 
+def is_in_blockstore(data_sha256):
+    if STORE_MSG_ON_S3:
+        return _is_in_s3(data_sha256)
+    else:
+        return _is_on_disk(data_sha256)
+
+
 def get_from_blockstore(data_sha256):
     if STORE_MSG_ON_S3:
         value = _get_from_s3(data_sha256)
@@ -79,6 +86,25 @@ def _save_to_s3(data_sha256, data):
     end = time.time()
     latency_millis = (end - start) * 1000
     statsd_client.timing('s3.save_latency', latency_millis)
+
+
+def _is_in_s3(data_sha256):
+    assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
+    assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
+    assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
+        'Need bucket name to store message data!'
+
+    # Boto pools connections at the class level
+    conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                        config.get('AWS_SECRET_ACCESS_KEY'))
+    bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
+                             validate=False)
+
+    return bool(bucket.get_key(data_sha256))
+
+
+def _is_on_disk(data_sha256):
+    return os.path.exists(_data_file_path(data_sha256))
 
 
 def _save_to_disk(data_sha256, data):
