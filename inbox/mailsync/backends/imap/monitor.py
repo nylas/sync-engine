@@ -1,4 +1,3 @@
-from datetime import datetime
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
