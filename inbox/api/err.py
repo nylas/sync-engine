@@ -50,6 +50,12 @@ class AccountStoppedError(APIException):
               "sync."
 
 
+class AccountDoesNotExistError(APIException):
+    """ Raised when an account does not exist (for example, if it was deleted). """
+    status_code = 404
+    message = "The account does not exist."
+
+
 def err(http_code, message, **kwargs):
     log.info('Returning API error to client',
              http_code=http_code, message=message, kwargs=kwargs)

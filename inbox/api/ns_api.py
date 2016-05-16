@@ -50,7 +50,8 @@ from inbox.models.action_log import schedule_action
 from inbox.models.session import new_session, session_scope
 from inbox.search.base import get_search_client, SearchBackendException
 from inbox.transactions import delta_sync
-from inbox.api.err import err, APIException, NotFoundError, InputError
+from inbox.api.err import (err, APIException, NotFoundError, InputError,
+                           AccountDoesNotExistError)
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.util.blockstore import get_from_blockstore
@@ -93,6 +94,11 @@ def start():
     engine = engine_manager.get_for_id(g.namespace_id)
     g.db_session = new_session(engine)
     g.namespace = Namespace.get(g.namespace_id, g.db_session)
+
+    if not g.namespace:
+        # The only way this can occur is if there used to be an account that
+        # was deleted, but the API access cache entry has not been expired yet.
+        raise AccountDoesNotExistError()
 
     is_n1 = request.environ.get('IS_N1', False)
     g.encoder = APIEncoder(g.namespace.public_id, is_n1=is_n1)
