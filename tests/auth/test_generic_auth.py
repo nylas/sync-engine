@@ -190,8 +190,8 @@ def test_double_auth(db):
         'settings': {
             'name': 'Y.Y!',
             'locale': 'fr',
-            'email': 'cypresstest@yahoo.com',
-            'password': 'IHate2Gmail'}
+            'email': 'benbitdiddle1861@yahoo.com',
+            'password': 'EverybodyLovesIMAPv4'}
     }
     email = settings['settings']['email']
     password = settings['settings']['password']
@@ -252,8 +252,8 @@ def test_successful_reauth_resets_sync_state(db):
         'settings': {
             'name': 'Y.Y!',
             'locale': 'fr',
-            'email': 'cypresstest@yahoo.com',
-            'password': 'IHate2Gmail'}
+            'email': 'benbitdiddle1861@yahoo.com',
+            'password': 'EverybodyLovesIMAPv4'}
     }
     email = settings['settings']['email']
     handler = GenericAuthHandler(settings['provider'])
