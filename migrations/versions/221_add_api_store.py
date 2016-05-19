@@ -32,6 +32,10 @@ def upgrade():
 
         sa.Column('categories', sa.Text(), nullable=False),
         sa.Column('subject', sa.String(255), nullable=True),
+        sa.Column('from_addrs', sa.Text(), nullable=False),
+        sa.Column('to_addrs', sa.Text(), nullable=False),
+        sa.Column('cc_addrs', sa.Text(), nullable=False),
+        sa.Column('bcc_addrs', sa.Text(), nullable=False),
 
         sa.PrimaryKeyConstraint('id'),
 
@@ -58,6 +62,10 @@ def upgrade():
         sa.Column('categories', sa.Text(), nullable=False),
         sa.Column('subject', sa.String(255), nullable=True),
         sa.Column('thread_public_id', sa.BINARY(length=16), nullable=False),
+        sa.Column('from_addr', sa.Text(), nullable=False),
+        sa.Column('to_addr', sa.Text(), nullable=False),
+        sa.Column('cc_addr', sa.Text(), nullable=False),
+        sa.Column('bcc_addr', sa.Text(), nullable=False),
 
         sa.PrimaryKeyConstraint('id'),
 
@@ -70,8 +78,13 @@ def upgrade():
 
     op.create_index('ix_apimessage_public_id',
             'apimessage', ['public_id'], unique=True)
+    op.create_index('ix_apimessage_subject',
+            'apimessage', ['subject'], unique=False, mysql_length=100)
+
     op.create_index('ix_apithread_public_id',
             'apithread', ['public_id'], unique=True)
+    op.create_index('ix_apithread_subject',
+            'apithread', ['subject'], unique=False, mysql_length=100)
 
     conn = op.get_bind()
     increment = (shard_id << 48) + 1

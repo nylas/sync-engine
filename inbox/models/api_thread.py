@@ -6,7 +6,7 @@ from sqlalchemy.dialects.mysql import LONGBLOB
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
-from inbox.sqlalchemy_ext.util import Base36UID
+from inbox.sqlalchemy_ext.util import Base36UID, JSON
 
 class ApiPatchThread(MailSyncBase):
     id = Column(BigInteger, primary_key=True, autoincrement=False)
@@ -56,9 +56,12 @@ class ApiThread(MailSyncBase):
     value = Column(LONGBLOB(), nullable=False)
     expanded_value = Column(LONGBLOB(), nullable=False)
 
-    # needed for indexes (TODO create indexes!)
-    categories = Column(Text(), nullable=False)
+    categories = Column(JSON(), nullable=False)
     subject = Column(String(255), nullable=True, default='')
+    from_addrs = Column(JSON(), nullable=False)
+    to_addrs = Column(JSON(), nullable=False)
+    cc_addrs = Column(JSON(), nullable=False)
+    bcc_addrs = Column(JSON(), nullable=False)
 
     def __repr__(self):
         return '<ApiThread(id=%d, public_id=%s)>' % (self.id, self.public_id)
@@ -80,15 +83,29 @@ class ApiThread(MailSyncBase):
             json = _dumps(encode(obj))
             expanded_json = _dumps(encode(obj, expand=True))
 
-            categories = obj.categories
-            pat = re.compile(',')
-            def escape_commas(category):
-                return pat.sub('COMMA', category.display_name)
-            catfield = ','.join(map(escape_commas, categories))
+            category_names = map(lambda cat: cat.name, obj.categories)
+            category_display_names = map(lambda cat: cat.display_name, obj.categories)
+
+            froms = set()
+            tos = set()
+            ccs = set()
+            bccs = set()
+            # based on Thread.participants
+            for m in obj.messages:
+                if m.is_draft:
+                    continue
+                for _, address in m.from_addr: froms.add(address)
+                for _, address in m.to_addr: tos.add(address)
+                for _, address in m.cc_addr: ccs.add(address)
+                for _, address in m.bcc_addr: bccs.add(address)
 
             return dict(id=id, public_id=public_id, namespace_id=obj.namespace.id,
-                    categories=catfield,
+                    categories=category_names + category_display_names,
                     subject=obj.subject,
+                    from_addrs=froms,
+                    to_addrs=tos,
+                    cc_addrs=ccs,
+                    bcc_addrs=bccs,
 
                     value=json,
                     expanded_value=expanded_json

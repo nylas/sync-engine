@@ -7,7 +7,7 @@ from sqlalchemy.dialects.mysql import LONGBLOB
 from inbox.models.api_thread import ApiThread
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
-from inbox.sqlalchemy_ext.util import Base36UID
+from inbox.sqlalchemy_ext.util import Base36UID, JSON
 
 
 class ApiPatchMessage(MailSyncBase):
@@ -61,10 +61,13 @@ class ApiMessage(MailSyncBase):
     # needed to load raw messages from block store
     data_sha256 = Column(String(255), nullable=True)
 
-    # needed for indexes (TODO create indexes!)
-    categories = Column(Text(), nullable=False)
+    categories = Column(JSON(), nullable=False)
     subject = Column(String(255), nullable=True, default='')
     thread_public_id = Column(Base36UID, nullable=False)
+    from_addr = Column(JSON(), nullable=False)
+    to_addr = Column(JSON(), nullable=False)
+    cc_addr = Column(JSON(), nullable=False)
+    bcc_addr = Column(JSON(), nullable=False)
 
     def __repr__(self):
         return '<ApiMessage(id=%d, public_id=%s)>' % (self.id, self.public_id)
@@ -86,18 +89,19 @@ class ApiMessage(MailSyncBase):
             json = _dumps(encode(obj))
             expanded_json = _dumps(encode(obj, expand=True))
 
-            categories = obj.categories
-            pat = re.compile(',')
-            def escape_commas(category):
-                return pat.sub('COMMA', category.display_name)
-            catfield = ','.join(map(escape_commas, categories))
+            category_names = map(lambda cat: cat.name, obj.categories)
+            category_display_names = map(lambda cat: cat.display_name, obj.categories)
 
             return dict(id=id, public_id=public_id, namespace_id=obj.namespace.id,
                     data_sha256=obj.data_sha256,
 
-                    categories=catfield,
+                    categories=category_names + category_display_names,
                     subject=obj.subject,
                     thread_public_id=obj.thread.public_id,
+                    from_addr=obj.from_addr,
+                    to_addr=obj.to_addr,
+                    cc_addr=obj.cc_addr,
+                    bcc_addr=obj.bcc_addr,
 
                     value=json,
                     expanded_value=expanded_json

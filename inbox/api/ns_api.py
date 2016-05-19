@@ -482,22 +482,29 @@ def message2_read_api(public_id):
 def _jsons_to_list(jsons):
     return '[' + ','.join(jsons) + ']'
 
-
 @app.route('/messages2/', methods=['GET'])
 def message2_query_api():
     g.parser.add_argument('view', type=view, location='args')
     g.parser.add_argument('in', type=bounded_str, location='args')
     g.parser.add_argument('subject', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
+    g.parser.add_argument('to', type=bounded_str, location='args')
+    g.parser.add_argument('from', type=bounded_str, location='args')
+    g.parser.add_argument('cc', type=bounded_str, location='args')
+    g.parser.add_argument('bcc', type=bounded_str, location='args')
 
     args = strict_parse_args(g.parser, request.args)
 
-    messages = g.api_store.all(g.namespace.id, ApiMessage,
-            limit=args['limit'],
-            offset=args['offset'],
+    messages = g.api_store.messages(g.namespace.id,
             in_=args['in'],
             subject=args['subject'],
-            thread_public_id=args['thread_id'])
+            thread_public_id=args['thread_id'],
+            to_addr=args['to'],
+            from_addr=args['from'],
+            cc_addr=args['cc'],
+            bcc_addr=args['bcc'],
+            limit=args['limit'],
+            offset=args['offset'])
 
     json = _jsons_to_list(m.as_json(view=args['view']) for m in messages)
     return Response(json, mimetype='application/json')
@@ -521,19 +528,27 @@ def thread2_api(public_id):
 
 @app.route('/threads2/', methods=['GET'])
 def thread2_query_api():
+    g.parser.add_argument('subject', type=bounded_str, location='args')
     g.parser.add_argument('view', type=view, location='args')
     g.parser.add_argument('in', type=bounded_str, location='args')
-    g.parser.add_argument('subject', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
+    g.parser.add_argument('to', type=bounded_str, location='args')
+    g.parser.add_argument('from', type=bounded_str, location='args')
+    g.parser.add_argument('cc', type=bounded_str, location='args')
+    g.parser.add_argument('bcc', type=bounded_str, location='args')
 
     args = strict_parse_args(g.parser, request.args)
 
-    threads = g.api_store.all(g.namespace.id, ApiThread,
-            limit=args['limit'],
-            offset=args['offset'],
+    threads = g.api_store.threads(g.namespace.id,
             in_=args['in'],
             subject=args['subject'],
-            thread_public_id=args['thread_id'])
+            public_id=args['thread_id'],
+            to_addr=args['to'],
+            from_addr=args['from'],
+            cc_addr=args['cc'],
+            bcc_addr=args['bcc'],
+            limit=args['limit'],
+            offset=args['offset'])
 
     json = _jsons_to_list(t.as_json(view=args['view']) for t in threads)
     return Response(json, mimetype='application/json')

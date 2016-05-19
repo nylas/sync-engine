@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy.sql import text
+
 from inbox.api.kellogs import encode
 from inbox.models import Transaction, ApiMessage, ApiThread
 from inbox.models.mixins import HasRevisions
@@ -32,22 +34,52 @@ class ApiStore(object):
 
         return record
 
-    def all(self, namespace_id, table, limit, offset=0, in_=None, subject=None, thread_public_id=None):
+    def messages(self, namespace_id, limit, offset=0, in_=None, subject=None, thread_public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
         # TODO respect patches
 
-        query = self.session.query(table)\
-                .filter(table.namespace_id == namespace_id)
+        query = self.session.query(ApiMessage)\
+                .filter(ApiMessage.namespace_id == namespace_id)
         if in_ is not None:
-            query = query.filter(table.categories.like('%' + in_ + '%'))
+            query = _filter_json_column(query, ApiMessage.categories, in_)
         if subject is not None:
-            query = query.filter(table.subject == subject)
+            query = query.filter(ApiMessage.subject == subject)
         if thread_public_id is not None:
-            if table == ApiThread:
-                query = query.filter(table.public_id == thread_public_id)
-            else:
-                query = query.filter(table.thread_public_id == thread_public_id)
+            query = query.filter(ApiMessage.thread_public_id == thread_public_id)
+        if from_addr is not None:
+            query = _filter_json_column(query, ApiMessage.from_addr, from_addr)
+        if to_addr is not None:
+            query = _filter_json_column(query, ApiMessage.to_addr, to_addr)
+        if cc_addr is not None:
+            query = _filter_json_column(query, ApiMessage.cc_addr, cc_addr)
+        if bcc_addr is not None:
+            query = _filter_json_column(query, ApiMessage.bcc_addr, bcc_addr)
 
-        records = query[offset:limit]
+        records = query[offset:offset+limit]
+
+        for record in records:
+            yield record
+
+    def threads(self, namespace_id, limit, offset=0, in_=None, subject=None, public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
+        # TODO respect patches
+
+        query = self.session.query(ApiThread)\
+                .filter(ApiThread.namespace_id == namespace_id)
+        if in_ is not None:
+            query = _filter_json_column(query, ApiThread.categories, in_)
+        if subject is not None:
+            query = query.filter(ApiThread.subject == subject)
+        if public_id is not None:
+            query = query.filter(ApiThread.public_id == public_id)
+        if from_addr is not None:
+            query = _filter_json_column(query, ApiThread.from_addrs, from_addr)
+        if to_addr is not None:
+            query = _filter_json_column(query, ApiThread.to_addrs, to_addr)
+        if cc_addr is not None:
+            query = _filter_json_column(query, ApiThread.cc_addrs, cc_addr)
+        if bcc_addr is not None:
+            query = _filter_json_column(query, ApiThread.bcc_addrs, bcc_addr)
+
+        records = query[offset:offset+limit]
 
         for record in records:
             yield record
@@ -143,6 +175,12 @@ class ApiStore(object):
 def _patch_table_for(table_or_obj):
     if hasattr(table_or_obj, 'API_STORE_TABLE') and hasattr(table_or_obj.API_STORE_TABLE, 'PATCH_TABLE'):
         return table_or_obj.API_STORE_TABLE.PATCH_TABLE
+
+# TODO not a correct or efficient way of doing this query
+def _filter_json_column(query, column, search):
+    like_expr = text("'%' :search '%'").bindparams(search=search)
+    return query.filter(column != [], column.like(like_expr))
+
 
 
 def _new_transactions(session):
