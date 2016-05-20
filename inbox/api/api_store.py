@@ -15,10 +15,9 @@ class ApiStore(object):
         self.log = logger
 
     def get_with_patch(self, namespace_id, table, public_id):
-        if hasattr(table, 'PATCH_TABLE'):
-            patch = self.get(namespace_id, table.PATCH_TABLE, public_id)
-            if patch:
-                return patch
+        patch = self.get_patch(namespace_id, table, public_id)
+        if patch:
+            return patch
 
         record = self.get(namespace_id, table, public_id)
         if not record:
@@ -34,9 +33,19 @@ class ApiStore(object):
 
         return record
 
-    def messages(self, namespace_id, limit, offset=0, in_=None, subject=None, thread_public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
-        # TODO respect patches
+    def get_patch(self, namespace_id, table, public_id):
+        if hasattr(table, 'PATCH_TABLE'):
+            return self.get(namespace_id, table.PATCH_TABLE, public_id)
 
+    def get_patches(self, namespace_id, table, public_ids):
+        if hasattr(table, 'PATCH_TABLE'):
+            return self.session.query(table.PATCH_TABLE).filter(
+                    table.namespace_id == namespace_id,
+                    table.public_id.in_(public_ids)).all()
+        else:
+            return []
+
+    def messages(self, namespace_id, limit, offset=0, in_=None, subject=None, thread_public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
         query = self.session.query(ApiMessage)\
                 .filter(ApiMessage.namespace_id == namespace_id)
         if in_ is not None:
@@ -54,14 +63,9 @@ class ApiStore(object):
         if bcc_addr is not None:
             query = _filter_json_column(query, ApiMessage.bcc_addr, bcc_addr)
 
-        records = query[offset:offset+limit]
-
-        for record in records:
-            yield record
+        return self._records_with_patches(query, namespace_id, ApiMessage, offset, limit)
 
     def threads(self, namespace_id, limit, offset=0, in_=None, subject=None, public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
-        # TODO respect patches
-
         query = self.session.query(ApiThread)\
                 .filter(ApiThread.namespace_id == namespace_id)
         if in_ is not None:
@@ -79,10 +83,21 @@ class ApiStore(object):
         if bcc_addr is not None:
             query = _filter_json_column(query, ApiThread.bcc_addrs, bcc_addr)
 
+        return self._records_with_patches(query, namespace_id, ApiThread, offset, limit)
+
+    def _records_with_patches(self, query, namespace_id, table, offset, limit):
         records = query[offset:offset+limit]
 
+        patches = self.get_patches(namespace_id, table, [r.public_id for r in records])
+        patches_by_id = {}
+        for patch in patches:
+            patches_by_id[patch.id] = patch
+
         for record in records:
-            yield record
+            if record.id in patches_by_id:
+                yield patches_by_id[record.id]
+            else:
+                yield record
 
     def bulk_update(self, objs):
         if len(objs) < 1:
