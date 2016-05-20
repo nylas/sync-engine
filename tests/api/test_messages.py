@@ -97,7 +97,7 @@ def test_sender_and_participants(stub_message, api_client, threads_endpoint):
     assert 'drafts' not in resp_dict
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail # Not counting drafts as messages
 def test_expanded_threads(stub_message, api_client, threads_endpoint):
     def _check_json_thread(resp_dict):
         assert 'message_ids' not in resp_dict
