@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, ForeignKey, String, Text
+from sqlalchemy import Column, BigInteger, DateTime, ForeignKey, String, Text, desc
 from sqlalchemy.dialects.mysql import LONGBLOB
 
 from inbox.models.api_thread import ApiThread
@@ -61,6 +61,10 @@ class ApiMessage(MailSyncBase):
     # needed to load raw messages from block store
     data_sha256 = Column(String(255), nullable=True)
 
+    # needed for ordering
+    received_date = Column(DateTime, nullable=False)
+    api_ordering = desc(received_date)
+
     categories = Column(JSON(), nullable=False)
     subject = Column(String(255), nullable=True, default='')
     thread_public_id = Column(Base36UID, nullable=False)
@@ -94,6 +98,7 @@ class ApiMessage(MailSyncBase):
 
             return dict(id=id, public_id=public_id, namespace_id=obj.namespace.id,
                     data_sha256=obj.data_sha256,
+                    received_date=obj.received_date,
 
                     categories=category_names + category_display_names,
                     subject=obj.subject,

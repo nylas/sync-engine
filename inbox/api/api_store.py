@@ -86,7 +86,9 @@ class ApiStore(object):
         return self._records_with_patches(query, namespace_id, ApiThread, offset, limit)
 
     def _records_with_patches(self, query, namespace_id, table, offset, limit):
-        records = query[offset:offset+limit]
+        records = query\
+                .order_by(table.api_ordering)\
+                [offset:offset+limit]
 
         patches = self.get_patches(namespace_id, table, [r.public_id for r in records])
         patches_by_id = {}

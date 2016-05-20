@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, ForeignKey, String, Text
+from sqlalchemy import Column, BigInteger, DateTime, ForeignKey, String, Text, desc
 from sqlalchemy.dialects.mysql import LONGBLOB
 
 from inbox.models.base import MailSyncBase
@@ -56,6 +56,10 @@ class ApiThread(MailSyncBase):
     value = Column(LONGBLOB(), nullable=False)
     expanded_value = Column(LONGBLOB(), nullable=False)
 
+    # needed for ordering
+    recentdate = Column(DateTime, nullable=False)
+    api_ordering = desc(recentdate)
+
     categories = Column(JSON(), nullable=False)
     subject = Column(String(255), nullable=True, default='')
     from_addrs = Column(JSON(), nullable=False)
@@ -100,6 +104,7 @@ class ApiThread(MailSyncBase):
                 for _, address in m.bcc_addr: bccs.add(address)
 
             return dict(id=id, public_id=public_id, namespace_id=obj.namespace.id,
+                    recentdate=obj.recentdate,
                     categories=category_names + category_display_names,
                     subject=obj.subject,
                     from_addrs=froms,

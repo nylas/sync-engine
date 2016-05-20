@@ -30,6 +30,8 @@ def upgrade():
         sa.Column('value', my.LONGBLOB(), nullable=False),
         sa.Column('expanded_value', my.LONGBLOB(), nullable=False),
 
+        sa.Column('recentdate', sa.DateTime(), nullable=False),
+
         sa.Column('categories', sa.Text(), nullable=False),
         sa.Column('subject', sa.String(255), nullable=True),
         sa.Column('from_addrs', sa.Text(), nullable=False),
@@ -59,6 +61,8 @@ def upgrade():
 
         sa.Column('data_sha256', sa.String(255), nullable=True),
 
+        sa.Column('received_date', sa.DateTime(), nullable=False),
+
         sa.Column('categories', sa.Text(), nullable=False),
         sa.Column('subject', sa.String(255), nullable=True),
         sa.Column('thread_public_id', sa.BINARY(length=16), nullable=False),
@@ -78,11 +82,15 @@ def upgrade():
 
     op.create_index('ix_apimessage_public_id',
             'apimessage', ['public_id'], unique=True)
+    op.create_index('ix_apimessage_namespace_id_received_date',
+            'apimessage', ['namespace_id', 'received_date'], unique=False)
     op.create_index('ix_apimessage_subject',
             'apimessage', ['subject'], unique=False, mysql_length=100)
 
     op.create_index('ix_apithread_public_id',
             'apithread', ['public_id'], unique=True)
+    op.create_index('ix_apithread_namespace_id_received_date',
+            'apithread', ['namespace_id', 'recentdate'], unique=False)
     op.create_index('ix_apithread_subject',
             'apithread', ['subject'], unique=False, mysql_length=100)
 

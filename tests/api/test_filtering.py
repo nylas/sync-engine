@@ -237,7 +237,6 @@ def test_query_target(db, api_client, messages_endpoint, thread, default_namespa
     assert count['count'] == 3
 
 
-@pytest.mark.xfail
 def test_ordering(api_client, messages_endpoint, db, default_namespace):
     for i in range(3):
         thr = add_fake_thread(db.session, default_namespace.id)
