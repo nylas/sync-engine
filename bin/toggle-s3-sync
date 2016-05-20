@@ -17,7 +17,8 @@ log = get_logger(purpose='s3-sync')
 @click.option('--min-id', type=int, default=None)
 @click.option('--max-id', type=int, default=None)
 @click.option('--shard-id', type=int, default=None)
-def main(min_id, max_id, shard_id):
+@click.option('--enable/--disable', default=True)
+def main(min_id, max_id, shard_id, enable):
     accounts = []
     failed = []
 
@@ -66,7 +67,11 @@ def main(min_id, max_id, shard_id):
 
                 print "Updating %s" % account.email_address
 
-                account._sync_status['s3_resync'] = True
+                if enable:
+                    account._sync_status['s3_resync'] = True
+                else:
+                    account._sync_status['s3_resync'] = False
+
                 flag_modified(account, '_sync_status')
                 db_session.commit()
 
