@@ -495,7 +495,9 @@ def message2_query_api():
 
     args = strict_parse_args(g.parser, request.args)
 
-    messages = g.api_store.messages(g.namespace.id,
+    the_view = args['view']
+
+    messages = g.api_store.messages(g.namespace.id, the_view,
             in_=args['in'],
             subject=args['subject'],
             thread_public_id=args['thread_id'],
@@ -506,7 +508,10 @@ def message2_query_api():
             limit=args['limit'],
             offset=args['offset'])
 
-    json = _jsons_to_list(m.as_json(view=args['view']) for m in messages)
+    if the_view == 'count':
+        json = '{"count":%d}' % messages
+    else:
+        json = _jsons_to_list(m.as_json(view=the_view) for m in messages)
     return Response(json, mimetype='application/json')
 
 
@@ -539,7 +544,9 @@ def thread2_query_api():
 
     args = strict_parse_args(g.parser, request.args)
 
-    threads = g.api_store.threads(g.namespace.id,
+    the_view = args['view']
+
+    threads = g.api_store.threads(g.namespace.id, the_view,
             in_=args['in'],
             subject=args['subject'],
             public_id=args['thread_id'],
@@ -550,7 +557,10 @@ def thread2_query_api():
             limit=args['limit'],
             offset=args['offset'])
 
-    json = _jsons_to_list(t.as_json(view=args['view']) for t in threads)
+    if the_view == 'count':
+        json = '{"count":%d}' % threads
+    else:
+        json = _jsons_to_list(t.as_json(view=the_view) for t in threads)
     return Response(json, mimetype='application/json')
 
 

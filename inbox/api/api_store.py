@@ -45,7 +45,7 @@ class ApiStore(object):
         else:
             return []
 
-    def messages(self, namespace_id, limit, offset=0, in_=None, subject=None, thread_public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
+    def messages(self, namespace_id, view, limit, offset=0, in_=None, subject=None, thread_public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
         query = self.session.query(ApiMessage)\
                 .filter(ApiMessage.namespace_id == namespace_id)
         if in_ is not None:
@@ -63,9 +63,9 @@ class ApiStore(object):
         if bcc_addr is not None:
             query = _filter_json_column(query, ApiMessage.bcc_addr, bcc_addr)
 
-        return self._records_with_patches(query, namespace_id, ApiMessage, offset, limit)
+        return self._records_with_patches(view, query, namespace_id, ApiMessage, offset, limit)
 
-    def threads(self, namespace_id, limit, offset=0, in_=None, subject=None, public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
+    def threads(self, namespace_id, view, limit, offset=0, in_=None, subject=None, public_id=None, from_addr=None, to_addr=None, cc_addr=None, bcc_addr=None):
         query = self.session.query(ApiThread)\
                 .filter(ApiThread.namespace_id == namespace_id)
         if in_ is not None:
@@ -83,9 +83,14 @@ class ApiStore(object):
         if bcc_addr is not None:
             query = _filter_json_column(query, ApiThread.bcc_addrs, bcc_addr)
 
-        return self._records_with_patches(query, namespace_id, ApiThread, offset, limit)
+        return self._records_with_patches(view, query, namespace_id, ApiThread, offset, limit)
 
-    def _records_with_patches(self, query, namespace_id, table, offset, limit):
+    def _records_with_patches(self, view, query, namespace_id, table, offset, limit):
+        if view == 'count':
+            if offset != 0:
+                raise ValueError("Can't combine view=count with offset")
+            return query.count()
+
         records = query\
                 .order_by(table.api_ordering)\
                 [offset:offset+limit]
@@ -95,11 +100,12 @@ class ApiStore(object):
         for patch in patches:
             patches_by_id[patch.id] = patch
 
-        for record in records:
+        def patched(record):
             if record.id in patches_by_id:
-                yield patches_by_id[record.id]
+                return patches_by_id[record.id]
             else:
-                yield record
+                return record
+        return map(patched, records)
 
     def bulk_update(self, objs):
         if len(objs) < 1:
