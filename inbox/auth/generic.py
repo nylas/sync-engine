@@ -215,9 +215,10 @@ class GenericAuthHandler(AuthHandler):
         try:
             conn.list_folders()
 
-            folder_prefix, folder_separator = conn.namespace()[0][0]
-            account.folder_separator = folder_separator
-            account.folder_prefix = folder_prefix
+            if conn.has_capability('NAMESPACE'):
+                folder_prefix, folder_separator = conn.namespace()[0][0]
+                account.folder_separator = folder_separator
+                account.folder_prefix = folder_prefix
         except Exception as e:
             log.error("account_folder_list_failed",
                       email=account.email_address,
