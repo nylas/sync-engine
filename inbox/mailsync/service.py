@@ -3,6 +3,7 @@ import platform
 import gevent
 from gevent.lock import BoundedSemaphore
 from sqlalchemy.exc import OperationalError
+import psutil
 
 from inbox.providers import providers
 from inbox.config import config
@@ -64,6 +65,12 @@ class SyncService(object):
         self.zone = config.get('ZONE')
         self.queue_client = QueueClient(self.zone)
 
+        # We call cpu_percent in a non-blocking way. Because of the way
+        # this function works, it'll always return 0.0 the first time
+        # we call it. See: https://pythonhosted.org/psutil/#psutil.cpu_percent
+        # for more details.
+        psutil.cpu_percent(percpu=True)
+
     def run(self):
         retry_with_logging(self._run_impl, self.log)
 
@@ -77,7 +84,17 @@ class SyncService(object):
             gevent.sleep(self.poll_interval)
 
     def poll(self):
-        if self.stealing_enabled:
+        # We really don't want to take on more load than we can bear, so we need
+        # to check the CPU usage before accepting new accounts.
+        # Note that we can't check this for the current core because the kernel
+        # transparently moves programs across cores.
+        usage_per_cpu = psutil.cpu_percent(percpu=True)
+
+        # Conservatively, stop accepting accounts if the CPU usage is over 90%
+        # for every core.
+        overloaded_cpus = all([cpu_usage > 90.0 for cpu_usage in usage_per_cpu])
+
+        if self.stealing_enabled and not overloaded_cpus:
             r = self.queue_client.claim_next(self.process_identifier)
             if r:
                 self.log.info('Claimed new account sync', account_id=r)
