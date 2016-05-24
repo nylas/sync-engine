@@ -1362,6 +1362,8 @@ def multi_send_create():
     # Mark the draft as sending, which ensures that it cannot be modified.
     draft.mark_as_sending()
     g.db_session.add(draft)
+    g.log.info("Initiated a new multi-send session",
+               draft_public_id=draft.public_id)
     return g.encoder.jsonify(draft)
 
 
@@ -1400,11 +1402,18 @@ def multi_send(draft_id):
         # message.
         return err(504, 'Request timed out.')
 
+    g.log.info("Sending a multi-send message", draft_public_id=draft.public_id)
+
     # Send a copy of the draft with the new body to the send_to address
     resp = send_draft_copy(account, draft, body, send_to)
 
+    g.log.info("Multi-send message sent!", draft_public_id=draft.public_id)
+
     # Immediately delete the message from the sent folder if it got put there.
     remote_delete_sent(account.id, draft.message_id_header)
+
+    g.log.info("Deleted remote sent message for multi-send if present.",
+               draft_public_id=draft.public_id)
 
     # Return the response from sending
     return resp
@@ -1431,6 +1440,9 @@ def multi_send_finish(draft_id):
 
     # Save the sent message with its existing body to the user's sent folder
     schedule_action('save_sent_email', draft, draft.namespace.id, g.db_session)
+
+    g.log.info("Closed out multi-send session, scheduled save to sent folder.",
+               draft_public_id=draft.public_id)
 
     return g.encoder.jsonify(draft)
 
