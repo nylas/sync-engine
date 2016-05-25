@@ -14,7 +14,9 @@ class Transaction(MailSyncBase, HasPublicID):
                           nullable=False)
     namespace = relationship(Namespace)
 
-    object_type = Column(String(20), nullable=False)
+    object_type = Column(Enum('account', 'calendar', 'contact', 'draft',
+                              'event', 'file', 'folder', 'label', 'message',
+                              'metadata', 'thread'), nullable=False)
     record_id = Column(BigInteger, nullable=False, index=True)
     object_public_id = Column(String(191), nullable=False, index=True)
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
@@ -73,8 +75,8 @@ def create_revisions(session):
 def create_revision(obj, session, revision_type):
     assert revision_type in ('insert', 'update', 'delete')
 
-    # Always create a Transaction record -- this maintains a total ordering over
-    # all events for an account.
+    # Always create a Transaction record -- this maintains a total ordering
+    # over all events for an account.
     revision = Transaction(command=revision_type, record_id=obj.id,
                            object_type=obj.API_OBJECT_NAME,
                            object_public_id=obj.public_id,
