@@ -89,7 +89,7 @@ class SyncbackHandler(object):
             self._log_to_statsd(actionlog.status, latency)
 
     def mark_failure(self, actionlog_id):
-        log_uncaught_errors(log, account_id=self.account_id,
+        log_uncaught_errors(log, component='syncback', account_id=self.account_id,
                             action_id=actionlog_id, provider=self.provider)
 
         with session_scope(self.account_id) as db_session:

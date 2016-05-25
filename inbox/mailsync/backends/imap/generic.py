@@ -840,8 +840,11 @@ class FolderSyncEngine(Greenlet):
         the iteration.
 
         """
+        start = datetime.utcnow()
         # Wait for the sync signal
         self.sync_signal.wait()
+        log.info('Folder sync pause interval (seconds)',
+                 time=(datetime.utcnow() - start).total_seconds())
         yield
         # Signal syncback
         self.sync_signal.clear()
