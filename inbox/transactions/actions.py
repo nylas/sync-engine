@@ -83,10 +83,9 @@ class SyncbackService(gevent.Greenlet):
     def _process_log(self):
         for key in self.keys:
             with session_scope_by_shard_id(key) as db_session:
-                query = db_session.query(ActionLog). \
-                    filter(ActionLog.discriminator == 'actionlog',
-                           ActionLog.status == 'pending'). \
-                    order_by(ActionLog.id)
+                query = db_session.query(ActionLog).filter(
+                    ActionLog.discriminator == 'actionlog',
+                    ActionLog.status == 'pending').order_by(ActionLog.id)
 
                 running_action_ids = {worker.action_log_id for worker in
                                       self.workers}
@@ -94,6 +93,12 @@ class SyncbackService(gevent.Greenlet):
                     if log_entry.id in running_action_ids:
                         continue
                     namespace = log_entry.namespace
+                    if namespace.account.sync_state == 'invalid':
+                        self.log.warning('Skipping action for invalid account',
+                                         account_id=namespace.account.id,
+                                         action_id=log_entry.id,
+                                         action=log_entry.action)
+                        continue
                     self.log.info('delegating action',
                                   action_id=log_entry.id,
                                   msg=log_entry.action)

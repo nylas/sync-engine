@@ -16,8 +16,8 @@ from tests.util.base import add_generic_imap_account
 def purge_accounts_and_actions():
     for key in engine_manager.engines:
         with session_scope_by_shard_id(key) as db_session:
-            db_session.query(Account).delete(synchronize_session='fetch')
-            db_session.query(ActionLog).delete(synchronize_session='fetch')
+            db_session.query(ActionLog).delete(synchronize_session=False)
+            db_session.query(Account).delete(synchronize_session=False)
             db_session.commit()
 
 
@@ -81,13 +81,13 @@ def test_all_keys_are_assigned_exactly_once(patched_enginemanager):
 
 def test_actions_are_claimed(purge_accounts_and_actions, patched_worker):
     with session_scope_by_shard_id(0) as db_session:
-        account = add_generic_imap_account(db_session,
-                                    email_address='{}@test.com'.format(0))
+        account = add_generic_imap_account(
+            db_session, email_address='{}@test.com'.format(0))
         schedule_test_action(db_session, account)
 
     with session_scope_by_shard_id(1) as db_session:
-        account = add_generic_imap_account(db_session,
-                                    email_address='{}@test.com'.format(1))
+        account = add_generic_imap_account(
+            db_session, email_address='{}@test.com'.format(1))
         schedule_test_action(db_session, account)
 
     service = SyncbackService(cpu_id=1, total_cpus=2)
@@ -129,3 +129,43 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
         assert len(service.workers) == 1
         assert list(service.workers)[0].action_log_id == actionlogs[i]
         gevent.joinall(list(service.workers))
+
+
+def test_actions_for_invalid_accounts_are_skipped(purge_accounts_and_actions,
+                                                  patched_worker):
+    with session_scope_by_shard_id(0) as db_session:
+        account = add_generic_imap_account(
+            db_session, email_address='person@test.com')
+        schedule_test_action(db_session, account)
+        namespace_id = account.namespace.id
+        count = db_session.query(ActionLog).filter(
+            ActionLog.namespace_id == namespace_id).count()
+        assert account.sync_state != 'invalid'
+
+        another_account = add_generic_imap_account(
+            db_session, email_address='another@test.com')
+        schedule_test_action(db_session, another_account)
+        another_namespace_id = another_account.namespace.id
+        another_count = db_session.query(ActionLog).filter(
+            ActionLog.namespace_id == another_namespace_id).count()
+        assert another_account.sync_state != 'invalid'
+
+        account.mark_invalid()
+        db_session.commit()
+
+    service = SyncbackService(cpu_id=0, total_cpus=2)
+    service._process_log()
+
+    while len(service.workers) >= 1:
+        gevent.sleep(0.1)
+
+    with session_scope_by_shard_id(0) as db_session:
+        q = db_session.query(ActionLog).filter(
+            ActionLog.namespace_id == namespace_id,
+            ActionLog.status == 'pending')
+        assert q.count() == count
+
+        q = db_session.query(ActionLog).filter(
+            ActionLog.namespace_id == another_namespace_id)
+        assert q.filter(ActionLog.status == 'pending').count() == 0
+        assert q.filter(ActionLog.status == 'successful').count() == another_count
