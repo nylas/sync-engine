@@ -40,6 +40,9 @@ def main(account_id, account_public_id, start_message_id, end_message_id):
         last_message_id = None
         try:
             for messages in batched(safer_yield_per(messages, Message.id, start_message_id, 1000), 500):
+                # TODO filter out messages > end-message-id to avoid uniqueness
+                # violation error (and possible rollback?)
+
                 # XXX this is very CPU bound
                 api_store.bulk_update(messages)
                 db_session.commit()
