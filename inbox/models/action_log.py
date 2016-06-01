@@ -6,8 +6,13 @@ from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 
+from nylas.logging import get_logger
+log = get_logger()
+
 
 def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
+    from inbox.api.api_store import ApiStore
+
     # Ensure that the record's id is non-null
     db_session.flush()
 
@@ -19,6 +24,9 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
         namespace_id=namespace_id,
         extra_args=kwargs)
     db_session.add(log_entry)
+
+    api_store = ApiStore(db_session, log)
+    api_store.patch(record)
 
 
 class ActionLog(MailSyncBase):

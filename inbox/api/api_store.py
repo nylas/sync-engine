@@ -12,16 +12,29 @@ class ApiStore(object):
         self.session = session
         self.log = logger
 
+    def get_with_patch(self, namespace_id, table, public_id):
+        if hasattr(table, 'PATCH_TABLE'):
+            patch = self.get(namespace_id, table.PATCH_TABLE, public_id)
+            if patch:
+                return patch
+
+        record = self.get(namespace_id, table, public_id)
+        if not record:
+            raise KeyError('table %s not populated for public_id %s'
+                    % (table.__tablename__, public_id))
+
+        return record
+
     def get(self, namespace_id, table, public_id):
         record = self.session.query(table).filter(
                 table.namespace_id == namespace_id,
                 table.public_id == public_id).one_or_none()
-        if not record:
-            raise KeyError('API store not populated for %s' % public_id)
 
         return record
 
     def all(self, namespace_id, table, limit, offset=0, in_=None, subject=None, thread_public_id=None):
+        # TODO respect patches
+
         query = self.session.query(table)\
                 .filter(table.namespace_id == namespace_id)
         if in_ is not None:
@@ -96,10 +109,40 @@ class ApiStore(object):
 
         api_obj = self.session.merge(api_obj)
 
+    def patch(self, obj):
+        table = _patch_table_for(obj)
+        if not table:
+            self.log.warn('ApiStore: skipping patch for %s' % type(obj))
+            return
+
+        patch = table.from_obj(obj)
+
+        # TODO think about concurrent patches
+        self.session.add(patch)
+
+        self.log.info('Patched ApiStore: %s %d (public_id %s)'
+            % (obj.API_OBJECT_NAME, obj.id, obj.public_id))
+
+    def unpatch(self, namespace_id, table_name, record_id, status):
+        table = transaction_objects()[table_name]
+        patch_table = _patch_table_for(table)
+        if not patch_table:
+            self.log.warn('ApiStore: skipping unpatch for %s' % table)
+            return
+
+        # TODO think about multiple patches
+        self.session.query(patch_table).filter(patch_table.id == record_id, patch_table.namespace_id == namespace_id).delete(synchronize_session=False)
+
+        self.log.info('Unpatched ApiStore: %s %d' % (table_name, record_id))
+
     def _clear_from_transaction(self, txn):
         table = ApiMessage # TODO thread?
 
         self.session.query(table).filter(table.id == txn.record_id, table.namespace_id == txn.namespace_id).delete(synchronize_session=False)
+
+def _patch_table_for(table_or_obj):
+    if hasattr(table_or_obj, 'API_STORE_TABLE') and hasattr(table_or_obj.API_STORE_TABLE, 'PATCH_TABLE'):
+        return table_or_obj.API_STORE_TABLE.PATCH_TABLE
 
 
 def _new_transactions(session):

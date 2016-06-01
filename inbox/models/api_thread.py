@@ -8,6 +8,47 @@ from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.sqlalchemy_ext.util import Base36UID
 
+class ApiPatchThread(MailSyncBase):
+    id = Column(BigInteger, primary_key=True, autoincrement=False)
+    public_id = Column(Base36UID, nullable=False)
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'), nullable=False)
+    value = Column(LONGBLOB(), nullable=False)
+    expanded_value = Column(LONGBLOB(), nullable=False)
+
+    def __repr__(self):
+        return '<ApiPatchThread(id=%d, public_id=%s)>' % (self.id, self.public_id)
+
+    @classmethod
+    def from_obj(cls, obj):
+        return cls(**cls.params_from_obj(obj))
+
+    @classmethod
+    def params_from_obj(cls, obj):
+        from inbox.models.thread import Thread
+        from inbox.api.kellogs import encode
+
+        if isinstance(obj, Thread):
+            id = obj.id
+            public_id = obj.public_id
+            json = _dumps(encode(obj))
+            expanded_json = _dumps(encode(obj, expand=True))
+
+            return dict(id=id, public_id=public_id, namespace_id=obj.namespace.id,
+                    value=json,
+                    expanded_value=expanded_json
+            )
+        else:
+            raise TypeError("%s.from_obj can't handle %s" % (cls, type(obj)))
+
+    def as_json(self, view=None):
+        if view == 'expanded':
+            return self.expanded_value
+        elif view is None:
+            return self.value
+        else:
+            raise ValueError('Invalid view parameter: %s' % view)
+
+
 class ApiThread(MailSyncBase):
     id = Column(BigInteger, primary_key=True, autoincrement=False)
     public_id = Column(Base36UID, nullable=False)
@@ -21,6 +62,8 @@ class ApiThread(MailSyncBase):
 
     def __repr__(self):
         return '<ApiThread(id=%d, public_id=%s)>' % (self.id, self.public_id)
+
+    PATCH_TABLE = ApiPatchThread
 
     @classmethod
     def from_obj(cls, obj):

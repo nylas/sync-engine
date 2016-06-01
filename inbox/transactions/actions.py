@@ -18,6 +18,7 @@ from nylas.logging.sentry import log_uncaught_errors
 logger = get_logger()
 from inbox.ignition import engine_manager
 from inbox.util.concurrency import retry_with_logging
+from inbox.api.api_store import ApiStore
 from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import ActionLog
 from inbox.util.stats import statsd_client
@@ -183,7 +184,11 @@ class SyncbackWorker(gevent.Greenlet):
                         action_log_entry = db_session.query(ActionLog).get(
                             self.action_log_id)
                         action_log_entry.status = 'successful'
+
+                        _unpatch(db_session, log, action_log_entry)
+
                         db_session.commit()
+
                         latency = round((datetime.utcnow() -
                                          action_log_entry.created_at).
                                         total_seconds(), 2)
@@ -206,7 +211,18 @@ class SyncbackWorker(gevent.Greenlet):
                                          exc_info=True)
                             action_log_entry.status = 'failed'
                             self._log_to_statsd(action_log_entry.status)
+
+                            _unpatch(db_session, log, action_log_entry)
+
                         db_session.commit()
 
                 # Wait before retrying
                 gevent.sleep(self.retry_interval)
+
+def _unpatch(db_session, log, action_log_entry):
+    api_store = ApiStore(db_session, log)
+    api_store.unpatch(
+            action_log_entry.namespace.id,
+            action_log_entry.table_name,
+            action_log_entry.record_id,
+            action_log_entry.status)

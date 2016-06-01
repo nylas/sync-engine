@@ -1,4 +1,5 @@
 import base64
+import copy
 import os
 import uuid
 import gevent
@@ -458,7 +459,8 @@ def message2_read_api(public_id):
     try:
         valid_public_id(public_id)
 
-        message = g.api_store.get(g.namespace.id, ApiMessage, public_id)
+        message = g.api_store.get_with_patch(g.namespace.id, ApiMessage, public_id)
+        # TODO data_sha256 will break
 
         if request.headers.get('Accept', None) == 'message/rfc822':
             raw_message = get_from_blockstore(message.data_sha256)
@@ -508,7 +510,7 @@ def thread2_api(public_id):
 
     try:
         valid_public_id(public_id)
-        thread = g.api_store.get(g.namespace.id, ApiThread, public_id)
+        thread = g.api_store.get_with_patch(g.namespace.id, ApiThread, public_id)
 
         json = thread.as_json(view=args['view'])
 
@@ -549,8 +551,12 @@ def message_update_api(public_id):
     data = request.get_json(force=True)
     if not isinstance(data, dict):
         raise InputError('Invalid request body')
-    update_message(message, data, g.db_session)
-    return g.encoder.jsonify(message)
+
+    # Take a copy of the message so our updates don't get saved to the sync DB
+    # TODO is this a safe way of copying the message?
+    updated_message = copy.copy(message)
+    update_message(updated_message, data, g.db_session)
+    return g.encoder.jsonify(updated_message)
 
 
 # Folders / Labels
