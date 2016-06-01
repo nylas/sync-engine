@@ -33,10 +33,13 @@ def upgrade():
         sa.Column('categories', sa.Text(), nullable=False),
         sa.Column('subject', sa.String(255), nullable=True),
 
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
 
         #sa.ForeignKeyConstraint(['namespace_id'], [u'namespace.id'],
             #ondelete='CASCADE') # doesn't work for some reason
+
+        mysql_row_format='COMPRESSED',
+        mysql_key_block_size='8'
     )
 
     op.create_table('apimessage',
@@ -56,10 +59,13 @@ def upgrade():
         sa.Column('subject', sa.String(255), nullable=True),
         sa.Column('thread_public_id', sa.BINARY(length=16), nullable=False),
 
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
 
         #sa.ForeignKeyConstraint(['namespace_id'], [u'namespace.id'],
             #ondelete='CASCADE') # doesn't work for some reason
+
+        mysql_row_format='COMPRESSED',
+        mysql_key_block_size='8'
     )
 
     op.create_index('ix_apimessage_public_id',
