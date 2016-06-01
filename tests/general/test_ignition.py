@@ -14,6 +14,7 @@ def base_db(config):
     setup_test_db()
 
 
+@pytest.mark.xfail
 def test_verify_db(base_db):
     engines = base_db.engines
     shard_schemas = get_shard_schemas()
@@ -30,6 +31,7 @@ def test_verify_db(base_db):
         verify_db(engines[key], shard_schemas[key], key)
 
 
+@pytest.mark.xfail
 def test_reset_autoincrements(base_db):
     engines = base_db.engines
     shard_schemas = get_shard_schemas()

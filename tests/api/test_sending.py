@@ -36,6 +36,16 @@ class MockGoogleTokenManager(object):
         raise OAuthError()
 
 
+@pytest.fixture(params=['/messages', '/messages2'])
+def messages_endpoint(request):
+    return request.param
+
+
+@pytest.fixture(params=['/threads', '/threads2'])
+def threads_endpoint(request):
+    return request.param
+
+
 @pytest.fixture
 def patch_token_manager(monkeypatch):
     monkeypatch.setattr('inbox.sendmail.smtp.postel.default_token_manager',
@@ -204,7 +214,7 @@ def example_event(db, api_client):
     return event_public_id
 
 
-def test_send_existing_draft(patch_smtp, api_client, example_draft):
+def test_send_existing_draft(patch_smtp, api_client, messages_endpoint, example_draft):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']
@@ -223,7 +233,7 @@ def test_send_existing_draft(patch_smtp, api_client, example_draft):
     drafts = api_client.get_data('/drafts')
     assert not drafts
 
-    message = api_client.get_data('/messages/{}'.format(draft_public_id))
+    message = api_client.get_data(messages_endpoint + '/{}'.format(draft_public_id))
     assert message['object'] == 'message'
 
 
@@ -379,11 +389,11 @@ def test_bcc_in_recipients_but_stripped_from_headers(patch_smtp, api_client):
     assert parsed.headers.get('Cc') == 'jane@foocorp.com'
 
 
-def test_reply_headers_set(db, patch_smtp, api_client, example_draft, thread,
+def test_reply_headers_set(db, patch_smtp, api_client, threads_endpoint, example_draft, thread,
                            message):
     message.message_id_header = '<exampleheader@example.com>'
     db.session.commit()
-    thread_id = api_client.get_data('/threads')[0]['id']
+    thread_id = api_client.get_data(threads_endpoint)[0]['id']
 
     api_client.post_data('/send', {'to': [{'email': 'bob@foocorp.com'}],
                                    'thread_id': thread_id})

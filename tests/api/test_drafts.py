@@ -14,6 +14,16 @@ from tests.api.base import api_client
 __all__ = ['api_client']
 
 
+@pytest.fixture(params=['/messages', '/messages2'])
+def messages_endpoint(request):
+    return request.param
+
+
+@pytest.fixture(params=['/threads', '/threads2'])
+def threads_endpoint(request):
+    return request.param
+
+
 @pytest.fixture
 def example_draft(db, default_account):
     return {
@@ -107,8 +117,8 @@ def test_create_and_get_draft(api_client, example_draft):
     assert all(saved_draft[k] == v for k, v in example_draft.iteritems())
 
 
-def test_create_draft_replying_to_thread(api_client, thread, message):
-    thread = api_client.get_data('/threads')[0]
+def test_create_draft_replying_to_thread(api_client, threads_endpoint, thread, message):
+    thread = api_client.get_data(threads_endpoint)[0]
     thread_id = thread['id']
     latest_message_id = thread['message_ids'][-1]
 
@@ -126,12 +136,12 @@ def test_create_draft_replying_to_thread(api_client, thread, message):
     assert thread_id == drafts[0]['thread_id']
     assert drafts[0]['reply_to_message_id'] == latest_message_id
 
-    thread_data = api_client.get_data('/threads/{}'.format(thread_id))
+    thread_data = api_client.get_data(threads_endpoint + '/{}'.format(thread_id))
     assert draft_id in thread_data['draft_ids']
 
 
-def test_create_draft_replying_to_message(api_client, message):
-    message = api_client.get_data('/messages')[0]
+def test_create_draft_replying_to_message(api_client, messages_endpoint, message):
+    message = api_client.get_data(messages_endpoint)[0]
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',
@@ -144,13 +154,13 @@ def test_create_draft_replying_to_message(api_client, message):
 
 
 def test_reject_incompatible_reply_thread_and_message(
-        db, api_client, message, thread, default_namespace):
+        db, api_client, messages_endpoint, message, thread, default_namespace):
     alt_thread = add_fake_thread(db.session, default_namespace.id)
     add_fake_message(db.session, default_namespace.id, alt_thread)
 
-    thread = api_client.get_data('/threads')[0]
-    alt_message_id = api_client.get_data('/threads')[1]['message_ids'][0]
-    alt_message = api_client.get_data('/messages/{}'.format(alt_message_id))
+    thread = api_client.get_data(threads_endpoint)[0]
+    alt_message_id = api_client.get_data(threads_endpoint)[1]['message_ids'][0]
+    alt_message = api_client.get_data(messages_endpoint + '/{}'.format(alt_message_id))
     assert thread['id'] != alt_message['thread_id']
     reply_draft = {
         'subject': 'test reply',
@@ -260,7 +270,7 @@ def test_get_all_drafts(api_client, example_draft):
     assert all(item['object'] == 'draft' for item in drafts)
 
 
-def test_update_draft(api_client):
+def test_update_draft(api_client, threads_endpoint):
     original_draft = {
         'subject': 'original draft',
         'body': 'parent draft'
@@ -292,13 +302,13 @@ def test_update_draft(api_client):
     assert drafts[0]['id'] == updated_public_id
 
     # Check that the thread is updated too.
-    thread = api_client.get_data('/threads/{}'.format(drafts[0]['thread_id']))
+    thread = api_client.get_data(threads_endpoint + '/{}'.format(drafts[0]['thread_id']))
     assert thread['subject'] == 'updated draft'
     assert thread['first_message_timestamp'] == drafts[0]['date']
     assert thread['last_message_timestamp'] == drafts[0]['date']
 
 
-def test_delete_draft(api_client, thread, message):
+def test_delete_draft(api_client, threads_endpoint, thread, message):
     original_draft = {
         'subject': 'parent draft',
         'body': 'parent draft'
@@ -325,13 +335,13 @@ def test_delete_draft(api_client, thread, message):
     assert not drafts
 
     # Check that no orphaned threads are around
-    threads = api_client.get_data('/threads?subject=parent%20draft')
+    threads = api_client.get_data(threads_endpoint + '?subject=parent%20draft')
     assert not threads
-    threads = api_client.get_data('/threads?subject=updated%20draft')
+    threads = api_client.get_data(threads_endpoint + '?subject=updated%20draft')
     assert not threads
 
     # And check that threads aren't deleted if they still have messages.
-    thread_public_id = api_client.get_data('/threads')[0]['id']
+    thread_public_id = api_client.get_data(threads_endpoint)[0]['id']
 
     reply_draft = {
         'subject': 'test reply',
@@ -341,11 +351,11 @@ def test_delete_draft(api_client, thread, message):
     r = api_client.post_data('/drafts', reply_draft)
     public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']
-    thread = api_client.get_data('/threads/{}'.format(thread_public_id))
+    thread = api_client.get_data(threads_endpoint + '/{}'.format(thread_public_id))
     assert len(thread['draft_ids']) > 0
     api_client.delete('/drafts/{}'.format(public_id),
                       {'version': version})
-    thread = api_client.get_data('/threads/{}'.format(thread_public_id))
+    thread = api_client.get_data(threads_endpoint + '/{}'.format(thread_public_id))
     assert thread
     assert len(thread['draft_ids']) == 0
 
@@ -418,7 +428,7 @@ def test_update_to_nonexistent_draft(api_client):
     assert len(drafts) == 0
 
 
-def test_contacts_updated(api_client):
+def test_contacts_updated(api_client, threads_endpoint):
     """Tests that draft-contact associations are properly created and
     updated."""
     draft = {
@@ -430,7 +440,7 @@ def test_contacts_updated(api_client):
     draft_id = json.loads(r.data)['id']
     draft_version = json.loads(r.data)['version']
 
-    r = api_client.get_data('/threads?to=alice@example.com')
+    r = api_client.get_data(threads_endpoint + '?to=alice@example.com')
     assert len(r) == 1
 
     updated_draft = {
@@ -441,20 +451,20 @@ def test_contacts_updated(api_client):
     r = api_client.put_data('/drafts/{}'.format(draft_id), updated_draft)
     assert r.status_code == 200
 
-    r = api_client.get_data('/threads?to=alice@example.com')
+    r = api_client.get_data(threads_endpoint + '?to=alice@example.com')
     assert len(r) == 1
 
-    r = api_client.get_data('/threads?to=bob@example.com')
+    r = api_client.get_data(threads_endpoint + '?to=bob@example.com')
     assert len(r) == 0
 
-    r = api_client.get_data('/threads?to=joe@example.com')
+    r = api_client.get_data(threads_endpoint + '?to=joe@example.com')
     assert len(r) == 1
 
     # Check that contacts aren't created for garbage recipients.
     r = api_client.post_data('/drafts',
                              {'to': [{'name': 'who', 'email': 'nope'}]})
     assert r.status_code == 200
-    r = api_client.get_data('/threads?to=nope')
+    r = api_client.get_data(threads_endpoint + '?to=nope')
     assert len(r) == 0
     r = api_client.get_data('/contacts?filter=nope')
     assert len(r) == 0
