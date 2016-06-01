@@ -54,12 +54,15 @@ def is_dirty(session, obj):
 
 
 def create_revisions(session):
+    revisions = []
+
     for obj in session:
+        revision = None
         if (not isinstance(obj, HasRevisions) or
                 obj.should_suppress_transaction_creation):
             continue
         if obj in session.new:
-            create_revision(obj, session, 'insert')
+            revision = create_revision(obj, session, 'insert')
         elif is_dirty(session, obj):
             # Need to unmark the object as 'dirty' to prevent an infinite loop
             # (the pre-flush hook may be called again before a commit
@@ -67,9 +70,13 @@ def create_revisions(session):
             # in that they are no longer present in the set during the next
             # invocation of the pre-flush hook.
             obj.dirty = False
-            create_revision(obj, session, 'update')
+            revision = create_revision(obj, session, 'update')
         elif obj in session.deleted:
-            create_revision(obj, session, 'delete')
+            revision = create_revision(obj, session, 'delete')
+        if revision is not None:
+            revisions.append(revision)
+
+    return revisions
 
 
 def create_revision(obj, session, revision_type):
@@ -87,11 +94,13 @@ def create_revision(obj, session, revision_type):
     # this is an optimization needed so these sparse events can be still be
     # retrieved efficiently for webhooks etc.
     if obj.API_OBJECT_NAME == 'account':
-        revision = AccountTransaction(command=revision_type, record_id=obj.id,
+        account_revision = AccountTransaction(command=revision_type, record_id=obj.id,
                                       object_type=obj.API_OBJECT_NAME,
                                       object_public_id=obj.public_id,
                                       namespace_id=obj.namespace.id)
-        session.add(revision)
+        session.add(account_revision)
+
+    return revision
 
 
 def propagate_changes(session):

@@ -4,6 +4,7 @@ import uuid
 import gevent
 import time
 from datetime import datetime
+import json
 
 from flask import (request, g, Blueprint, make_response, Response,
                    stream_with_context)
@@ -14,7 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from nylas.logging import get_logger
 log = get_logger()
-from inbox.models import (Message, Block, Part, Thread, Namespace,
+from inbox.models import (ApiThread, ApiMessage, Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache, Category, MessageCategory)
 from inbox.models.event import RecurringEvent, RecurringEventOverride
@@ -50,6 +51,8 @@ from inbox.api.err import err, APIException, NotFoundError, InputError
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.util.blockstore import get_from_blockstore
+
+from inbox.api.api_store import ApiStore
 
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
@@ -98,6 +101,8 @@ def start():
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
     g.parser.add_argument('offset', default=0, type=offset, location='args')
+
+    g.api_store = ApiStore(g.db_session, g.log)
 
 
 @app.before_request
@@ -432,6 +437,104 @@ def message_read_api(public_id):
                 .format(public_id))
 
     return encoder.jsonify(message)
+
+
+EPOCH = datetime.utcfromtimestamp(0)
+
+def _dumps(obj):
+    def serialize_with_epoch_time(obj):
+        if isinstance(obj, datetime):
+            epoch_seconds = (obj - EPOCH).total_seconds()
+            return epoch_seconds
+        raise TypeError('Type not serializable')
+    return json.dumps(obj, default=serialize_with_epoch_time)
+
+
+@app.route('/messages2/<public_id>', methods=['GET'])
+def message2_read_api(public_id):
+    g.parser.add_argument('view', type=view, location='args')
+    args = strict_parse_args(g.parser, request.args)
+
+    try:
+        valid_public_id(public_id)
+
+        message = g.api_store.get(g.namespace.id, ApiMessage, public_id)
+
+        if request.headers.get('Accept', None) == 'message/rfc822':
+            raw_message = get_from_blockstore(message.data_sha256)
+            if raw_message is not None:
+                return Response(raw_message, mimetype='message/rfc822')
+            else:
+                g.log.error('Missing raw MIME message', id=message.id)
+                raise NotFoundError(
+                    "Couldn't find raw contents for message `{0}`"
+                    .format(public_id))
+
+        json = message.as_json(view=args['view'])
+
+        return Response(json, mimetype='application/json')
+    except KeyError:
+        raise NotFoundError("Couldn't find message {0} ".format(public_id))
+
+
+def _jsons_to_list(jsons):
+    return '[' + ','.join(jsons) + ']'
+
+
+@app.route('/messages2/', methods=['GET'])
+def message2_query_api():
+    g.parser.add_argument('view', type=view, location='args')
+    g.parser.add_argument('in', type=bounded_str, location='args')
+    g.parser.add_argument('subject', type=bounded_str, location='args')
+    g.parser.add_argument('thread_id', type=valid_public_id, location='args')
+
+    args = strict_parse_args(g.parser, request.args)
+
+    messages = g.api_store.all(g.namespace.id, ApiMessage,
+            limit=args['limit'],
+            offset=args['offset'],
+            in_=args['in'],
+            subject=args['subject'],
+            thread_public_id=args['thread_id'])
+
+    json = _jsons_to_list(m.as_json(view=args['view']) for m in messages)
+    return Response(json, mimetype='application/json')
+
+
+@app.route('/threads2/<public_id>')
+def thread2_api(public_id):
+    g.parser.add_argument('view', type=view, location='args')
+    args = strict_parse_args(g.parser, request.args)
+
+    try:
+        valid_public_id(public_id)
+        thread = g.api_store.get(g.namespace.id, ApiThread, public_id)
+
+        json = thread.as_json(view=args['view'])
+
+        return Response(json, mimetype='application/json')
+    except KeyError:
+        raise NotFoundError("Couldn't find thread `{0}`".format(public_id))
+
+
+@app.route('/threads2/', methods=['GET'])
+def thread2_query_api():
+    g.parser.add_argument('view', type=view, location='args')
+    g.parser.add_argument('in', type=bounded_str, location='args')
+    g.parser.add_argument('subject', type=bounded_str, location='args')
+    g.parser.add_argument('thread_id', type=valid_public_id, location='args')
+
+    args = strict_parse_args(g.parser, request.args)
+
+    threads = g.api_store.all(g.namespace.id, ApiThread,
+            limit=args['limit'],
+            offset=args['offset'],
+            in_=args['in'],
+            subject=args['subject'],
+            thread_public_id=args['thread_id'])
+
+    json = _jsons_to_list(t.as_json(view=args['view']) for t in threads)
+    return Response(json, mimetype='application/json')
 
 
 @app.route('/messages/<public_id>', methods=['PUT', 'PATCH'])

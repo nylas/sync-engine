@@ -4,6 +4,8 @@ inbox/models/__init__.py for the explanation of why this is necessary."""
 
 def load_models():
     from inbox.models.account import Account
+    from inbox.models.api_message import ApiMessage
+    from inbox.models.api_thread import ApiThread
     from inbox.models.base import MailSyncBase
     from inbox.models.action_log import ActionLog
     from inbox.models.block import Block, Part
@@ -23,7 +25,7 @@ def load_models():
     from inbox.models.label import Label
     from inbox.models.category import Category
     from inbox.models.metadata import Metadata
-    exports = [Account, MailSyncBase, ActionLog, Block, Part,
+    exports = [Account, ApiMessage, ApiThread, MailSyncBase, ActionLog, Block, Part,
                MessageContactAssociation, Contact, PhoneNumber, Calendar,
                DataProcessingCache, Event, Folder,
                Message, Namespace, ContactSearchIndexCursor, Secret,

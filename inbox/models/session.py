@@ -84,6 +84,7 @@ def new_session(engine, versioned=True):
 def configure_versioning(session):
     from inbox.models.transaction import (create_revisions, propagate_changes,
                                           increment_versions)
+    from inbox.api.api_store import ApiStore, write_to_api_store
 
     @event.listens_for(session, 'before_flush')
     def before_flush(session, flush_context, instances):
@@ -97,7 +98,15 @@ def configure_versioning(session):
         grab object IDs on new objects.
 
         """
-        create_revisions(session)
+        transactions = create_revisions(session)
+
+        # TODO this needs to be a ShardedSession or something
+        api_store_session = Session(bind=session.connection())
+
+        try:
+            write_to_api_store(ApiStore(api_store_session, log), transactions=transactions, session=session)
+        finally:
+            api_store_session.commit()
 
     return session
 

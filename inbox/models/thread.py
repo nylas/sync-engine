@@ -7,6 +7,7 @@ from sqlalchemy.orm import (relationship, backref, validates, object_session,
 
 from nylas.logging import get_logger
 log = get_logger()
+from inbox.models.api_thread import ApiThread
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -26,6 +27,8 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     """
     API_OBJECT_NAME = 'thread'
+
+    API_STORE_TABLE = ApiThread
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False, index=True)

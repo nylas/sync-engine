@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+# Script to bootstrap the API store for one account from the sync DB.
+# TODO this only bootstraps messages, need to handle other objects too.
+
+import click
+from click import UsageError
+
+from inbox.api.api_store import ApiStore
+from inbox.models import (Account, Message, Namespace, Thread, Event,
+                          Calendar, Transaction, Part, Block)
+from inbox.models.session import global_session_scope, session_scope
+from inbox.sqlalchemy_ext.util import (safer_yield_per)
+from nylas.logging import get_logger
+
+@click.command()
+@click.option('--account-id', '-i', type=int, default=None)
+@click.option('--account-public-id', '-p', type=str, default=None)
+@click.option('--start-message-id', '-m', type=int, default=0)
+@click.option('--end-message-id', '-m', type=int, default=None)
+def main(account_id, account_public_id, start_message_id, end_message_id):
+    if account_public_id is not None:
+        raise UsageError('Sorry, --account-public-id is not implemented yet.')
+    if account_id is None:
+        raise UsageError('Please specify --account-id to bootstrap.')
+
+    namespace = None
+    with global_session_scope() as db_session:
+        namespace = db_session.query(Namespace).filter(Namespace.account_id == account_id).one()
+
+    with session_scope(namespace.id) as db_session:
+        log = get_logger()
+
+        api_store = ApiStore(db_session, log)
+
+        messages = db_session.query(Message)\
+                .filter(Message.namespace_id == namespace.id, Message.is_draft == False)
+
+        count = 0
+        last_message_id = None
+        try:
+            for messages in batched(safer_yield_per(messages, Message.id, start_message_id, 1000), 500):
+                # XXX this is very CPU bound
+                api_store.bulk_update(messages)
+                db_session.commit()
+                if len(messages) > 0: last_message_id = messages[-1].id
+                count = count + len(messages)
+                if end_message_id is not None and last_message_id >= end_message_id:
+                    print 'Reached --end-message-id'
+                    break
+                print 'Processed message id %d' % last_message_id
+        finally:
+            if last_message_id is None:
+                print 'No messages processed!'
+            else:
+                print 'Processed %d messages!' % count
+                print 'Last processed message id: %d (pass to --start-message-id)' % last_message_id
+
+def batched(iterable, batch_size):
+    batch = []
+
+    for item in iterable:
+        batch.append(item)
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+
+    if len(batch) > 0: yield batch
+
+if __name__ == '__main__':
+    main()

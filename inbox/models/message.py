@@ -22,6 +22,7 @@ from inbox.util.misc import parse_references, get_internaldate
 from inbox.util.blockstore import save_to_blockstore
 from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.models.mixins import HasPublicID, HasRevisions
+from inbox.models.api_message import ApiMessage
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.category import Category
@@ -41,6 +42,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def API_OBJECT_NAME(self):
         return 'message' if not self.is_draft else 'draft'
+
+    API_STORE_TABLE = ApiMessage
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           index=True, nullable=False)
