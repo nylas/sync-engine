@@ -23,6 +23,11 @@ def _message_missing_s3_object(account_id, folder_id, uid):
         if not existing_imapuid:
             return False
 
+        if existing_imapuid.message is None:
+            log.warning('Found an uid without a message!', uid=uid,
+                        db_id=existing_imapuid.id)
+            return False
+
         shas = [part.block.data_sha256 for part in existing_imapuid.message.parts]
         db_session.expunge_all()
 
