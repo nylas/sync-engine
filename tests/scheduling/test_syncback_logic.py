@@ -131,7 +131,7 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
         gevent.joinall(list(service.workers))
 
 
-@pytest.mark.skip(reason='Test if causing Jenkins build to fail')
+@pytest.mark.skipif(True, reason='Test if causing Jenkins build to fail')
 def test_actions_for_invalid_accounts_are_skipped(purge_accounts_and_actions,
                                                   patched_worker):
     with session_scope_by_shard_id(0) as db_session:
