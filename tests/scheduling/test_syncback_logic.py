@@ -158,6 +158,7 @@ def test_actions_for_invalid_accounts_are_skipped(purge_accounts_and_actions,
 
     while len(service.workers) >= 1:
         gevent.sleep(0.1)
+    gevent.killall(service.workers)
 
     with session_scope_by_shard_id(0) as db_session:
         q = db_session.query(ActionLog).filter(
