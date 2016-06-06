@@ -14,6 +14,7 @@ http://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
 
 """
 import pkg_resources
+from datetime import datetime
 
 from flanker import mime
 from flanker.addresslib import address
@@ -150,6 +151,17 @@ def create_email(from_name,
         msg.headers['In-Reply-To'] = in_reply_to
     if references:
         msg.headers['References'] = '\t'.join(references)
+
+    # Most ISPs set date automatically, but we need to set it here for those
+    # which do not. The Date header is required and omitting it causes issues
+    # with scoring in many spam systems like SpamAssassin
+    # Set dates in UTC since we don't know the timezone of the sending user
+    # +0000 means UTC, whereas -0000 means unsure of timezone
+    utc_datetime = datetime.utcnow()
+    day = utc_datetime.strftime('%a')
+    date = utc_datetime.strftime('%d %b %Y %X')
+    date_header = '{day}, {date} +0000\r\n'.format(day=day, date=date)
+    msg.headers['Date'] = date_header
 
     rfcmsg = _rfc_transform(msg)
 
