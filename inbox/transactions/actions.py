@@ -106,7 +106,8 @@ class SyncbackService(gevent.Greenlet):
                     ### BEGIN SHIM ###
                     # Shim until sync-syncback integration fully deployed.
                     sync_host = namespace.account.sync_host
-                    if sync_host in SKIP_SYNCBACK_FOR_HOSTS:
+                    if (sync_host and sync_host.split(':')[0] in
+                            SKIP_SYNCBACK_FOR_HOSTS):
                         self.log.info('SyncbackService not delegating for',
                                       account_id=namespace.account.id,
                                       sync_host=sync_host,
