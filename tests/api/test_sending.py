@@ -8,6 +8,7 @@ from inbox.basicauth import OAuthError
 from inbox.models import Message, Event
 from tests.util.base import thread, message, imported_event
 from tests.api.base import api_client
+from inbox.sendmail.smtp.postel import _substitute_bcc
 
 
 __all__ = ['thread', 'message', 'api_client', 'imported_event']
@@ -859,3 +860,37 @@ def test_multisend_message_rejected_for_security(insecure_content, api_client,
     assert r.status_code == 402
     assert json.loads(r.data)['message'] == 'Message content rejected ' \
                                             'for security reasons'
+
+
+def test_raw_bcc_replacements(patch_smtp, api_client):
+    # Check that we're replacing "Bcc:" correctly from messages.
+    res = _substitute_bcc('From: bob@foocorp.com\r\n'
+                          'To: \r\n'
+                          'Bcc: karim@nylas.com\r\n'
+                          'Subject: '
+                          '[go-nuts] Runtime Panic On Method'
+                          'Call \r\n'
+                          'Mime-Version: 1.0\r\n'
+                          'Content-Type: '
+                          'text/plain; charset=UTF-8\r\n'
+                          'Content-Transfer-Encoding: 7bit\r\n'
+                          'X-My-Custom-Header: Random'
+                          '\r\n\r\n')
+
+    assert 'karim@nylas.com' not in res
+
+    res = _substitute_bcc('From: bob@foocorp.com\r\n'
+                          'To: \r\n'
+                          'BCC: karim@nylas.com\r\n'
+                          'Subject: '
+                          '[go-nuts] Runtime BCC: On Method'
+                          'Call \r\n'
+                          'Mime-Version: 1.0\r\n'
+                          'Content-Type: '
+                          'text/plain; charset=UTF-8\r\n'
+                          'Content-Transfer-Encoding: 7bit\r\n'
+                          'X-My-Custom-Header: Random'
+                          '\r\n\r\n')
+
+    assert 'karim@nylas.com' not in res
+    assert 'Runtime BCC:' in res

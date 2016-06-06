@@ -119,6 +119,15 @@ def _transform_ssl_error(strerror):
         return strerror
 
 
+def _substitute_bcc(raw_message):
+    """
+    Substitute BCC in raw message.
+    """
+    bcc_regexp = re.compile(r'^Bcc: [^\r\n]*\r\n',
+                            re.IGNORECASE | re.MULTILINE)
+    return bcc_regexp.sub('', raw_message)
+
+
 class SMTPConnection(object):
 
     def __init__(self, account_id, email_address, smtp_username,
@@ -477,7 +486,7 @@ class SMTPClient(object):
             msg.bcc_addr, msg.cc_addr, msg.to_addr)]
 
         raw_message = get_from_blockstore(msg.data_sha256)
-        mime_body = re.sub(r'Bcc: [^\r\n]*\r\n', '', raw_message)
+        mime_body = _substitute_bcc(raw_message)
         self._send(recipient_emails, mime_body)
 
         # Sent to all successfully
