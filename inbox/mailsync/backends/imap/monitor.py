@@ -161,8 +161,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                    folder_name,
                                                    self.email_address,
                                                    self.provider_name,
-                                                   self.syncmanager_lock)
-
+                                                   self.syncmanager_lock,
+                                                   None)
                     self.folder_monitors.start(s3_thread)
 
             while not thread.state == 'poll' and not thread.ready():
@@ -204,10 +204,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             log.info('Skipping syncback', reason='folder syncs running')
             return
 
-        syncback_interval = ((datetime.utcnow() - self.syncback_timestamp).seconds if # noqa
-            self.syncback_timestamp else None)
-
-        if syncback_interval < self.syncback_frequency:
+        if (self.syncback_timestamp and
+                (datetime.utcnow() - self.syncback_timestamp).seconds <
+                 self.syncback_frequency):
             log.info('Skipping syncback',
                      reason='last syncback < syncback_frequency seconds ago',
                      syncback_frequency=self.syncback_frequency)
@@ -220,8 +219,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                     self.namespace_id,
                                                     self.provider_name)
         try:
-            log.info('Performing syncback',
-                     syncback_interval_in_seconds=syncback_interval)
+            interval = ((datetime.utcnow() - self.syncback_timestamp).seconds
+                        if self.syncback_timestamp else None)
+            log.info('Performing syncback', syncback_interval_in_seconds=interval)
             self.syncback_handler.send_client_changes()
             self.syncback_timestamp = datetime.utcnow()
         except Exception:
