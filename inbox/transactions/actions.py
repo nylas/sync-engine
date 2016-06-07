@@ -215,7 +215,7 @@ class SyncbackWorker(gevent.Greenlet):
                                  latency=latency)
                         self._log_to_statsd(action_log_entry.status, latency)
                         return
-                except Exception as e:
+                except Exception:
                     log_uncaught_errors(log, account_id=self.account_id,
                                         provider=self.provider)
                     with session_scope(self.account_id) as db_session:
