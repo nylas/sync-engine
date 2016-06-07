@@ -206,7 +206,7 @@ def imap_folder_path(path, separator='.', prefix=''):
 
     res = None
 
-    if not folders:
+    if folders:
         res = separator.join(folders)
 
         if prefix and not res.startswith(prefix):
