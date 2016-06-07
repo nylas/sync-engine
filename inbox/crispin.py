@@ -349,20 +349,24 @@ class CrispinClient(object):
         return or_none(self.selected_folder_info, lambda i: i.get('UIDNEXT'))
 
     @property
-    def folder_delimiter(self):
-        folders = self._fetch_folder_list()
-        _, delimiter, __ = folders[0]
-        return delimiter
-
-    @property
     def folder_separator(self):
-        folder_prefix, folder_separator = self.conn.namespace()[0][0]
-        return folder_separator
+        # We use the list command because it works for most accounts.
+        folders_list = self.conn.list_folders()
+
+        if len(folders_list) == 0:
+            return '.'
+
+        return folders_list[0][1]
 
     @property
     def folder_prefix(self):
-        folder_prefix, folder_separator = self.conn.namespace()[0][0]
-        return folder_prefix
+        # Unfortunately, some servers don't support the NAMESPACE command.
+        # In this case, assume that there's no folder prefix.
+        if self.conn.has_capability('NAMESPACE'):
+            folder_prefix, folder_separator = self.conn.namespace()[0][0]
+            return folder_prefix
+        else:
+            return ''
 
     def sync_folders(self):
         """

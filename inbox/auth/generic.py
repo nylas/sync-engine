@@ -14,6 +14,7 @@ from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
 from inbox.util.url import matching_subdomains
+from inbox.crispin import CrispinClient
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
@@ -207,6 +208,8 @@ class GenericAuthHandler(AuthHandler):
         """
         # Verify IMAP login
         conn = self.connect_account(account)
+        crispin = CrispinClient(account.id, account.provider_info,
+                                account.email_address, conn)
 
         info = account.provider_info
         if "condstore" not in info:
@@ -214,11 +217,8 @@ class GenericAuthHandler(AuthHandler):
                 account.supports_condstore = True
         try:
             conn.list_folders()
-
-            if conn.has_capability('NAMESPACE'):
-                folder_prefix, folder_separator = conn.namespace()[0][0]
-                account.folder_separator = folder_separator
-                account.folder_prefix = folder_prefix
+            account.folder_separator = crispin.folder_separator
+            account.folder_prefix = crispin.folder_prefix
         except Exception as e:
             log.error("account_folder_list_failed",
                       email=account.email_address,

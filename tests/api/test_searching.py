@@ -11,14 +11,9 @@ from inbox.search.backends.gmail import GmailSearchClient
 from inbox.search.backends.imap import IMAPSearchClient
 from tests.util.base import (add_fake_message, add_fake_thread,
                              add_fake_imapuid, add_fake_folder)
-from tests.api.base import api_client, new_api_client
+from tests.api.base import api_client, imap_api_client
 
 __all__ = ['api_client']
-
-
-@fixture
-def imap_api_client(db, generic_account):
-    return new_api_client(db, generic_account.namespace)
 
 
 @fixture

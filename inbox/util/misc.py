@@ -198,34 +198,44 @@ def cleanup_subject(subject_str):
     return re.sub(cleanup_regexp, "", subject_str)
 
 
-# Generic IMAP doesn't support nested folders but there's a convention to
-# support those --- clients use "." to handle nested folders. For example,
-# most email clients use will represent "Inbox.FolderA.FolderB" as
-# "/FolderA/FolderB".
+# IMAP doesn't support nested folders and instead encodes paths inside folder
+# names.
 # imap_folder_path converts a "/" delimited path to an IMAP compatible path.
-def imap_folder_path(path, separator='.'):
+def imap_folder_path(path, separator='.', prefix=''):
     folders = [folder for folder in path.split('/') if folder != '']
 
-    if folders != []:
-        return "INBOX" + separator + separator.join(folders)
-    else:
-        return "INBOX"
+    res = None
+
+    if not folders:
+        res = separator.join(folders)
+
+        if prefix and not res.startswith(prefix):
+            # Check that the value we got for the prefix doesn't include
+            # the separator too (i.e: `INBOX.` instead of `INBOX`).
+            if prefix[-1] != separator:
+                res = u"{}{}{}".format(prefix, separator, res)
+            else:
+                res = u"{}{}".format(prefix, res)
+
+    return res
+
+
+def strip_prefix(path, prefix):
+    if path.startswith(prefix):
+        return path[len(prefix):]
+
+    return path
 
 
 # fs_folder_path converts an IMAP compatible path to a "/" delimited path.
-def fs_folder_path(path, separator='.'):
-    ret = ""
+def fs_folder_path(path, separator='.', prefix=''):
+    if prefix:
+        path = strip_prefix(path, prefix)
 
-    folders = path[6:].split(separator)
-    ret += '/'.join(folders)
-    return ret
+    folders = path.split(separator)
+    # Remove stray '' which can happen if the folder is prefixed
+    # i.e: INBOX.Taxes.Accounting -> .Taxes.Accounting -> ['', 'Taxes', 'Accounting']
+    if folders[0] == '':
+        folders.pop(0)
 
-
-def is_imap_folder_path(path):
-    if len(path) < 6:
-        return False
-
-    if path[:5] == 'INBOX' and path[5] in ['.', '/']:
-        return True
-
-    return False
+    return '/'.join(folders)
