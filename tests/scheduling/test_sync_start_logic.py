@@ -60,15 +60,31 @@ def test_accounts_started_when_process_previously_assigned(
     assert s.accounts_to_sync() == {default_account.id}
 
 
-def test_start_new_accounts_when_stealing_enabled(db, default_account,
-                                                  config,
+def test_start_new_accounts_when_stealing_enabled(monkeypatch, db,
+                                                  default_account, config,
                                                   mock_queue_client):
     config['SYNC_STEAL_ACCOUNTS'] = True
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     mock_queue_client.enqueue(default_account.id)
     s = patched_sync_service(db, mock_queue_client)
     s.poll()
     assert s.start_sync.call_count == 1
     assert s.start_sync.call_args == mock.call(default_account.id)
+
+
+def test_dont_start_new_accounts_if_cpu_over_85(monkeypatch, db,
+                                                default_account, config,
+                                                mock_queue_client):
+    config['SYNC_STEAL_ACCOUNTS'] = True
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [86.5, 88.0])
+
+    mock_queue_client.enqueue(default_account.id)
+    s = patched_sync_service(db, mock_queue_client)
+    s.poll()
+    assert s.start_sync.call_count == 0
 
 
 def test_dont_start_new_accounts_when_stealing_disabled(db, config,
@@ -80,8 +96,12 @@ def test_dont_start_new_accounts_when_stealing_disabled(db, config,
     assert s.start_sync.call_count == 0
 
 
-def test_concurrent_syncs(db, default_account, config, mock_queue_client):
+def test_concurrent_syncs(monkeypatch, db, default_account, config,
+                          mock_queue_client):
     config['SYNC_STEAL_ACCOUNTS'] = True
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     mock_queue_client.enqueue(default_account.id)
     s1 = patched_sync_service(db, mock_queue_client, cpu_id=0)
     s2 = patched_sync_service(db, mock_queue_client, cpu_id=2)
@@ -93,8 +113,11 @@ def test_concurrent_syncs(db, default_account, config, mock_queue_client):
     assert s2.start_sync.call_count == 0
 
 
-def test_twice_queued_accounts_started_once(db, default_account,
+def test_twice_queued_accounts_started_once(monkeypatch, db, default_account,
                                             mock_queue_client):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     mock_queue_client.enqueue(default_account.id)
     mock_queue_client.enqueue(default_account.id)
     s = patched_sync_service(db, mock_queue_client)
@@ -103,7 +126,10 @@ def test_twice_queued_accounts_started_once(db, default_account,
     assert s.start_sync.call_count == 1
 
 
-def test_queue_population(db, default_account, mock_queue_client):
+def test_queue_population(monkeypatch, db, default_account, mock_queue_client):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts(default_account)
     qp = QueuePopulator(zone='testzone')
     qp.queue_client = mock_queue_client
@@ -117,8 +143,11 @@ def test_queue_population(db, default_account, mock_queue_client):
     assert s.start_sync.call_count == 1
 
 
-def test_queue_population_limited_by_zone(db, default_account,
+def test_queue_population_limited_by_zone(monkeypatch, db, default_account,
                                           mock_queue_client):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts(default_account)
     qp = QueuePopulator(zone='otherzone')
     qp.queue_client = mock_queue_client
@@ -128,9 +157,13 @@ def test_queue_population_limited_by_zone(db, default_account,
     assert s.start_sync.call_count == 0
 
 
-def test_external_sync_disabling(db, mock_queue_client):
+def test_external_sync_disabling(monkeypatch, db, mock_queue_client):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts()
-    account = add_generic_imap_account(db.session, email_address='test@example.com')
+    account = add_generic_imap_account(db.session,
+                                       email_address='test@example.com')
     other_account = add_generic_imap_account(
         db.session, email_address='test2@example.com')
     qp = QueuePopulator(zone='testzone')
@@ -188,9 +221,12 @@ def test_http_unassignment(db, default_account, mock_queue_client):
 
 
 @pytest.mark.parametrize("sync_state", ["running", "stopped", "invalid", None])
-def test_start_accounts_w_sync_should_run_set(db, default_account,
+def test_start_accounts_w_sync_should_run_set(monkeypatch, db, default_account,
                                               config,
                                               mock_queue_client, sync_state):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
     default_account.sync_should_run = True
@@ -207,10 +243,14 @@ def test_start_accounts_w_sync_should_run_set(db, default_account,
 
 
 @pytest.mark.parametrize("sync_state", ["running", "stopped", "invalid", None])
-def test_dont_start_accounts_when_sync_should_run_is_none(db, default_account,
+def test_dont_start_accounts_when_sync_should_run_is_none(monkeypatch, db,
+                                                          default_account,
                                                           config,
                                                           mock_queue_client,
                                                           sync_state):
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
     default_account.sync_should_run = False
@@ -227,7 +267,11 @@ def test_dont_start_accounts_when_sync_should_run_is_none(db, default_account,
 
 
 def test_sync_stop_after_restart_selectively_overwrites_sync_states(
-        db, default_account, config, mock_queue_client):
+        monkeypatch, db, default_account, config, mock_queue_client):
+
+    monkeypatch.setattr('psutil.cpu_percent',
+                        lambda *args, **kwargs: [10.0, 25.0])
+
     purge_other_accounts(default_account)
     config['SYNC_STEAL_ACCOUNTS'] = True
 
@@ -271,7 +315,7 @@ def test_sync_stop_after_restart_selectively_overwrites_sync_states(
     original_host.poll()
     assert original_host.syncing_accounts == set([])
     account = db.session.query(Account).get(default_account.id)
-    assert account.sync_host != None
+    assert account.sync_host is not None
     assert account.sync_state != 'stopped'
 
     # The account is unassigned from the new sync_host and enqueued again.
@@ -286,5 +330,5 @@ def test_sync_stop_after_restart_selectively_overwrites_sync_states(
     db.session.commit()
     assert new_host.syncing_accounts == set([])
     account = db.session.query(Account).get(default_account.id)
-    assert account.sync_host == None
+    assert account.sync_host is None
     assert account.sync_state == 'stopped'
