@@ -56,7 +56,7 @@ class SyncbackHandler(object):
                 ActionLog.discriminator == 'actionlog',
                 ActionLog.status == 'pending').\
                 order_by(ActionLog.id)
-            actions = q.limit(100).all()
+            actions = q.limit(10).all()
             db_session.expunge_all()
 
         if not actions:
