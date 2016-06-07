@@ -175,6 +175,11 @@ def verify_db(engine, schema, key):
 
     verified = set()
     for table in MailSyncBase.metadata.sorted_tables:
+        # ContactSearchIndexCursor does not need to be checked because there's
+        # only one row in the table
+        if str(table) == 'contactsearchindexcursor':
+            continue
+
         increment = engine.execute(query.format(schema, table)).scalar()
         if increment is not None:
             assert (increment >> 48) == key, \
