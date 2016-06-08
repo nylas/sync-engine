@@ -89,7 +89,8 @@ class SyncbackService(gevent.Greenlet):
             with session_scope_by_shard_id(key) as db_session:
                 query = db_session.query(ActionLog).filter(
                     ActionLog.discriminator == 'actionlog',
-                    ActionLog.status == 'pending').order_by(ActionLog.id)
+                    ActionLog.status == 'pending').order_by(ActionLog.id).\
+                    limit(500)
 
                 running_action_ids = {worker.action_log_id for worker in
                                       self.workers}
