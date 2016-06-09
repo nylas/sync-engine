@@ -32,11 +32,14 @@ from inbox.util.startup import preflight, load_overrides
 @click.option('--process_num', default=0,
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
-@click.option('--syncback-id', default=0,
+@click.option('--syncback-id',
               help="This sync instance's id: a unique number assigned to "
                    "each syncback instance.")
 def main(prod, config, process_num, syncback_id):
     """ Launch the actions syncback service. """
+    if syncback_id is None:
+        syncback_id = 0
+
     setproctitle('syncback-{}'.format(process_num))
 
     if config is not None:
