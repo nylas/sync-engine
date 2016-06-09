@@ -28,6 +28,7 @@ from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 delete_label, delete_sent_email)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
+from inbox.config import config
 
 ACTION_FUNCTION_MAP = {
     'mark_unread': mark_unread,

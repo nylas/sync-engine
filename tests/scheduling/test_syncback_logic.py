@@ -17,7 +17,6 @@ def purge_accounts_and_actions():
     for key in engine_manager.engines:
         with session_scope_by_shard_id(key) as db_session:
             db_session.query(ActionLog).delete(synchronize_session=False)
-            db_session.query(Account).delete(synchronize_session=False)
             db_session.commit()
 
 
