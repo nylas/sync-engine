@@ -61,7 +61,8 @@ SKIP_SYNCBACK_FOR_HOSTS = config.get('SKIP_SYNCBACK_FOR_HOSTS', [])
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, cpu_id, total_cpus, poll_interval=1, retry_interval=30):
+    def __init__(self, syncback_id, cpu_id, total_cpus, poll_interval=1,
+                 retry_interval=30):
         self.cpu_id = cpu_id
         self.total_cpus = total_cpus
         self.poll_interval = poll_interval
@@ -78,8 +79,16 @@ class SyncbackService(gevent.Greenlet):
         # This SyncbackService performs syncback for only and all the accounts
         # on shards it is reponsible for; shards are divided up between
         # running SyncbackServices.
-        self.keys = [key for key in engine_manager.engines if
-                     (key % self.total_cpus) == self.cpu_id]
+        self.log = logger.new(component='syncback')
+        syncback_assignments = config.get("SYNCBACK_ASSIGNMENTS", {})
+        if syncback_id in syncback_assignments:
+            self.keys = [key for key in engine_manager.engines
+                         if key in syncback_assignments[syncback_id] and
+                         key % total_cpus == cpu_id]
+        else:
+            self.log.warn("No shards assigned to syncback server",
+                          syncback_id=syncback_id)
+            self.keys = []
 
         self.log = logger.new(component='syncback')
         gevent.Greenlet.__init__(self)

@@ -23,6 +23,11 @@
     }
 ],
 
+"SYNCBACK_ASSIGNMENTS": {
+    0:[0, 1, 2, 3, 4, 5]
+
+},
+
 "SYNC_STEAL_ACCOUNTS": true,
 
 "DB_POOL_SIZE": 25,

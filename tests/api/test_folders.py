@@ -1,12 +1,8 @@
-import os
-import json
 import mock
 import gevent
-import pytest
 
-from tests.util.base import (add_fake_message, add_fake_thread, add_fake_folder,
-                             add_fake_category)
-from tests.api.base import api_client, imap_api_client
+from tests.api.base import imap_api_client
+from tests.util.base import add_fake_folder, add_fake_category
 from tests.imap.data import mock_imapclient  # noqa
 
 
@@ -16,8 +12,8 @@ def test_folder_stripping(db, generic_account, imap_api_client):
     # Check that regular IMAP paths get converted to unix-style paths
     generic_account.folder_separator = '.'
     folder = add_fake_folder(db.session, generic_account)
-    cat = add_fake_category(db.session, generic_account.namespace.id,
-                            'INBOX.Red.Carpet')
+    add_fake_category(db.session, generic_account.namespace.id,
+                      'INBOX.Red.Carpet')
 
     r = imap_api_client.get_data('/folders')
     for folder in r:
@@ -51,7 +47,7 @@ def test_folder_stripping(db, generic_account, imap_api_client):
 def test_folder_name_translation(empty_db, generic_account, imap_api_client,
                                  mock_imapclient, monkeypatch):
     from inbox.transactions.actions import SyncbackService
-    syncback = SyncbackService(0, 1)
+    syncback = SyncbackService(syncback_id=0, cpu_id=0, total_cpus=1)
 
     imap_namespaces = (((u'INBOX.', u'.'),),)
     mock_imapclient.create_folder = mock.Mock()
@@ -67,8 +63,7 @@ def test_folder_name_translation(empty_db, generic_account, imap_api_client,
     empty_db.session.commit()
 
     folder_json = {'display_name': 'Taxes/Accounting'}
-    r = imap_api_client.post_data('/folders', folder_json)
-    folder_id = json.loads(r.data)['id']
+    imap_api_client.post_data('/folders', folder_json)
 
     syncback._process_log()
     gevent.joinall(list(syncback.workers))
