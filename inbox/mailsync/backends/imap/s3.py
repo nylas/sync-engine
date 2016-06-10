@@ -172,12 +172,14 @@ class S3FolderSyncEngine(FolderSyncEngine):
         # data to statsd.
         with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
-            statsd_prefix = '.'.join(['s3_resync', account.provider, str(account.id), str(self.folder_id)])
+            statsd_prefix = '.'.join(['s3_resync', account.provider,
+                                      str(account.id), str(self.folder_id)])
 
         statsd_client.gauge(statsd_prefix + '.messages_total', len(remote_uids))
 
         remaining_messages = len(uids)
-        statsd_client.gauge(statsd_prefix + '.remaining_messages', remaining_messages)
+        statsd_client.gauge(statsd_prefix + '.remaining_messages',
+                            remaining_messages)
 
         if len(uids) == 0:
             log.info('Done syncing to S3', account_id=self.account_id)
@@ -224,3 +226,8 @@ class S3FolderSyncEngine(FolderSyncEngine):
             count += 1
 
         return count
+
+    def setup_heartbeats(self):
+        # Don't setup a HeartbeatStatusProxy --- we don't report heartbeats to
+        # redis.
+        pass

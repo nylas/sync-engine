@@ -136,6 +136,8 @@ class FolderSyncEngine(Greenlet):
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.folder_name = folder_name
+        self.email_address = email_address
+
         if self.folder_name.lower() == 'inbox':
             self.poll_frequency = INBOX_POLL_FREQUENCY
         else:
@@ -156,13 +158,8 @@ class FolderSyncEngine(Greenlet):
             'poll uidinvalid': self.resync_uids,
         }
 
+        self.setup_heartbeats()
         Greenlet.__init__(self)
-
-        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id,
-                                                     self.folder_name,
-                                                     email_address,
-                                                     self.provider_name)
 
         # Some generic IMAP servers are throwing UIDVALIDITY
         # errors forever. Instead of resyncing those servers
@@ -170,6 +167,13 @@ class FolderSyncEngine(Greenlet):
         # times we got such an error and bail out if it's higher than
         # MAX_UIDINVALID_RESYNCS.
         self.uidinvalid_count = 0
+
+    def setup_heartbeats(self):
+        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
+                                                     self.folder_id,
+                                                     self.folder_name,
+                                                     self.email_address,
+                                                     self.provider_name)
 
     def _run(self):
         # Bind greenlet-local logging context.
