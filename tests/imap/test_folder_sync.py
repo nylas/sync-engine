@@ -1,10 +1,7 @@
-from hashlib import sha256
 import pytest
-import mock
-
+from hashlib import sha256
 from gevent.lock import BoundedSemaphore
 from sqlalchemy.orm.exc import ObjectDeletedError
-
 from inbox.models import Folder, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapUid,
                                         ImapFolderInfo)
@@ -12,7 +9,6 @@ from inbox.mailsync.backends.imap.generic import (FolderSyncEngine, UidInvalid,
                                                   MAX_UIDINVALID_RESYNCS)
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
 from inbox.mailsync.backends.base import MailsyncDone
-
 from tests.imap.data import uids, uid_data, mock_imapclient  # noqa
 
 
@@ -61,8 +57,7 @@ def test_initial_sync(db, generic_account, inbox_folder, mock_imapclient):
                                           inbox_folder.name,
                                           generic_account.email_address,
                                           'custom',
-                                          BoundedSemaphore(1),
-                                          mock.Mock())
+                                          BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
 
     saved_uids = db.session.query(ImapUid).filter(
@@ -87,8 +82,7 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
                                           inbox_folder.name,
                                           generic_account.email_address,
                                           'custom',
-                                          BoundedSemaphore(1),
-                                          mock.Mock())
+                                          BoundedSemaphore(1))
     folder_sync_engine.poll_frequency = 0
     folder_sync_engine.poll_impl()
 
@@ -111,8 +105,7 @@ def test_condstore_flags_refresh(db, default_account, all_mail_folder,
                                           all_mail_folder.name,
                                           default_account.email_address,
                                           'gmail',
-                                          BoundedSemaphore(1),
-                                          mock.Mock())
+                                          BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
 
     # Change the labels provided by the mock IMAP server
@@ -146,8 +139,7 @@ def test_generic_flags_refresh_expunges_transient_uids(
                                           inbox_folder.name,
                                           generic_account.email_address,
                                           'custom',
-                                          BoundedSemaphore(1),
-                                          mock.Mock())
+                                          BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
     folder_sync_engine.poll_impl()
     msg = db.session.query(Message).filter_by(
@@ -174,8 +166,7 @@ def test_handle_uidinvalid(db, generic_account, inbox_folder, mock_imapclient):
                                           inbox_folder.name,
                                           generic_account.email_address,
                                           'custom',
-                                          BoundedSemaphore(1),
-                                          mock.Mock())
+                                          BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
     mock_imapclient.uidvalidity = 2
     with pytest.raises(UidInvalid):
@@ -215,8 +206,7 @@ def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
                                                          inbox_folder.name,
                                                          generic_account.email_address,
                                                          'custom',
-                                                         BoundedSemaphore(1),
-                                                         mock.Mock())
+                                                         BoundedSemaphore(1))
 
     folder_sync_engine.state = 'poll'
 
@@ -241,8 +231,7 @@ def test_gmail_initial_sync(db, default_account, all_mail_folder,
                                                all_mail_folder.name,
                                                default_account.email_address,
                                                'gmail',
-                                               BoundedSemaphore(1),
-                                               mock.Mock())
+                                               BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
 
     saved_uids = db.session.query(ImapUid).filter(
@@ -266,13 +255,13 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
     all_folder_sync_engine = GmailFolderSyncEngine(
         default_account.id, default_account.namespace.id, all_mail_folder.name,
         default_account.email_address, 'gmail',
-        BoundedSemaphore(1), mock.Mock())
+        BoundedSemaphore(1))
     all_folder_sync_engine.initial_sync()
 
     trash_folder_sync_engine = GmailFolderSyncEngine(
         default_account.id, default_account.namespace.id, trash_folder.name,
         default_account.email_address, 'gmail',
-        BoundedSemaphore(1), mock.Mock())
+        BoundedSemaphore(1))
     trash_folder_sync_engine.initial_sync()
 
     # Check that we have two uids, but just one message.
@@ -307,8 +296,7 @@ def test_imap_message_deduplication(db, generic_account, inbox_folder,
                          inbox_folder.name,
                          generic_account.email_address,
                          'custom',
-                         BoundedSemaphore(1),
-                         mock.Mock())
+                         BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
 
     trash_folder_sync_engine = FolderSyncEngine(
@@ -317,8 +305,7 @@ def test_imap_message_deduplication(db, generic_account, inbox_folder,
                                generic_trash_folder.name,
                                generic_account.email_address,
                                'custom',
-                               BoundedSemaphore(1),
-                               mock.Mock())
+                               BoundedSemaphore(1))
     trash_folder_sync_engine.initial_sync()
 
     # Check that we have two uids, but just one message.

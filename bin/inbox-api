@@ -31,7 +31,7 @@ http_server = None
 @click.option('--prod/--no-prod', default=False,
               help='Disables the autoreloader and potentially other '
                    'non-production features.')
-@click.option('--start-syncback/--no-start-syncback', default=False,
+@click.option('--start-syncback/--no-start-syncback', default=True,
               help='Also start the syncback service')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')

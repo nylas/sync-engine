@@ -28,7 +28,6 @@ from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 delete_label, delete_sent_email)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
-from inbox.config import config
 
 ACTION_FUNCTION_MAP = {
     'mark_unread': mark_unread,
@@ -53,9 +52,6 @@ ACTION_FUNCTION_MAP = {
 
 
 ACTION_MAX_NR_OF_RETRIES = 20
-
-# Shim until sync-syncback integration fully deployed.
-SKIP_SYNCBACK_FOR_HOSTS = config.get('SKIP_SYNCBACK_FOR_HOSTS', [])
 
 
 class SyncbackService(gevent.Greenlet):
@@ -113,17 +109,6 @@ class SyncbackService(gevent.Greenlet):
                                          action_id=log_entry.id,
                                          action=log_entry.action)
                         continue
-                    ### BEGIN SHIM ###
-                    # Shim until sync-syncback integration fully deployed.
-                    sync_host = namespace.account.sync_host
-                    if (sync_host and sync_host.split(':')[0] in
-                            SKIP_SYNCBACK_FOR_HOSTS):
-                        self.log.info('SyncbackService not delegating for',
-                                      account_id=namespace.account.id,
-                                      sync_host=sync_host,
-                                      action_id=log_entry.id)
-                        continue
-                    ### END SHIM ###
                     self.log.info('delegating action',
                                   action_id=log_entry.id,
                                   msg=log_entry.action)

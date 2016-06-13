@@ -2,9 +2,9 @@
 # trying to sync comes back as deleted while syncing
 
 import pytest
-import mock
 from sqlalchemy.exc import IntegrityError
 
+from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.base import MailsyncDone
 from inbox.models import Folder
@@ -33,8 +33,7 @@ def sync_engine_stub(db, yahoo_account):
     db.session.add(Folder(account=yahoo_account, name='Inbox'))
     db.session.commit()
     engine = FolderSyncEngine(yahoo_account.id, yahoo_account.namespace.id,
-                              "Inbox", TEST_YAHOO_EMAIL, "yahoo", None,
-                              mock.Mock())
+                              "Inbox", TEST_YAHOO_EMAIL, "yahoo", None)
 
     return engine
 

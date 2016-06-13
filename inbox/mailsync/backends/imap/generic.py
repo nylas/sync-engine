@@ -61,11 +61,10 @@ sessions reduce scalability.
 
 """
 from __future__ import division
-from datetime import datetime, timedelta
-import contextlib
-import imaplib
 
+from datetime import datetime, timedelta
 from gevent import Greenlet, kill, spawn, sleep
+import imaplib
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
 from sqlalchemy.exc import IntegrityError
@@ -114,8 +113,8 @@ class FolderSyncEngine(Greenlet):
     """Base class for a per-folder IMAP sync engine."""
 
     def __init__(self, account_id, namespace_id, folder_name,
-                 email_address, provider_name, syncmanager_lock,
-                 sync_signal):
+                 email_address, provider_name, syncmanager_lock):
+
         with session_scope(namespace_id) as db_session:
             try:
                 folder = db_session.query(Folder). \
@@ -148,8 +147,6 @@ class FolderSyncEngine(Greenlet):
         self.last_fast_refresh = None
         self.flags_fetch_results = {}
         self.conn_pool = connection_pool(self.account_id)
-
-        self.sync_signal = sync_signal
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -307,7 +304,8 @@ class FolderSyncEngine(Greenlet):
                 try:
                     db_session.query(ImapFolderInfo). \
                         filter(ImapFolderInfo.account_id == self.account_id,
-                               ImapFolderInfo.folder_id == self.folder_id).one()
+                               ImapFolderInfo.folder_id == self.folder_id). \
+                        one()
                 except NoResultFound:
                     imapfolderinfo = ImapFolderInfo(
                         account_id=self.account_id, folder_id=self.folder_id,
@@ -396,9 +394,7 @@ class FolderSyncEngine(Greenlet):
 
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:
-            with self.signal_watcher():
-                self.check_uid_changes(crispin_client)
-
+            self.check_uid_changes(crispin_client)
             if self.should_idle(crispin_client):
                 crispin_client.select_folder(self.folder_name,
                                              self.uidvalidity_cb)
@@ -509,11 +505,8 @@ class FolderSyncEngine(Greenlet):
         return count
 
     def add_message_to_thread(self, db_session, message_obj, raw_message):
-        """
-        Associate message_obj to the right Thread object, creating a new
-        thread if necessary.
-
-        """
+        """Associate message_obj to the right Thread object, creating a new
+        thread if necessary."""
         with db_session.no_autoflush:
             # Disable autoflush so we don't try to flush a message with null
             # thread_id.
@@ -835,30 +828,6 @@ class FolderSyncEngine(Greenlet):
                                                 selected_uidvalidity,
                                                 self.uidvalidity))
         return select_info
-
-    @contextlib.contextmanager
-    def signal_watcher(self):
-        """
-        Implement signal-wait for the folder sync.
-        Blocks until a sync iteration can proceed and signals syncback after
-        the iteration.
-
-        """
-        try:
-            start = datetime.utcnow()
-            # Wait for the sync signal
-            self.sync_signal.wait()
-            log.info('Folder sync pause interval (seconds)',
-                     time=(datetime.utcnow() - start).total_seconds())
-            yield
-        except Exception:
-            # Log, unset self.sync_signal, and then re-raise (so the greenlet
-            # can be restarted etc.)
-            log.error('Error in signal_watcher caller', exc_info=True)
-            raise
-        finally:
-            # Signal syncback
-            self.sync_signal.clear()
 
 
 class UidInvalid(Exception):

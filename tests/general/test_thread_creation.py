@@ -1,12 +1,10 @@
 # test that T441 doesn't reappear, ever.
 import datetime
-from collections import namedtuple
-
 import pytest
-import mock
-
+from collections import namedtuple
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
-from inbox.models import Folder
+from inbox.models import Folder, Namespace
+from inbox.models.backends.generic import GenericAccount
 from inbox.models.backends.imap import ImapUid
 from inbox.util.threading import fetch_corresponding_thread
 from tests.util.base import (add_fake_thread, add_fake_message,
@@ -24,8 +22,7 @@ def folder_sync_engine(db, generic_account):
                               "Inbox",
                               generic_account.email_address,
                               generic_account.provider,
-                              None,
-                              mock.Mock())
+                              None)
     return engine
 
 
