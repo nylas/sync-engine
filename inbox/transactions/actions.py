@@ -53,6 +53,7 @@ ACTION_FUNCTION_MAP = {
 
 
 ACTION_MAX_NR_OF_RETRIES = 20
+INVALID_ACCOUNT_GRACE_PERIOD = 60 * 60 * 2  # 2 hours
 
 
 class SyncbackService(gevent.Greenlet):
@@ -109,6 +110,22 @@ class SyncbackService(gevent.Greenlet):
                                          account_id=namespace.account.id,
                                          action_id=log_entry.id,
                                          action=log_entry.action)
+
+                        action_age = (datetime.utcnow() -
+                                      log_entry.created_at).total_seconds()
+
+                        if action_age > INVALID_ACCOUNT_GRACE_PERIOD:
+                            log_entry.status = 'failed'
+                            db_session.commit()
+                            self.log.warning('Marking action as failed for '
+                                             'invalid account, older than '
+                                             'grace period',
+                                             account_id=namespace.account.id,
+                                             action_id=log_entry.id,
+                                             action=log_entry.action)
+                            statsd_client.incr('syncback.invalid_failed.total')
+                            statsd_client.incr('syncback.invalid_failed.{}'.
+                                               format(namespace.account.id))
                         continue
                     self.log.info('delegating action',
                                   action_id=log_entry.id,
