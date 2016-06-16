@@ -161,7 +161,7 @@ providers = dict([
     ("namecheap", {
         "type": "generic",
         "imap": ("mail.privateemail.com", 993),
-        "smtp": ("mail.privateemail.com", 587),
+        "smtp": ("mail.privateemail.com", 465),
         "auth": "password",
         "mx_servers": ["mx[12].privateemail.com"]
     }),
