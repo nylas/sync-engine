@@ -101,8 +101,14 @@ class SyncbackService(gevent.Greenlet):
 
                 running_action_ids = {worker.action_log_id for worker in
                                       self.workers}
+                found = 0
+                already_running = 0
+                skipped = 0
+                delegated = 0
                 for log_entry in query:
+                    found += 1
                     if log_entry.id in running_action_ids:
+                        already_running += 1
                         continue
                     namespace = log_entry.namespace
                     if namespace.account.sync_state == 'invalid':
@@ -126,10 +132,12 @@ class SyncbackService(gevent.Greenlet):
                             statsd_client.incr('syncback.invalid_failed.total')
                             statsd_client.incr('syncback.invalid_failed.{}'.
                                                format(namespace.account.id))
+                        skipped += 1
                         continue
                     self.log.info('delegating action',
                                   action_id=log_entry.id,
                                   msg=log_entry.action)
+                    delegated += 1
                     semaphore = self.account_semaphores[namespace.account_id]
                     worker = SyncbackWorker(action_name=log_entry.action,
                                             semaphore=semaphore,
@@ -142,6 +150,13 @@ class SyncbackService(gevent.Greenlet):
                                             extra_args=log_entry.extra_args)
                     self.workers.add(worker)
                     worker.start()
+                self.log.info('Ran one syncback polling iteration',
+                              actions_found=found,
+                              actions_invalid=skipped,
+                              actions_started=delegated,
+                              actions_already_running=already_running,
+                              workers_running=len(running_action_ids),
+                              shard_id=key)
 
     def _run_impl(self):
         self.log.info('Starting syncback service',
@@ -187,6 +202,7 @@ class SyncbackWorker(gevent.Greenlet):
         self.provider = provider
         self.extra_args = extra_args
         self.retry_interval = retry_interval
+        self.start_time = datetime.utcnow()
         gevent.Greenlet.__init__(self)
 
     def _log_to_statsd(self, action_log_status, latency=None):
@@ -223,9 +239,12 @@ class SyncbackWorker(gevent.Greenlet):
                         latency = round((datetime.utcnow() -
                                          action_log_entry.created_at).
                                         total_seconds(), 2)
+                        worker_latency = round((datetime.utcnow() -
+                                                self.start_time).
+                                               total_seconds(), 2)
                         log.info('syncback action completed',
-                                 action_id=self.action_log_id,
-                                 latency=latency)
+                                 latency=latency,
+                                 worker_latency=worker_latency)
                         self._log_to_statsd(action_log_entry.status, latency)
                         return
                 except Exception:
@@ -241,6 +260,14 @@ class SyncbackWorker(gevent.Greenlet):
                                          exc_info=True)
                             action_log_entry.status = 'failed'
                             self._log_to_statsd(action_log_entry.status)
+                        else:
+                            remaining_retries = ACTION_MAX_NR_OF_RETRIES - \
+                                action_log_entry.retries
+                            log.error('Exception while attempting a '
+                                      'syncback action, will retry in {}s'.
+                                      format(self.retry_interval),
+                                      remaining_retries=remaining_retries,
+                                      exc_info=True)
                         db_session.commit()
 
                 # Wait before retrying
