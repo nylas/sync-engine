@@ -92,7 +92,8 @@ setup(
              'bin/purge-transaction-log',
              'bin/mysql-prompt',
              'bin/toggle-s3-sync',
-             'bin/unschedule-account-syncs'
+             'bin/unschedule-account-syncs',
+             'bin/syncback-stats'
              ],
 
     # See:
