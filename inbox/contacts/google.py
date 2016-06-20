@@ -17,7 +17,7 @@ from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount, g_token_manager
 from inbox.models.backends.gmail import GmailAuthCredentials
 
-SOURCE_APP_NAME = 'Nilas Sync Engine'
+SOURCE_APP_NAME = 'Nylas Sync Engine'
 
 
 class GoogleContactsProvider(object):
