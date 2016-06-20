@@ -1410,10 +1410,18 @@ def multi_send(draft_id):
     g.log.info("Multi-send message sent!", draft_public_id=draft.public_id)
 
     # Immediately delete the message from the sent folder if it got put there.
-    remote_delete_sent(account.id, draft.message_id_header)
+    try:
+        remote_delete_sent(account.id, draft.message_id_header)
+        g.log.info("Deleted remote sent message for multi-send if present.",
+                   draft_public_id=draft.public_id)
+    except Exception:
+        g.log.error("Error occured while deleting remote sent message during "
+                    "multi-send",
+                    draft_public_id=draft.public_id,
+                    exc_info=True)
 
-    g.log.info("Deleted remote sent message for multi-send if present.",
-               draft_public_id=draft.public_id)
+        # Maybe schedule a delete here? But what about the message we'll put
+        # into send folder later? Def don't return a 500...
 
     # Return the response from sending
     return resp

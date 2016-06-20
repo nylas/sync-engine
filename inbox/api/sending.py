@@ -1,7 +1,7 @@
 from datetime import datetime
 from nylas.logging import get_logger
 from inbox.api.err import err
-from inbox.api.kellogs import APIEncoder
+from inbox.api.kellogs import APIEncoder, encode
 from inbox.sendmail.base import get_sendmail_client, SendMailException
 log = get_logger()
 
@@ -35,16 +35,14 @@ def send_draft_copy(account, draft, custom_body, recipient):
     sent. Used within multi-send to send messages to individual recipients
     with customized bodies.
     """
-    # Create the response to send on success by serlializing the draft. Before
-    # serializing, we temporarily swap in the new custom body (which the
-    # recipient will get and which should be returned in this response) in
-    # place of the existing body (which we still need to retain in the draft
-    # for when it's saved to the sent folder). We replace the existing body
-    # after serialization is done.
-    original_body = draft.body
-    draft.body = custom_body
-    response_on_success = APIEncoder().jsonify(draft)
-    draft.body = original_body
+    # Create the response to send on success by serlializing the draft. After
+    # serializing, we replace the new custom body (which the recipient will get
+    # and which should be returned in this response) in place of the existing
+    # body (which we still need to retain in the draft for when it's saved to
+    # the sent folder).
+    response_on_success = encode(draft)
+    response_on_success['body'] = custom_body
+    response_on_success = APIEncoder().jsonify(response_on_success)
 
     # Now send the draft to the specified recipient. The send_custom method
     # will write the custom body into the message in place of the one in the
