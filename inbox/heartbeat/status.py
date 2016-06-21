@@ -34,20 +34,20 @@ def get_ping_status(account_ids, host=None, port=6379, threshold=ALIVE_EXPIRY):
         accounts = {}
         # grab the folders from all accounts in one batch
         all_folder_heartbeats = store.get_accounts_folders(account_ids)
-        for i, account_id in enumerate(account_ids):
+        for account_id in account_ids:
             account_id = int(account_id)
-            folder_heartbeats = all_folder_heartbeats[i]
+            folder_heartbeats = all_folder_heartbeats[account_id]
             folders = [FolderPing(int(aid), ts > expiry, ts)
                        for (aid, ts) in folder_heartbeats]
             account = AccountPing(account_id, folders)
             accounts[account_id] = account
+
         return accounts
 
 
-def clear_heartbeat_status(account_id, folder_id=None, device_id=None,
-                           host=None, port=None):
+def clear_heartbeat_status(account_id, device_id=None):
     # Clears the status for the account, folder and/or device.
     # Returns the number of folders cleared.
-    store = HeartbeatStore.store(host, port)
-    n = store.remove_folders(account_id, folder_id, device_id)
+    store = HeartbeatStore.store()
+    n = store.remove_folders(account_id, None, device_id)
     return n

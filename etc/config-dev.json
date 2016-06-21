@@ -48,8 +48,8 @@
 "LOGDIR": "/var/log/inboxapp",
 "LOGLEVEL": 10,
 
-"REDIS_HOSTNAME": "localhost",
 "REDIS_PORT": 6379,
+"REDIS_SHARDS": ["localhost"],
 
 "ACCOUNT_QUEUE_REDIS_HOSTNAME": "localhost",
 "ACCOUNT_QUEUE_REDIS_DB": 3,

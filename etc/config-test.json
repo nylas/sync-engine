@@ -36,7 +36,7 @@
 "LOGLEVEL": 10,
 "TEST_LOGFILE": "/tmp/log/test.log",
 
-"REDIS_HOSTNAME": "localhost",
+"REDIS_SHARDS": ["localhost", "127.0.0.1"],
 "REDIS_PORT": 6379,
 
 "ACCOUNT_QUEUE_REDIS_HOSTNAME": "mockredis",
