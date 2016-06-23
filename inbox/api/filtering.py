@@ -99,7 +99,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             pass
         category_query = db_session.query(Message.thread_id). \
             prefix_with('STRAIGHT_JOIN'). \
-            join(MessageCategory).join(Category). \
+            join(Message.messagecategories).join(MessageCategory.category). \
             filter(Category.namespace_id == namespace_id,
                    or_(*category_filters)).subquery()
         query = query.filter(Thread.id.in_(category_query))
@@ -300,7 +300,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         except InputError:
             pass
         query += lambda q: q.prefix_with('STRAIGHT_JOIN'). \
-            join(MessageCategory).join(Category). \
+            join(Message.messagecategories).join(MessageCategory.category). \
             filter(Category.namespace_id == namespace_id,
                    or_(*category_filters))
 
@@ -533,8 +533,8 @@ def messages_for_contact_scores(db_session, namespace_id, starts_after=None):
     query = (db_session.query(
         Message.to_addr, Message.cc_addr, Message.bcc_addr,
         Message.id, Message.received_date.label('date'))
-        .join(MessageCategory)
-        .join(Category)
+        .join(MessageCategory.message)
+        .join(MessageCategory.category)
         .filter(Message.namespace_id == namespace_id)
         .filter(Category.name == 'sent')
         .filter(~Message.is_draft)

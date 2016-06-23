@@ -541,8 +541,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
             Message.public_id == bindparam('public_id'),
             Message.namespace_id == bindparam('namespace_id'))
         q += lambda q: q.options(
-            joinedload(Message.thread).load_only('discriminator', 'public_id'),
-            joinedload(Message.messagecategories).joinedload('category'),
+            joinedload(Message.thread).
+            load_only('discriminator', 'public_id'),
+            joinedload(Message.messagecategories).
+            joinedload(MessageCategory.category),
             joinedload(Message.parts).joinedload('block'),
             joinedload(Message.events))
         return q(db_session).params(
@@ -590,20 +592,20 @@ Index('ix_message_namespace_id_message_id_header_subject',
 
 class MessageCategory(MailSyncBase):
     """ Mapping between messages and categories. """
-    message_id = Column(ForeignKey(Message.id, ondelete='CASCADE'),
-                        nullable=False)
+    message_id = Column(BigInteger, nullable=False)
     message = relationship(
         'Message',
+        primaryjoin='foreign(MessageCategory.message_id) == remote(Message.id)',  # noqa
         backref=backref('messagecategories',
                         collection_class=set,
-                        cascade='all, delete-orphan'))
+                        cascade="all, delete-orphan"))
 
-    category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'),
-                         nullable=False)
+    category_id = Column(BigInteger, nullable=False)
     category = relationship(
         Category,
+        primaryjoin='foreign(MessageCategory.category_id) == remote(Category.id)',  # noqa
         backref=backref('messagecategories',
-                        cascade='all, delete-orphan',
+                        cascade="all, delete-orphan",
                         lazy='dynamic'))
 
     @property
