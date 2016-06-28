@@ -1,4 +1,4 @@
-""" IMAPClient wrapper for the Nylas Sync Engine. """
+""" IMAPClient wrapper for the Nylas Sync Engine."""
 import contextlib
 import re
 import time
@@ -40,6 +40,7 @@ from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.generic import GenericAccount
 from inbox.models.backends.gmail import GmailAccount
+from inbox.folder_edge_cases import localized_folder_names
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -438,6 +439,9 @@ class CrispinClient(object):
         """
         raw_folders = []
 
+        # Folders that provide basic functionality of email
+        system_role_names = ['inbox', 'sent', 'trash', 'spam']
+
         folders = self._fetch_folder_list()
         for flags, delimiter, name in folders:
             if u'\\Noselect' in flags or u'\\NoSelect' in flags \
@@ -448,7 +452,63 @@ class CrispinClient(object):
             raw_folder = self._process_folder(name, flags)
             raw_folders.append(raw_folder)
 
+        # Check to see if we have to guess the roles for any system role
+        missing_roles = self._get_missing_roles(raw_folders,
+                                                system_role_names)
+        guessed_roles = [self._guess_role(folder.display_name)
+                         for folder in raw_folders]
+
+        for role in missing_roles:
+            if guessed_roles.count(role) == 1:
+                guess_index = guessed_roles.index(role)
+                raw_folders[guess_index] = RawFolder(
+                    display_name=raw_folders[guess_index].display_name,
+                    role=role)
+
         return raw_folders
+
+    def _get_missing_roles(self, folders, roles):
+        '''
+        Given a list of folders, and a list of roles, returns a list
+        a list of roles that did not appear in the list of folders
+
+        Parameters:
+            folders: List of RawFolder objects
+        roles: list of role strings
+
+        Returns:
+            a list of roles that did not appear as a role in folders
+        '''
+
+        assert len(folders) > 0
+        assert len(roles) > 0
+
+        missing_roles = {role: "" for role in roles}
+        for folder in folders:
+            # if role is in missing_roles, then we lied about it being missing
+            if folder.role in missing_roles:
+                del missing_roles[folder.role]
+
+        return missing_roles.keys()
+
+    def _guess_role(self, folder):
+        '''
+        Given a folder, guess the system role that corresponds to that folder
+
+        Parameters:
+            folder: string representing the folder in question
+
+        Returns:
+            string representing role that most likely correpsonds to folder
+        '''
+        # localized_folder_names is an external map of folders we have seen
+        # in the wild with implicit roles that we were unable to determine
+        # because they had missing flags. We've manually gone through the
+        # folders and assigned them roles. When we find a folder we weren't
+        # able to assign a role, we add it to that map
+        for role in localized_folder_names:
+            if folder in localized_folder_names[role]:
+                return role
 
     def _process_folder(self, display_name, flags):
         """
@@ -875,30 +935,6 @@ class GmailCrispinClient(CrispinClient):
                 self._folder_names[f.role].append(f.display_name)
 
         return self._folder_names
-
-    def folders(self):
-        """
-        Fetch the list of folders for the account from the remote, return as a
-        list of RawFolder objects.
-
-        NOTE:
-        Always fetches the list of folders from the remote.
-
-        """
-        raw_folders = []
-
-        folders = self._fetch_folder_list()
-        for flags, delimiter, name in folders:
-            if u'\\Noselect' in flags or u'\\NoSelect' in flags \
-                    or u'\\NonExistent' in flags:
-                # Special folders that can't contain messages, usually
-                # just '[Gmail]'
-                continue
-
-            raw_folder = self._process_folder(name, flags)
-            raw_folders.append(raw_folder)
-
-        return raw_folders
 
     def _process_folder(self, display_name, flags):
         """
