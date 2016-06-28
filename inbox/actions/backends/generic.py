@@ -228,14 +228,14 @@ def remote_delete_draft(account_id, inbox_uid, message_id_header):
         crispin_client.delete_draft(message_id_header)
 
 
-def remote_delete_sent(account_id, message_id_header):
+def remote_delete_sent(account_id, message_id_header, delete_multiple=False):
     with writable_connection_pool(account_id).get() as crispin_client:
         if 'sent' not in crispin_client.folder_names():
             log.info(
                 'Account has no detected sent folder; not deleting message',
                 account_id=account_id)
             return
-        crispin_client.delete_sent_message(message_id_header)
+        crispin_client.delete_sent_message(message_id_header, delete_multiple)
 
 
 def remote_save_sent(account_id, message_id):

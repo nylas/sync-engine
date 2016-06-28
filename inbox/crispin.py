@@ -740,7 +740,7 @@ class CrispinClient(object):
 
         return results
 
-    def delete_sent_message(self, message_id_header):
+    def delete_sent_message(self, message_id_header, delete_multiple=False):
         """
         Delete a message in the sent folder, as identified by the Message-Id
         header. We first delete the message from the Sent folder, and then
@@ -751,11 +751,11 @@ class CrispinClient(object):
                  message_id_header=message_id_header)
         sent_folder_name = self.folder_names()['sent'][0]
         self.conn.select_folder(sent_folder_name)
-        msg_deleted = self._delete_message(message_id_header)
+        msg_deleted = self._delete_message(message_id_header, delete_multiple)
         if msg_deleted:
             trash_folder_name = self.folder_names()['trash'][0]
             self.conn.select_folder(trash_folder_name)
-            self._delete_message(message_id_header)
+            self._delete_message(message_id_header, delete_multiple)
         return msg_deleted
 
     def delete_draft(self, message_id_header):
@@ -775,7 +775,7 @@ class CrispinClient(object):
             self._delete_message(message_id_header)
         return draft_deleted
 
-    def _delete_message(self, message_id_header):
+    def _delete_message(self, message_id_header, delete_multiple=False):
         """
         Delete a message from the selected folder, using the Message-Id header
         to locate it. Does nothing if no matching messages are found, or if
@@ -787,7 +787,7 @@ class CrispinClient(object):
             log.error('No remote messages found to delete',
                       message_id_header=message_id_header)
             return False
-        if len(matching_uids) > 1:
+        if len(matching_uids) > 1 and not delete_multiple:
             log.error('Multiple remote messages found to delete',
                       message_id_header=message_id_header,
                       uids=matching_uids)
@@ -1033,7 +1033,7 @@ class GmailCrispinClient(CrispinClient):
     def _decode_labels(self, labels):
         return map(imapclient.imap_utf7.decode, labels)
 
-    def delete_sent_message(self, message_id_header):
+    def delete_sent_message(self, message_id_header, delete_multiple=False):
         """
         Delete a message in the sent folder, as identified by the Message-Id
         header. This overrides the parent class's method because gmail has
@@ -1060,5 +1060,5 @@ class GmailCrispinClient(CrispinClient):
         # Next, select delete the message from trash (in the normal way) to
         # permanently delete it.
         self.conn.select_folder(trash_folder_name)
-        self._delete_message(message_id_header)
+        self._delete_message(message_id_header, delete_multiple)
         return True

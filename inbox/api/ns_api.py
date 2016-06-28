@@ -1409,20 +1409,6 @@ def multi_send(draft_id):
 
     g.log.info("Multi-send message sent!", draft_public_id=draft.public_id)
 
-    # Immediately delete the message from the sent folder if it got put there.
-    try:
-        remote_delete_sent(account.id, draft.message_id_header)
-        g.log.info("Deleted remote sent message for multi-send if present.",
-                   draft_public_id=draft.public_id)
-    except Exception:
-        g.log.error("Error occured while deleting remote sent message during "
-                    "multi-send",
-                    draft_public_id=draft.public_id,
-                    exc_info=True)
-
-        # Maybe schedule a delete here? But what about the message we'll put
-        # into send folder later? Def don't return a 500...
-
     # Return the response from sending
     return resp
 
@@ -1442,6 +1428,21 @@ def multi_send_finish(draft_id):
     draft = get_sending_draft(draft_id, g.namespace.id, g.db_session)
     if not draft.is_sending:
         return err(400, 'Invalid draft, not part of a multi-send transaction')
+
+    # Synchronously delete any matching messages from the sent folder, left
+    # over from the send calls (in gmail only)
+    if not isinstance(account, GenericAccount):
+        try:
+            remote_delete_sent(account.id, draft.message_id_header,
+                               delete_multiple=True)
+            g.log.info("Deleted remote sent messages for multi-send",
+                       draft_public_id=draft.public_id)
+        except Exception:
+            # Even if this fails, we need to finish off the multi-send session
+            g.log.error("Error occured while deleting remote sent messages "
+                        "during multi-send",
+                        draft_public_id=draft.public_id,
+                        exc_info=True)
 
     # Mark the draft as sent in our database
     update_draft_on_send(account, draft, g.db_session)
