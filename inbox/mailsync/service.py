@@ -1,3 +1,4 @@
+import time
 import platform
 import random
 import collections
@@ -32,6 +33,7 @@ SYNC_POLL_INTERVAL = 10
 NUM_CPU_SAMPLES = (OVERLOAD_MIN * 60) / SYNC_POLL_INTERVAL
 OVERLOADED_THRESHOLD = 95.0
 NOMINAL_THRESHOLD = 90.0
+UNLOAD_INTERVAL = 60
 
 
 class SyncService(object):
@@ -76,6 +78,7 @@ class SyncService(object):
         self.zone = config.get('ZONE')
         self.queue_client = QueueClient(self.zone)
         self.rolling_cpu_counts = collections.deque(maxlen=NUM_CPU_SAMPLES)
+        self.last_unloaded_account = time.time()
 
         # Fill the queue with initial values.
         null_cpu_values = [0.0 for cpu in psutil.cpu_percent(percpu=True)]
@@ -138,15 +141,17 @@ class SyncService(object):
                 self.log.info('Claimed new account sync', account_id=r)
 
         if has_overloaded_cpus:
-            # Unload a single account.
-            acc = self._pick_account()
+            # Unload accounts only if we haven't done it in the last minute.
+            if time.time() - self.last_unloaded_account > UNLOAD_INTERVAL:
+                acc = self._pick_account()
 
-            if acc is not None:
-                self.log.info('Overloaded CPU, unloading account',
-                              account_id=acc)
-                self.stop_sync(acc)
-            else:
-                self.log.error("Couldn't find an account to unload!")
+                if acc is not None:
+                    self.log.info('Overloaded CPU, unloading account',
+                                  account_id=acc)
+                    self.stop_sync(acc)
+                    self.last_unloaded_account = time.time()
+                else:
+                    self.log.error("Couldn't find an account to unload!")
 
         # Determine which accounts to sync
         start_accounts = self.accounts_to_sync()
