@@ -27,7 +27,7 @@ USE_GOOGLE_PUSH_NOTIFICATIONS = \
 
 # How much time (in minutes) should all CPUs be over 90% to consider them
 # overloaded.
-OVERLOAD_MIN = 40
+OVERLOAD_MIN = 20
 SYNC_POLL_INTERVAL = 10
 NUM_CPU_SAMPLES = (OVERLOAD_MIN * 60) / SYNC_POLL_INTERVAL
 NOMINAL_THRESHOLD = 90.0
