@@ -1,6 +1,5 @@
 import time
 import platform
-import random
 import collections
 
 import gevent
@@ -28,12 +27,10 @@ USE_GOOGLE_PUSH_NOTIFICATIONS = \
 
 # How much time (in minutes) should all CPUs be over 90% to consider them
 # overloaded.
-OVERLOAD_MIN = 20
+OVERLOAD_MIN = 40
 SYNC_POLL_INTERVAL = 10
 NUM_CPU_SAMPLES = (OVERLOAD_MIN * 60) / SYNC_POLL_INTERVAL
-OVERLOADED_THRESHOLD = 95.0
 NOMINAL_THRESHOLD = 90.0
-UNLOAD_INTERVAL = 60
 
 
 class SyncService(object):
@@ -97,20 +94,6 @@ class SyncService(object):
             self.poll()
             gevent.sleep(self.poll_interval)
 
-    def _pick_account(self):
-        """
-        Pick an account to unload. We choose one at random, but we should
-        probably be smarter, for example by picking one of the most
-        newly created syncs.
-        """
-
-        if len(self.syncing_accounts) == 0:
-            return None
-
-        account = random.sample(self.syncing_accounts, 1)[0]
-        self.syncing_accounts.remove(account)
-        return account
-
     def _compute_cpu_average(self):
         """
         Use our CPU data to compute the average CPU usage for this machine.
@@ -130,7 +113,6 @@ class SyncService(object):
 
         cpu_averages = self._compute_cpu_average()
 
-        has_overloaded_cpus = all([cpu_usage > OVERLOADED_THRESHOLD for cpu_usage in cpu_averages])
         cpus_over_nominal = all([cpu_usage > NOMINAL_THRESHOLD for cpu_usage in cpu_averages])
 
         # Conservatively, stop accepting accounts if the CPU usage is over
@@ -139,19 +121,6 @@ class SyncService(object):
             r = self.queue_client.claim_next(self.process_identifier)
             if r:
                 self.log.info('Claimed new account sync', account_id=r)
-
-        if has_overloaded_cpus:
-            # Unload accounts only if we haven't done it in the last minute.
-            if time.time() - self.last_unloaded_account > UNLOAD_INTERVAL:
-                acc = self._pick_account()
-
-                if acc is not None:
-                    self.log.info('Overloaded CPU, unloading account',
-                                  account_id=acc)
-                    self.stop_sync(acc)
-                    self.last_unloaded_account = time.time()
-                else:
-                    self.log.error("Couldn't find an account to unload!")
 
         # Determine which accounts to sync
         start_accounts = self.accounts_to_sync()

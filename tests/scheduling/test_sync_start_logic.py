@@ -1,4 +1,3 @@
-import time
 import json
 import mockredis
 import mock
@@ -7,7 +6,7 @@ import platform
 from inbox.ignition import engine_manager
 from inbox.mailsync.frontend import HTTPFrontend
 from inbox.mailsync.service import (SyncService, NOMINAL_THRESHOLD,
-                                    NUM_CPU_SAMPLES, OVERLOADED_THRESHOLD)
+                                    NUM_CPU_SAMPLES)
 from inbox.models import Account
 from inbox.models.session import session_scope_by_shard_id
 from inbox.scheduling.queue import QueueClient, QueuePopulator
@@ -79,42 +78,6 @@ def test_start_new_accounts_when_stealing_enabled(monkeypatch, db,
     s.poll()
     assert s.start_sync.call_count == 1
     assert s.start_sync.call_args == mock.call(default_account.id)
-
-
-def test_unload_accounts_if_overloaded(monkeypatch, db,
-                                       default_account, config,
-                                       mock_queue_client):
-    config['SYNC_STEAL_ACCOUNTS'] = True
-
-    under_nominal_count = [10.0, 25.0]
-    monkeypatch.setattr('psutil.cpu_percent',
-                        lambda *args, **kwargs: under_nominal_count)
-
-    s = patched_sync_service(db, mock_queue_client)
-    for i in range(NUM_CPU_SAMPLES):
-        s.rolling_cpu_counts.append(under_nominal_count)
-
-    # Enqueue a new account.
-    mock_queue_client.enqueue(default_account.id)
-    s.poll()
-    assert s.start_sync.call_count == 1
-    assert s.start_sync.call_args == mock.call(default_account.id)
-    assert len(s.syncing_accounts) == 1
-
-    over_nominal_count = [OVERLOADED_THRESHOLD + 1, OVERLOADED_THRESHOLD + 3]
-    monkeypatch.setattr('psutil.cpu_percent',
-                        lambda *args, **kwargs: over_nominal_count)
-
-    for i in range(NUM_CPU_SAMPLES):
-        s.rolling_cpu_counts.append(over_nominal_count)
-
-    s.last_unloaded_account = time.time() - 60
-    s.poll()
-
-    assert len(s.syncing_accounts) == 0
-
-    # Check that the counter is reset when we unload an account.
-    assert s.last_unloaded_account - time.time() < 60
 
 
 def test_dont_start_accounts_if_over_nominal(monkeypatch, db,
