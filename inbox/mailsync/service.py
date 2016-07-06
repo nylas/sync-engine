@@ -32,6 +32,8 @@ SYNC_POLL_INTERVAL = 10
 NUM_CPU_SAMPLES = (OVERLOAD_MIN * 60) / SYNC_POLL_INTERVAL
 NOMINAL_THRESHOLD = 90.0
 
+MAX_ACCOUNTS_PER_PROCESS = config.get('MAX_ACCOUNTS_PER_PROCESS', 150)
+
 
 class SyncService(object):
     """
@@ -116,8 +118,13 @@ class SyncService(object):
         cpus_over_nominal = all([cpu_usage > NOMINAL_THRESHOLD for cpu_usage in cpu_averages])
 
         # Conservatively, stop accepting accounts if the CPU usage is over
-        # NOMINAL_THRESHOLD for every core.
-        if self.stealing_enabled and not cpus_over_nominal:
+        # NOMINAL_THRESHOLD for every core, or if the total # of accounts
+        # being synced by a single process exceeds the threshold. Excessive
+        # concurrency per process can result in lowered database throughput
+        # or availability problems, since many transactions may be held open
+        # at the same time.
+        if self.stealing_enabled and not cpus_over_nominal and \
+                len(self.syncing_accounts) < MAX_ACCOUNTS_PER_PROCESS:
             r = self.queue_client.claim_next(self.process_identifier)
             if r:
                 self.log.info('Claimed new account sync', account_id=r)
