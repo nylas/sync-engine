@@ -61,10 +61,10 @@ INVALID_ACCOUNT_GRACE_PERIOD = 60 * 60 * 2  # 2 hours
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, syncback_id, cpu_id, total_cpus, poll_interval=1,
+    def __init__(self, syncback_id, process_number, total_processes, poll_interval=1,
                  retry_interval=30):
-        self.cpu_id = cpu_id
-        self.total_cpus = total_cpus
+        self.process_number = process_number
+        self.total_processes = total_processes
         self.poll_interval = poll_interval
         self.retry_interval = retry_interval
         self.keep_running = True
@@ -84,7 +84,7 @@ class SyncbackService(gevent.Greenlet):
         if syncback_id in syncback_assignments:
             self.keys = [key for key in engine_manager.engines
                          if key in syncback_assignments[syncback_id] and
-                         key % total_cpus == cpu_id]
+                         key % total_processes == process_number]
         else:
             self.log.warn("No shards assigned to syncback server",
                           syncback_id=syncback_id)
@@ -182,7 +182,8 @@ class SyncbackService(gevent.Greenlet):
 
     def _run_impl(self):
         self.log.info('Starting syncback service',
-                      process_num=self.cpu_id, total_processes=self.total_cpus,
+                      process_num=self.process_number,
+                      total_processes=self.total_processes,
                       keys=self.keys)
         while self.keep_running:
             self._process_log()

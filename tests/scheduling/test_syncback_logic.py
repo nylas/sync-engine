@@ -5,7 +5,6 @@ import gevent
 
 from inbox.ignition import engine_manager
 from inbox.models.session import session_scope, session_scope_by_shard_id
-from inbox.models.account import Account
 from inbox.models.action_log import ActionLog, schedule_action
 from inbox.transactions.actions import SyncbackService
 
@@ -64,11 +63,13 @@ def schedule_test_action(db_session, account):
 def test_all_keys_are_assigned_exactly_once(patched_enginemanager):
     assigned_keys = []
 
-    service = SyncbackService(syncback_id=0, cpu_id=0, total_cpus=2)
+    service = SyncbackService(
+        syncback_id=0, process_number=0, total_processes=2)
     assert service.keys == [0, 2, 4]
     assigned_keys.extend(service.keys)
 
-    service = SyncbackService(syncback_id=0, cpu_id=1, total_cpus=2)
+    service = SyncbackService(
+        syncback_id=0, process_number=1, total_processes=2)
     assert service.keys == [1, 3, 5]
     assigned_keys.extend(service.keys)
 
@@ -89,7 +90,8 @@ def test_actions_are_claimed(purge_accounts_and_actions, patched_worker):
             db_session, email_address='{}@test.com'.format(1))
         schedule_test_action(db_session, account)
 
-    service = SyncbackService(syncback_id=0, cpu_id=1, total_cpus=2)
+    service = SyncbackService(
+        syncback_id=0, process_number=1, total_processes=2)
     service.workers = set()
     service._process_log()
 
@@ -118,8 +120,9 @@ def test_actions_claimed_by_a_single_service(purge_accounts_and_actions,
             actionlogs += [db_session.query(ActionLog).one().id]
 
     services = []
-    for cpu_id in (0, 1):
-        service = SyncbackService(syncback_id=0, cpu_id=cpu_id, total_cpus=2)
+    for process_number in (0, 1):
+        service = SyncbackService(
+            syncback_id=0, process_number=process_number, total_processes=2)
         service.workers = set()
         service._process_log()
         services.append(service)
@@ -153,7 +156,8 @@ def test_actions_for_invalid_accounts_are_skipped(purge_accounts_and_actions,
         account.mark_invalid()
         db_session.commit()
 
-    service = SyncbackService(syncback_id=0, cpu_id=0, total_cpus=2)
+    service = SyncbackService(
+        syncback_id=0, process_number=0, total_processes=2)
     service._process_log()
 
     while len(service.workers) >= 1:

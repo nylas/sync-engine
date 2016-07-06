@@ -26,9 +26,9 @@ def mock_queue_client(monkeypatch):
     return cl
 
 
-def patched_sync_service(db, mock_queue_client, host=host, cpu_id=0):
-    s = SyncService(process_identifier='{}:{}'.format(host, cpu_id),
-                    cpu_id=cpu_id)
+def patched_sync_service(db, mock_queue_client, host=host, process_number=0):
+    s = SyncService(process_identifier='{}:{}'.format(host, process_number),
+                    process_number=process_number)
     s.queue_client = mock_queue_client
 
     def start_sync(aid):
@@ -57,7 +57,7 @@ def test_accounts_started_when_process_previously_assigned(
     config['SYNC_STEAL_ACCOUNTS'] = False
     mock_queue_client.enqueue(default_account.id)
     mock_queue_client.claim_next('{}:{}'.format(host, 0))
-    s = patched_sync_service(db, mock_queue_client, host=host, cpu_id=0)
+    s = patched_sync_service(db, mock_queue_client, host=host, process_number=0)
     assert s.accounts_to_sync() == {default_account.id}
 
 
@@ -114,8 +114,8 @@ def test_concurrent_syncs(monkeypatch, db, default_account, config,
                         lambda *args, **kwargs: [10.0, 25.0])
 
     mock_queue_client.enqueue(default_account.id)
-    s1 = patched_sync_service(db, mock_queue_client, cpu_id=0)
-    s2 = patched_sync_service(db, mock_queue_client, cpu_id=2)
+    s1 = patched_sync_service(db, mock_queue_client, process_number=0)
+    s2 = patched_sync_service(db, mock_queue_client, process_number=2)
     s1.poll()
     s2.poll()
     # Check that only one SyncService instance claims the account.
@@ -295,7 +295,7 @@ def test_sync_stop_after_restart_selectively_overwrites_sync_states(
 
     # The account is claimed by a sync_host.
     original_host = patched_sync_service(db, mock_queue_client, host=host,
-                                         cpu_id=0)
+                                         process_number=0)
     original_host.poll()
     assert original_host.syncing_accounts == {default_account.id}
     assert original_host.start_sync.call_count == 1
@@ -313,7 +313,7 @@ def test_sync_stop_after_restart_selectively_overwrites_sync_states(
 
     # The account is claimed by another sync_host and starts its sync.
     new_host = patched_sync_service(db, mock_queue_client, host=host,
-                                    cpu_id=2)
+                                    process_number=2)
     new_host.poll()
     assert new_host.syncing_accounts == {default_account.id}
     account = db.session.query(Account).get(default_account.id)

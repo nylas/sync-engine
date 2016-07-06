@@ -47,7 +47,8 @@ def test_folder_stripping(db, generic_account, imap_api_client):
 def test_folder_name_translation(empty_db, generic_account, imap_api_client,
                                  mock_imapclient, monkeypatch):
     from inbox.transactions.actions import SyncbackService
-    syncback = SyncbackService(syncback_id=0, cpu_id=0, total_cpus=1)
+    syncback = SyncbackService(syncback_id=0, process_number=0,
+                               total_processes=1)
 
     imap_namespaces = (((u'INBOX.', u'.'),),)
     mock_imapclient.create_folder = mock.Mock()

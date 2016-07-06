@@ -40,16 +40,16 @@ class SyncService(object):
     process_identifier: string
         Unique identifying string for this process (currently
         <hostname>:<process_number>)
-    cpu_id: int
-        If a system has 4 cores, value from 0-3. (Each sync service on the
-        system should get a different value.)
+    process_number: int
+        If a system is launching 16 sync processes, value from 0-15. (Each
+        sync service on the system should get a different value.)
     poll_interval : int
         Seconds between polls for account changes.
     """
-    def __init__(self, process_identifier, cpu_id,
+    def __init__(self, process_identifier, process_number,
                  poll_interval=SYNC_POLL_INTERVAL):
         self.host = platform.node()
-        self.cpu_id = cpu_id
+        self.process_number = process_number
         self.process_identifier = process_identifier
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
@@ -60,7 +60,7 @@ class SyncService(object):
                 self.monitor_cls_for[p_name] = self.monitor_cls_for["generic"]
 
         self.log = get_logger()
-        self.log.bind(cpu_id=cpu_id)
+        self.log.bind(process_number=process_number)
         self.log.info('starting mail sync process',
                       supported_providers=module_registry.keys())
 
@@ -125,8 +125,8 @@ class SyncService(object):
         # Determine which accounts to sync
         start_accounts = self.accounts_to_sync()
         statsd_client.gauge(
-            'accounts.{}.mailsync-{}.count'.format(self.host, self.cpu_id),
-            len(start_accounts))
+            'accounts.{}.mailsync-{}.count'.format(
+                self.host, self.process_number), len(start_accounts))
 
         # Perform the appropriate action on each account
         for account_id in start_accounts:
