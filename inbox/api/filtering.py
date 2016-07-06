@@ -1,4 +1,4 @@
-from sqlalchemy import and_, or_, desc, asc, func, bindparam
+from sqlalchemy import and_, or_, desc, asc, func, bindparam, distinct
 from sqlalchemy.orm import subqueryload, contains_eager
 from inbox.api.err import InputError
 from inbox.api.validation import valid_public_id
@@ -10,18 +10,9 @@ from inbox.models.event import RecurringEvent
 from inbox.sqlalchemy_ext.util import bakery
 
 
-def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
-            any_email, thread_public_id, started_before, started_after,
-            last_message_before, last_message_after, filename, in_, unread,
-            starred, limit, offset, view, db_session):
-
-    if view == 'count':
-        query = db_session.query(func.count(Thread.id))
-    elif view == 'ids':
-        query = db_session.query(Thread.public_id)
-    else:
-        query = db_session.query(Thread)
-
+def _threads_filters(namespace_id, thread_public_id, started_before,
+                    started_after, last_message_before, last_message_after,
+                    subject):
     filters = [Thread.namespace_id == namespace_id]
     if thread_public_id is not None:
         filters.append(Thread.public_id == thread_public_id)
@@ -40,56 +31,72 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
     if subject is not None:
         filters.append(Thread.subject == subject)
+    return filters
 
-    query = query.filter(*filters)
 
+def _threads_subqueries(namespace_id, from_addr, to_addr, cc_addr, bcc_addr,
+                        any_email, filename, unread, starred, db_session):
+    subqueries = []
     if from_addr is not None:
-        from_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == from_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'from_addr').subquery()
-        query = query.filter(Thread.id.in_(from_query))
+        subqueries.append(db_session.query(Message.thread_id).
+            join(MessageContactAssociation).
+            join(Contact).
+            filter(Contact.email_address == from_addr,
+                   Contact.namespace_id == namespace_id,
+                   MessageContactAssociation.field == 'from_addr').subquery())
 
     if to_addr is not None:
-        to_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == to_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'to_addr').subquery()
-        query = query.filter(Thread.id.in_(to_query))
+        subqueries.append(db_session.query(Message.thread_id).
+            join(MessageContactAssociation).
+            join(Contact).
+            filter(Contact.email_address == to_addr,
+                   Contact.namespace_id == namespace_id,
+                   MessageContactAssociation.field == 'to_addr').subquery())
 
     if cc_addr is not None:
-        cc_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == cc_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'cc_addr').subquery()
-        query = query.filter(Thread.id.in_(cc_query))
+        subqueries.append(db_session.query(Message.thread_id).
+            join(MessageContactAssociation).
+            join(Contact).
+            filter(Contact.email_address == cc_addr,
+                   Contact.namespace_id == namespace_id,
+                   MessageContactAssociation.field == 'cc_addr').subquery())
 
     if bcc_addr is not None:
-        bcc_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == bcc_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'bcc_addr').subquery()
-        query = query.filter(Thread.id.in_(bcc_query))
+        subqueries.append(db_session.query(Message.thread_id).
+            join(MessageContactAssociation).
+            join(Contact).
+            filter(Contact.email_address == bcc_addr,
+                   Contact.namespace_id == namespace_id,
+                   MessageContactAssociation.field == 'bcc_addr').subquery())
 
     if any_email is not None:
-        any_contact_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact). \
+        subqueries.append(db_session.query(Message.thread_id).
+            join(MessageContactAssociation).
+            join(Contact).
             filter(Contact.email_address.in_(any_email),
-                   Contact.namespace_id == namespace_id).subquery()
-        query = query.filter(Thread.id.in_(any_contact_query))
+                   Contact.namespace_id == namespace_id).subquery())
 
     if filename is not None:
-        files_query = db_session.query(Message.thread_id). \
-            join(Part).join(Block). \
+        subqueries.append(db_session.query(Message.thread_id).
+            join(Part).
+            join(Block).
             filter(Block.filename == filename,
-                   Block.namespace_id == namespace_id). \
-            subquery()
-        query = query.filter(Thread.id.in_(files_query))
+                   Block.namespace_id == namespace_id).subquery())
 
+    if unread is not None:
+        read = not unread
+        subqueries.append(db_session.query(Message.thread_id).
+            filter(Message.namespace_id == namespace_id,
+                   Message.is_read == read).subquery())
+
+    if starred is not None:
+        subqueries.append(db_session.query(Message.thread_id).
+            filter(Message.namespace_id == namespace_id,
+                   Message.is_starred == starred).subquery())
+    return subqueries
+
+
+def _threads_join_category(thread_query, namespace_id, in_):
     if in_ is not None:
         category_filters = [Category.name == in_, Category.display_name == in_]
         try:
@@ -97,25 +104,36 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             category_filters.append(Category.public_id == in_)
         except InputError:
             pass
-        category_query = db_session.query(Message.thread_id). \
-            prefix_with('STRAIGHT_JOIN'). \
-            join(Message.messagecategories).join(MessageCategory.category). \
+        return thread_query.join(Thread.messages). \
+            join(Message.messagecategories). \
+            join(MessageCategory.category). \
             filter(Category.namespace_id == namespace_id,
-                   or_(*category_filters)).subquery()
-        query = query.filter(Thread.id.in_(category_query))
+                   or_(*category_filters))
+    return thread_query
 
-    if unread is not None:
-        read = not unread
-        unread_query = db_session.query(Message.thread_id).filter(
-            Message.namespace_id == namespace_id,
-            Message.is_read == read).subquery()
-        query = query.filter(Thread.id.in_(unread_query))
 
-    if starred is not None:
-        starred_query = db_session.query(Message.thread_id).filter(
-            Message.namespace_id == namespace_id,
-            Message.is_starred == starred).subquery()
-        query = query.filter(Thread.id.in_(starred_query))
+def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
+            any_email, thread_public_id, started_before, started_after,
+            last_message_before, last_message_after, filename, in_, unread,
+            starred, limit, offset, view, db_session):
+
+    if view == 'count':
+        query = db_session.query(func.count(distinct(Thread.id)))
+    elif view == 'ids':
+        query = db_session.query(Thread.public_id)
+    else:
+        query = db_session.query(Thread)
+
+    filters = _threads_filters(namespace_id, thread_public_id, started_before,
+                              started_after, last_message_before,
+                              last_message_after, subject)
+
+    query = _threads_join_category(query, namespace_id, in_)
+    query = query.filter(*filters)
+    for subquery in _threads_subqueries(namespace_id, from_addr, to_addr,
+                                       cc_addr, bcc_addr, any_email, filename,
+                                       unread, starred, db_session):
+        query = query.filter(Thread.id.in_(subquery))
 
     if view == 'count':
         return {"count": query.one()[0]}
