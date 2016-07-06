@@ -30,7 +30,7 @@ def get_zone_for_instance(hostname):
 @click.option('--dry-run', is_flag=True, default=False)
 @click.option('--number', type=int, help='how many accounts to unschedule')
 @click.argument('hostname')
-@click.argument('process', default=None)
+@click.argument('process', required=False, default=None)
 def main(dry_run, number, hostname, process):
     """
     Unschedule all accounts assigned to a given sync host.
