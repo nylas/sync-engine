@@ -342,7 +342,7 @@ def message_query_api():
 
     args = strict_parse_args(g.parser, request.args)
 
-    messages = filtering.messages_or_drafts(
+    query_debug_data, messages = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
         drafts=False,
         subject=args['subject'],
@@ -367,9 +367,22 @@ def message_query_api():
         view=args['view'],
         db_session=g.db_session)
 
-    # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
-    return encoder.jsonify(messages)
+    try:
+        # Use a new encoder object with the expand parameter set.
+        encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
+        return encoder.jsonify(messages)
+    except AttributeError as e:
+        executed_query, is_query_cached, query_cache_key = query_debug_data
+        error_context = {
+            "exception": e,
+            "exc_info": True,
+            "executed_query": executed_query,
+            "is_query_cached": is_query_cached,
+            "query_cache_key": query_cache_key,
+        }
+
+        log.error("Message encoding failure", **error_context)
+        raise
 
 
 @app.route('/messages/search', methods=['GET'])
@@ -1213,7 +1226,7 @@ def draft_query_api():
 
     args = strict_parse_args(g.parser, request.args)
 
-    drafts = filtering.messages_or_drafts(
+    _, drafts = filtering.messages_or_drafts(
         namespace_id=g.namespace.id,
         drafts=True,
         subject=args['subject'],
