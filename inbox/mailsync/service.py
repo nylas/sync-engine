@@ -128,6 +128,14 @@ class SyncService(object):
             r = self.queue_client.claim_next(self.process_identifier)
             if r:
                 self.log.info('Claimed new account sync', account_id=r)
+        else:
+            if not self.stealing_enabled:
+                reason = 'stealing disabled'
+            elif cpus_over_nominal:
+                reason = 'CPU too high'
+            else:
+                reason = 'reached max accounts for process'
+            self.log.info('Not claiming new account sync', reason=reason)
 
         # Determine which accounts to sync
         start_accounts = self.accounts_to_sync()
