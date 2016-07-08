@@ -58,7 +58,6 @@ from inbox.util.blockstore import get_from_blockstore
 from inbox.actions.backends.generic import remote_delete_sent
 
 DEFAULT_LIMIT = 100
-MAX_LIMIT = 1000
 LONG_POLL_REQUEST_TIMEOUT = 120
 SEND_TIMEOUT = 60
 
