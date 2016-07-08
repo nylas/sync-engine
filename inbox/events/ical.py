@@ -525,7 +525,7 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
         msg.append(body)
 
         attachment = mime.create.attachment(
-            'application/ics',
+            'text/calendar; method=CANCEL',
             ical_txt,
             'invite.ics',
             disposition='attachment')

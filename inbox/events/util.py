@@ -76,6 +76,22 @@ def valid_base36(uid):
     return all(c in (string.ascii_lowercase + string.digits) for c in uid)
 
 
+def removed_participants(original_participants, update_participants):
+    """Returns the name and addresses of the participants which have been
+    removed."""
+    original_table = { part['email']: part.get('name') for part in original_participants
+                                                       if 'email' in part }
+    update_table   = { part['email']: part.get('name') for part in update_participants
+                                                       if 'email' in part }
+
+    ret = []
+    for email in original_table:
+        if email not in update_table:
+            ret.append(dict(email=email, name=original_table[email]))
+
+    return ret
+
+
 # Container for a parsed API response. API calls return adds/updates/deletes
 # all together, but we want to handle deletions separately in our persistence
 # logic. deleted_uids should be a list of uids, and updated_objects should be a

@@ -15,6 +15,7 @@ def create_event(account_id, event_id, extra_args):
         remote_create_event(account, event, db_session, extra_args)
 
         notify_participants = extra_args.get('notify_participants', False)
+        cancelled_participants = extra_args.get('cancelled_participants', [])
         # Do we need to send an RSVP message?
         # We use gmail's sendNotification API for google accounts.
         # but we need create and send an iCalendar invite ourselves
@@ -22,6 +23,15 @@ def create_event(account_id, event_id, extra_args):
         if notify_participants and account.provider != 'gmail':
             ical_file = generate_icalendar_invite(event).to_ical()
             send_invite(ical_file, event, account, invite_type='request')
+
+            if cancelled_participants != []:
+                # Some people got removed from the event. Send them a
+                # cancellation email.
+                event.status = 'cancelled'
+                event.participants = cancelled_participants
+                ical_file = generate_icalendar_invite(event,
+                      invite_type='cancel').to_ical()
+                send_invite(ical_file, event, account, invite_type='cancel')
 
 
 def update_event(account_id, event_id, extra_args):

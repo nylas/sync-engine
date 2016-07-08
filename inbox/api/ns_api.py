@@ -1,6 +1,7 @@
 import base64
 import os
 import uuid
+import json
 import gevent
 import time
 from datetime import datetime
@@ -54,6 +55,7 @@ from inbox.api.err import (err, APIException, NotFoundError, InputError,
                            AccountDoesNotExistError)
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
+from inbox.events.util import removed_participants
 from inbox.util.blockstore import get_from_blockstore
 from inbox.actions.backends.generic import remote_delete_sent
 
@@ -861,10 +863,21 @@ def event_update_api(public_id):
 
     valid_event_update(data, g.namespace, g.db_session)
 
+    # A list of participants we need to send cancellation invites to.
+    cancelled_participants = []
     if 'participants' in data:
         for p in data['participants']:
             if 'status' not in p:
                 p['status'] = 'noreply'
+
+        cancelled_participants = removed_participants(event.participants,
+                                                      data['participants'])
+
+        # We're going to save this data into a JSON-like TEXT field in the
+        # db. With MySQL, this means that the column will be 64k.
+        # Drop the latest participants until it fits in the column.
+        while len(json.dumps(cancelled_participants)) > 63000:
+            cancelled_participants.pop()
 
     # Don't update an event if we don't need to.
     if noop_event_update(event, data):
@@ -881,6 +894,7 @@ def event_update_api(public_id):
     if event.calendar != account.emailed_events_calendar:
         schedule_action('update_event', event, g.namespace.id, g.db_session,
                         calendar_uid=event.calendar.uid,
+                        cancelled_participants=cancelled_participants,
                         notify_participants=notify_participants)
 
     return g.encoder.jsonify(event)
