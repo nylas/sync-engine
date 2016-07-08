@@ -86,6 +86,7 @@ class ContactSearchIndexService(Greenlet):
         """ index with filter """
         # index 'em
         for key in engine_manager.engines:
+            shard_should_sleep = []
             with session_scope_by_shard_id(key) as db_session:
                 txn_query = db_session.query(Transaction).filter(
                     Transaction.id > self.transaction_pointers[key],
@@ -113,9 +114,10 @@ class ContactSearchIndexService(Greenlet):
                     db_session.commit()
                 else:
                     should_sleep = True
-            if should_sleep:
-                log.info('sleeping')
-                sleep(self.poll_interval)
+            shard_should_sleep.append(should_sleep)
+        if all(shard_should_sleep):
+            log.info('sleeping')
+            sleep(self.poll_interval)
 
     def _run(self):
         """
