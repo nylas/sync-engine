@@ -101,7 +101,8 @@ def get_accounts_to_delete(shard_id):
     return ids_to_delete
 
 
-def delete_marked_accounts(shard_id, ids_to_delete, throttle=False, dry_run=False):
+def delete_marked_accounts(shard_id, ids_to_delete, throttle=False,
+                            dry_run=False):
     start = time.time()
 
     deleted_count = 0
@@ -325,17 +326,21 @@ def check_throttle():
 
 
 def purge_transactions(shard_id, days_ago=60, limit=1000, throttle=False,
-                       dry_run=False):
+                       dry_run=False, now=None):
+    start = 'now()'
+    if now is not None:
+        start = "'{}'".format(now.strftime('%Y-%m-%d %H:%M:%S'))
+
     # Delete all items from the transaction table that are older than
     # `days_ago` days.
     if dry_run:
         offset = 0
         query = ("SELECT id FROM transaction where created_at < "
-                 "DATE_SUB(now(), INTERVAL {} day) LIMIT {}".
-                 format(days_ago, limit))
+                 "DATE_SUB({}, INTERVAL {} day) LIMIT {}".
+                 format(start, days_ago, limit))
     else:
-        query = ("DELETE FROM transaction where created_at < DATE_SUB(now(),"
-                 " INTERVAL {} day) LIMIT {}".format(days_ago, limit))
+        query = ("DELETE FROM transaction where created_at < DATE_SUB({},"
+                 " INTERVAL {} day) LIMIT {}".format(start, days_ago, limit))
     try:
         # delete from rows until there are no more rows affected
         rowcount = 1

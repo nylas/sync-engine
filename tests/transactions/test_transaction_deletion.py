@@ -26,6 +26,10 @@ def create_transaction(db, created_at, namespace_id):
     return t
 
 
+def format_datetime(dt):
+    return "'{}'".format(dt.strftime('%Y-%m-%d %H:%M:%S'))
+
+
 def test_transaction_deletion(db, default_namespace):
     # Test that transaction deletion respects the days_ago
     # parameter. Arbitrarily chose 30 days for `days_ago`
@@ -45,15 +49,15 @@ def test_transaction_deletion(db, default_namespace):
         format(default_namespace.id)
     all_transactions = db.session.execute(query).scalar()
     date_query = ("SELECT count(id) FROM transaction WHERE created_at < "
-                  "DATE_SUB(now(), INTERVAL 30 day)")
+                  "DATE_SUB({}, INTERVAL 30 day)").format(format_datetime(now))
     older_than_thirty_days = db.session.execute(date_query).scalar()
 
     # Ensure no transactions are deleted during a dry run
-    purge_transactions(shard_id, days_ago=30, dry_run=True)
+    purge_transactions(shard_id, days_ago=30, dry_run=True, now=now)
     assert db.session.execute(query).scalar() == all_transactions
 
     # Delete all transactions older than 30 days
-    purge_transactions(shard_id, days_ago=30, dry_run=False)
+    purge_transactions(shard_id, days_ago=30, dry_run=False, now=now)
     assert all_transactions - older_than_thirty_days == \
         db.session.execute(query).scalar()
 
@@ -62,10 +66,10 @@ def test_transaction_deletion(db, default_namespace):
     all_transactions = db.session.execute(query).scalar()
 
     date_query = ("SELECT count(id) FROM transaction WHERE created_at < "
-                  "DATE_SUB(now(), INTERVAL 1 day)")
+                  "DATE_SUB({}, INTERVAL 1 day)").format(format_datetime(now))
     older_than_one_day = db.session.execute(date_query).scalar()
     # Delete all transactions older than 1 day
-    purge_transactions(shard_id, days_ago=1, dry_run=False)
+    purge_transactions(shard_id, days_ago=1, dry_run=False, now=now)
     assert all_transactions - older_than_one_day == \
         db.session.execute(query).scalar()
 
