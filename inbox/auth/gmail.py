@@ -104,6 +104,7 @@ class GmailAuthHandler(OAuthAuthHandler):
         # (redwood auth versus bin/inbox-auth)
         namespace = Namespace()
         account = GmailAccount(namespace=namespace)
+        account.create_emailed_events_calendar()
         return self.update_account(account, response)
 
     def update_account(self, account, response):

@@ -45,6 +45,9 @@ def test_create_account(db):
     account = db.session.query(Account).get(id_)
     assert account.imap_endpoint == (imap_host, imap_port)
     assert account.smtp_endpoint == (smtp_host, smtp_port)
+    # Ensure that the emailed events calendar was created
+    assert account._emailed_events_calendar is not None
+    assert account._emailed_events_calendar.name == 'Emailed events'
 
 
 def test_update_account(db):

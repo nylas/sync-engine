@@ -48,6 +48,8 @@ class GenericAuthHandler(AuthHandler):
             account.smtp_endpoint = (response['smtp_server_host'],
                                      response['smtp_server_port'])
 
+        account.create_emailed_events_calendar()
+
         # Shim for back-compatability with legacy auth
         # The old API does NOT send these but authentication now uses them
         # so set them (included here, set in update_account()).

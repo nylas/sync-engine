@@ -41,6 +41,9 @@ def test_create_account(db):
     assert account.sync_email == settings['sync_email']
     assert account.sync_contacts == settings['contacts']
     assert account.sync_events == settings['events']
+    # Ensure that the emailed events calendar was created
+    assert account._emailed_events_calendar is not None
+    assert account._emailed_events_calendar.name == 'Emailed events'
 
 
 def test_update_account(db):
