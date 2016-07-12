@@ -324,7 +324,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if view == 'count':
         res = query(db_session).params(**param_dict).one()[0]
-        return None, {"count": res}
+        return {"count": res}
 
     query += lambda q: q.order_by(desc(Message.received_date))
     query += lambda q: q.limit(bindparam('limit'))
@@ -333,7 +333,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if view == 'ids':
         res = query(db_session).params(**param_dict).all()
-        return None, [x[0] for x in res]
+        return [x[0] for x in res]
 
     # Eager-load related attributes to make constructing API representations
     # faster. Note that we don't use the options defined by
@@ -345,10 +345,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         subqueryload(Message.parts).joinedload(Part.block),
         subqueryload(Message.events))
 
-    cached_query = query._bakery.get(query._cache_key)
     prepared = query(db_session).params(**param_dict)
-    return ((str(prepared), (cached_query is not None), query._cache_key),
-            prepared.all())
+    return prepared.all()
 
 
 def files(namespace_id, message_public_id, filename, content_type,
