@@ -10,7 +10,11 @@ import IPython
 def user_console(user_email_address):
     with global_session_scope() as db_session:
         account = db_session.query(Account).filter_by(
-            email_address=user_email_address).one()
+            email_address=user_email_address).first()
+
+        if account is None:
+            print "No account found with email '{}'".format(email_address)
+            return
 
         if account.provider == 'eas':
             banner = """
