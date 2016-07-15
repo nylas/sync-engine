@@ -10,7 +10,7 @@ setup(
 
     install_requires=[
         "gevent>=1.0.1",
-        "nylas-production-python>=0.2.0",
+        "nylas-production-python>=0.2.10",
         "click>=2.4",
         "cpu_affinity>=0.1.0",
         "pyyaml",

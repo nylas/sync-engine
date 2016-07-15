@@ -45,7 +45,8 @@ def main(prod, config, process_num, syncback_id):
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
-    configure_logging(log_level=inbox_config.get('LOGLEVEL'))
+    level = os.environ.get('LOGLEVEL', inbox_config.get('LOGLEVEL'))
+    configure_logging(log_level=level)
     os.environ["SENTRY_DSN"] = inbox_config.get("SENTRY_DSN", "")
 
     total_processes = int(os.environ.get('SYNCBACK_PROCESSES', 1))

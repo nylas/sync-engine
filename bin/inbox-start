@@ -48,7 +48,8 @@ socket.setdefaulttimeout(SOCKET_TIMEOUT)
                    "number satisfying 0 <= process_num < total_processes.")
 def main(prod, enable_tracer, config, process_num):
     """ Launch the Nylas sync service. """
-    configure_logging(log_level=inbox_config.get('LOGLEVEL'))
+    level = os.environ.get('LOGLEVEL', inbox_config.get('LOGLEVEL'))
+    configure_logging(log_level=level)
     os.environ["SENTRY_DSN"] = inbox_config.get("SENTRY_DSN", "")
 
     if config is not None:

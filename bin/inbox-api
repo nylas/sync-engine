@@ -38,7 +38,8 @@ http_server = None
 @click.option('-p', '--port', default=5555, help='Port to run flask app on.')
 def main(prod, start_syncback, config, port):
     """ Launch the Nylas API service. """
-    configure_logging(log_level=inbox_config.get('LOGLEVEL'))
+    level = os.environ.get('LOGLEVEL', inbox_config.get('LOGLEVEL'))
+    configure_logging(log_level=level)
 
     if config is not None:
         config_path = os.path.abspath(config)
