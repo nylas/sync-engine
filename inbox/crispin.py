@@ -773,8 +773,9 @@ class CrispinClient(object):
         Leaves the Trash folder selected at the end of the method.
 
         """
-        log.info('Trying to delete draft', message_id_header=message_id_header)
         drafts_folder_name = self.folder_names()['drafts'][0]
+        log.info('Trying to delete draft',
+                message_id_header=message_id_header, folder=drafts_folder_name)
         self.conn.select_folder(drafts_folder_name)
         draft_deleted = self._delete_message(message_id_header)
         if draft_deleted:
@@ -1040,6 +1041,40 @@ class GmailCrispinClient(CrispinClient):
 
     def _decode_labels(self, labels):
         return map(imapclient.imap_utf7.decode, labels)
+
+    def delete_draft(self, message_id_header):
+        """
+        Delete a message in the drafts folder, as identified by the Message-Id
+        header. This overrides the parent class's method because gmail has
+        weird delete semantics: to delete a message from a "folder" (actually a
+        label) besides Trash or Spam, you must copy it to the trash. Issuing a
+        delete command will only remove the label. So here we first copy the
+        message from the draft folder to Trash, and then also delete it from the
+        Trash folder to permanently delete it.
+
+        Leaves the Trash folder selected at the end of the method.
+        """
+
+        log.info('Trying to delete gmail draft',
+                message_id_header=message_id_header)
+        drafts_folder_name = self.folder_names()['drafts'][0]
+        trash_folder_name = self.folder_names()['trash'][0]
+
+        # First find the draft in the drafts folder
+        self.conn.select_folder(drafts_folder_name)
+        matching_uids = self.find_by_header('Message-Id', message_id_header)
+        if not matching_uids:
+            return False
+
+        # To delete, first copy the message to trash (sufficient to move from
+        # gmail's All Mail folder to Trash folder)
+        self.conn.copy(matching_uids, trash_folder_name)
+
+        # Next, delete the message from trash (in the normal way) to permanently
+        # delete it.
+        self.conn.select_folder(trash_folder_name)
+        self._delete_message(message_id_header, False)
+        return True
 
     def delete_sent_message(self, message_id_header, delete_multiple=False):
         """

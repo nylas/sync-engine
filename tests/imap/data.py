@@ -167,6 +167,16 @@ class MockIMAPClient(object):
             'X-GM-THRID': 0
         }
 
+    def copy(self, matching_uids, folder_name):
+        """
+        Note: _moves_ one or more messages from the currently selected folder to
+        folder_name
+        """
+        for u in matching_uids:
+            self._data[folder_name][u] = self._data[self.selected_folder][u]
+        self.delete_messages(matching_uids)
+
+
     def capabilities(self):
         return []
 
