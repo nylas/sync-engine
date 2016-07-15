@@ -1,5 +1,3 @@
-
-
 from sqlalchemy import Column, Integer, String, ForeignKey, BigInteger, Index
 from sqlalchemy.orm import (relationship)
 from inbox.sqlalchemy_ext.util import JSON
