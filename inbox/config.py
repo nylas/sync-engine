@@ -1,6 +1,7 @@
 import errno
 import os
 import yaml
+import hvac
 
 __all__ = ['config']
 
@@ -93,6 +94,13 @@ def _update_config_from_env(config):
             with f:
                 # this also parses json, which is a subset of yaml
                 config.update(yaml.safe_load(f))
+
+
+def _update_from_vault(config):
+    client = hvac.Client(url="http://10.77.201.237:8200",
+                         token="ec1d37ba-12ca-bc8e-a440-c284327152c4")
+    secrets = client.read('secret/sync-engine')
+    config.update(secrets[u'data'])
 
 
 def _get_local_feature_flags(config):
