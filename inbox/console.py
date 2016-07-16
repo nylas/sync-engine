@@ -13,7 +13,7 @@ def user_console(user_email_address):
             email_address=user_email_address).first()
 
         if account is None:
-            print "No account found with email '{}'".format(email_address)
+            print "No account found with email '{}'".format(user_email_address)
             return
 
         if account.provider == 'eas':
