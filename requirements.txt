@@ -61,3 +61,4 @@ gevent_openssl==1.2
 backports.ssl==0.0.9
 imapclient==1.0.1
 tldextract==1.7.5
+hvac==0.2.15
