@@ -34,12 +34,12 @@ def get_zone_for_instance(hostname):
 @click.argument('hostname')
 @click.argument('process-num')
 @click.argument('account-id')
-def main(previous-hostname, previous-process-num,
+def main(previous-hostname, previous-process-num, previous-zone
          hostname, process_num, account_id):
     """
     Assigns the hostnme the account_id to sync
     When supplied with the previous sync host details, it will atomically
-    unassign the account from the old host, to the new host
+    transfer the account from the old host, to the new host
     Intended primarily for use when testing peformance of a specific
     sync host with certain account
     """
