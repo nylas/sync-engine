@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+import click
+import redis
+
+from boto import ec2
+
+from inbox.scheduling.queue import QueueClient
+
+
+def get_zone_for_instance(hostname):
+    conn = ec2.connect_to_region('us-west-2')
+
+    instances = []
+    for r in conn.get_all_instances():
+        for i in r.instances:
+            instances.append(i)
+
+    instances = [i for i in instances if i.tags.get('Name') == hostname and
+                 i.tags.get('Role') == 'sync']
+
+    if not instances:
+        raise Exception("No sync host with hostname '{}'".format(hostname))
+
+    assert len(instances) == 1
+
+    return instances[0].placement
+
+
+@click.command()
+@click.option('--previous-hostname', type=string,
+              help='which sync host is currently sycing this account?')
+@click.option('--previous-process-num', type=string, help="previous host proc")
+@click.argument('hostname')
+@click.argument('process-num')
+@click.argument('account-id')
+def main(previous-hostname, previous-process-num,
+         hostname, process_num, account_id):
+    """
+    Assigns the hostnme the account_id to sync
+    Intended primarily for use when testing peformance of a specific
+    sync host with certain account
+
+    WARNING: does not unassign accounts. Before using this script be sure
+    """
+
+    zone = get_zone_for_instance(hostname)
+    qc = QueueClient(zone)
+
+    if !(previous-process-num is None):
+        if previous-hostname is None:
+            unassign_host_name = hostname
+        else:
+            unassign_host_name = previous-hostname
+        unassign_host = '{}:{}'.format(unassign_host_name,
+                                       previous-process-num)
+        qc.unassign(account_id, unassign_host)
+    else:
+        message = 'You have not provided a --previous-hostname or a '\
+                  '--previous-process-num option. Please make sure you'\
+                  'unassign the desired account-id from it\'s original sync'\
+                  'host before continuing. Proceed? [Y/n] '
+        if raw_input(message).strip().lower() == 'n':
+            print 'Will not proceed'
+            return
+        
+    host = '{}:{}'.format(hostname, process_num)
+    qc.assign_account(account_id, host)
+
