@@ -50,6 +50,10 @@ class QueueClient(object):
         end
     end'''
 
+    ASSIGN_ACCOUNT = '''
+    redis.call('HSETNX', KEYS[1], KEYS[2], ARGV[1])
+    '''
+
     UNASSIGN = '''
     if redis.call('HGET', KEYS[1], KEYS[2]) == ARGV[1] then
         return redis.call('HDEL', KEYS[1], KEYS[2])
@@ -98,6 +102,15 @@ class QueueClient(object):
         """
         s = self.redis.register_script(self.ASSIGN)
         return s(keys=[self._queue, self._hash], args=[value])
+
+    def assign_account(self, key, value):
+        """
+        Assign an account to a sync process
+        
+        """
+        
+        s = self.redis.register_script(self.ASSIGN_ACCOUNT)
+        return s(keys=[self._hash, key], args=[value])
 
     def unassign(self, key, value):
         """
