@@ -46,6 +46,7 @@ setup(
         "backports.ssl>=0.0.9",
         "imapclient==1.0.1",
         "tldextract==1.7.5",
+        "hvac==0.2.15",
     ],
     dependency_links=["git+https://github.com/nylas/dateutil.git@da336a366cd3#egg=python-dateutil-2.4.2"],
 
