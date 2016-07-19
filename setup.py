@@ -16,7 +16,7 @@ setup(
         "pyyaml",
         "SQLAlchemy==1.0.11",
         "alembic>=0.6.4",
-        "requests>=2.4.3",
+        "requests>=2.7.0",
         "html2text>=2014.9.8",
         "pyinstrument>=0.12",
         "PyMySQL>=0.6.2",
