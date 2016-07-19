@@ -109,7 +109,10 @@ class QueueClient(object):
         Transfer the account_id from one sync host to another
         """
 
+        # Other hash exists in the case that the
+        # two instances are not in the same zone
         other_hash = 'assigned_{}'.format(zone)
+
         s = self.redis.register_script(self.TRANSFER_ACCOUNT)
         return s(keys=[self._hash, key, other_hash], args=[value])
 

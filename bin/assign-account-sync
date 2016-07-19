@@ -27,15 +27,12 @@ def get_zone_for_instance(hostname):
 
 
 @click.command()
-@click.option('--previous-hostname', type=string,
-              help='which sync host is currently sycing this account?')
-@click.option('--previous-process-num', type=string, help="previous host proc")
-@click.option('--previous-zone', type=string, help="previous sync host zone")
+@click.option('--previous-host-name', type=string,
+              help="previous sync host zone")
 @click.argument('hostname')
 @click.argument('process-num')
-@click.argument('account-id')
-def main(previous-hostname, previous-process-num, previous-zone
-         hostname, process_num, account_id):
+@click.argument('accountid')
+def main(previous_host_name, hostname, process_num, account_id):
     """
     Assigns the hostnme the account_id to sync
     When supplied with the previous sync host details, it will atomically
@@ -45,28 +42,20 @@ def main(previous-hostname, previous-process-num, previous-zone
     """
 
     zone = get_zone_for_instance(hostname)
-    qc = QueueClient(zone)
-
-    if !(previous-process-num is None):
-        if previous-hostname is None:
-            unassign_host_name = hostname
-        else:
-            unassign_host_name = previous-hostname
-        unassign_host = '{}:{}'.format(unassign_host_name,
-                                       previous-process-num)
-        qc.unassign(account_id, unassign_host)
-    else:
-        message = 'You have not provided a --previous-hostname or a '\
-                  '--previous-process-num option. Please make sure you'\
-                  'unassign the desired account-id from it\'s original sync'\
-                  'host before continuing. Proceed? [Y/n] '
+    if previous_host_name is None:
+        message = 'You have not provided a --previous-host-name option'\
+                  'When previou-host-name in unspecified, this script only '\
+                  'unassigns the desired account from the previous instance'\
+                  'if the two sync instances are in the same zone.'\
+                  'Proceed? [Y/n] '
         if raw_input(message).strip().lower() == 'n':
             print 'Will not proceed'
             return
-
-    if previous_zone is None:
         previous_zone = zone
-        
+    else:
+        previous_zone = get_zone_for_instance(previous_host_name)
+    qc = QueueClient(zone)
+
     host = '{}:{}'.format(hostname, process_num)
-    qc.transfer_account(account_id, host, previous_zone)
+    qc.transfer_account(accountid, host, previous_zone)
 
