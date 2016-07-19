@@ -30,6 +30,7 @@ def get_zone_for_instance(hostname):
 @click.option('--previous-hostname', type=string,
               help='which sync host is currently sycing this account?')
 @click.option('--previous-process-num', type=string, help="previous host proc")
+@click.option('--previous-zone', type=string, help="previous sync host zone")
 @click.argument('hostname')
 @click.argument('process-num')
 @click.argument('account-id')
@@ -37,12 +38,10 @@ def main(previous-hostname, previous-process-num,
          hostname, process_num, account_id):
     """
     Assigns the hostnme the account_id to sync
+    When supplied with the previous sync host details, it will atomically
+    unassign the account from the old host, to the new host
     Intended primarily for use when testing peformance of a specific
     sync host with certain account
-
-    WARNING: does not unassign accounts. Before using this script be sure
-    to check that you have already unassign the account from a sync intance,
-    less you want two machines syncing an account
     """
 
     zone = get_zone_for_instance(hostname)
@@ -64,7 +63,10 @@ def main(previous-hostname, previous-process-num,
         if raw_input(message).strip().lower() == 'n':
             print 'Will not proceed'
             return
+
+    if previous_zone is None:
+        previous_zone = zone
         
     host = '{}:{}'.format(hostname, process_num)
-    qc.assign_account(account_id, host)
+    qc.transfer_account(account_id, host, previous_zone)
 
