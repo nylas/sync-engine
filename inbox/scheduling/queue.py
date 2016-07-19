@@ -50,7 +50,8 @@ class QueueClient(object):
         end
     end'''
 
-    ASSIGN_ACCOUNT = '''
+    TRANSFER_ACCOUNT = '''
+    redis.call('HDEL', KEYS[3], KEYS[2])
     redis.call('HSETNX', KEYS[1], KEYS[2], ARGV[1])
     '''
 
@@ -103,14 +104,14 @@ class QueueClient(object):
         s = self.redis.register_script(self.ASSIGN)
         return s(keys=[self._queue, self._hash], args=[value])
 
-    def assign_account(self, key, value):
+    def transfer_account(self, key, value, zone=self.zone):
         """
-        Assign an account to a sync process
-
+        Transfer the account_id from one sync host to another
         """
 
-        s = self.redis.register_script(self.ASSIGN_ACCOUNT)
-        return s(keys=[self._hash, key], args=[value])
+        other_hash = 'assigned_{}'.format(zone)
+        s = self.redis.register_script(self.TRANSFER_ACCOUNT)
+        return s(keys=[self._hash, key, other_hash], args=[value])
 
     def unassign(self, key, value):
         """
