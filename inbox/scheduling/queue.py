@@ -106,9 +106,9 @@ class QueueClient(object):
     def assign_account(self, key, value):
         """
         Assign an account to a sync process
-        
+
         """
-        
+
         s = self.redis.register_script(self.ASSIGN_ACCOUNT)
         return s(keys=[self._hash, key], args=[value])
 
