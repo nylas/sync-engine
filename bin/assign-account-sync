@@ -41,6 +41,8 @@ def main(previous-hostname, previous-process-num,
     sync host with certain account
 
     WARNING: does not unassign accounts. Before using this script be sure
+    to check that you have already unassign the account from a sync intance,
+    less you want two machines syncing an account
     """
 
     zone = get_zone_for_instance(hostname)
