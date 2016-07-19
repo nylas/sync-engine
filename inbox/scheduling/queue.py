@@ -104,7 +104,7 @@ class QueueClient(object):
         s = self.redis.register_script(self.ASSIGN)
         return s(keys=[self._queue, self._hash], args=[value])
 
-    def transfer_account(self, key, value, zone=self.zone):
+    def transfer_account(self, key, value, zone):
         """
         Transfer the account_id from one sync host to another
         """
