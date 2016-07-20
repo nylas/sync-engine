@@ -94,6 +94,7 @@ setup(
              'bin/mysql-prompt',
              'bin/toggle-s3-sync',
              'bin/unschedule-account-syncs',
+             'bin/assign-account-sync',
              'bin/syncback-stats'
              ],
 
