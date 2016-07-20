@@ -27,7 +27,7 @@ def get_zone_for_instance(hostname):
 
 
 @click.command()
-@click.option('--previous-host-name', type=string,
+@click.option('--previous-host-name', type=str,
               help="previous sync host zone")
 @click.argument('hostname')
 @click.argument('process-num')
