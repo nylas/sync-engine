@@ -18,17 +18,12 @@ def user_console(user_email_address):
             account = result[0]
         elif len(result) > 1:
             print "\n{} accounts found for that email.\n".format(len(result))
-            for acc in result:
-                choice = raw_input("[y/n] Do you want to select the {} "\
-                "account\n{} {}\n".format(acc.provider, 
+            for idx, acc in enumerate(result):
+                print "[{}] - {} {} {}".format(idx, acc.provider, 
                     acc.namespace.email_address, 
-                    acc.namespace.public_id))
-                if choice == 'y':
-                    account = acc
-                    break
-            if account is None:
-                print "No account selected..."
-                return
+                    acc.namespace.public_id)
+            choice = int(raw_input("\nWhich # do you want to select? "))
+            account = result[choice]
 
         if account is None:
             print "No account found with email '{}'".format(user_email_address)
