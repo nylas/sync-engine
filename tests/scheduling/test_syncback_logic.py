@@ -29,12 +29,16 @@ def patched_enginemanager(monkeypatch):
 
 @pytest.yield_fixture
 def patched_task(monkeypatch):
+    def uses_crispin_client(self):
+        return False
+
     def execute_with_lock(self):
         with session_scope(self.account_id) as db_session:
             action_log_entry = db_session.query(ActionLog).get(
                 self.action_log_id)
             action_log_entry.status = 'successful'
             db_session.commit()
+    monkeypatch.setattr('inbox.transactions.actions.SyncbackTask.uses_crispin_client', uses_crispin_client)
     monkeypatch.setattr('inbox.transactions.actions.SyncbackTask.execute_with_lock', execute_with_lock)
     yield
     monkeypatch.undo()

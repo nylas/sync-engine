@@ -46,6 +46,7 @@ log = get_logger()
 
 __all__ = ['CrispinClient', 'GmailCrispinClient']
 
+
 # Unify flags API across IMAP and Gmail
 Flags = namedtuple('Flags', 'flags modseq')
 # Flags includes labels on Gmail because Gmail doesn't use \Draft.

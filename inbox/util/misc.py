@@ -10,6 +10,14 @@ from nylas.logging import get_logger
 from inbox.providers import providers
 
 
+class DummyContextManager(object):
+    def __enter__(self):
+        return None
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+
 class ProviderSpecificException(Exception):
     pass
 

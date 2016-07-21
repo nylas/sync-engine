@@ -20,21 +20,33 @@ import weakref
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 logger = get_logger()
+from inbox.crispin import writable_connection_pool
 from inbox.ignition import engine_manager
 from inbox.util.concurrency import retry_with_logging
 from inbox.models.session import session_scope, session_scope_by_shard_id
 from inbox.models import ActionLog
+from inbox.util.misc import DummyContextManager
 from inbox.util.stats import statsd_client
-from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
-                                save_draft, update_draft, delete_draft,
-                                save_sent_email, create_folder, create_label,
-                                update_folder, update_label, delete_folder,
-                                delete_label, delete_sent_email)
+from inbox.actions.base import (mark_unread,
+                                mark_starred,
+                                move,
+                                change_labels,
+                                save_draft,
+                                update_draft,
+                                delete_draft,
+                                save_sent_email,
+                                create_folder,
+                                create_label,
+                                update_folder,
+                                update_label,
+                                delete_folder,
+                                delete_label,
+                                delete_sent_email)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 from inbox.config import config
 
-ACTION_FUNCTION_MAP = {
+MAIL_ACTION_FUNCTION_MAP = {
     'mark_unread': mark_unread,
     'mark_starred': mark_starred,
     'move': move,
@@ -44,16 +56,29 @@ ACTION_FUNCTION_MAP = {
     'delete_draft': delete_draft,
     'save_sent_email': save_sent_email,
     'delete_sent_email': delete_sent_email,
-    'create_event': create_event,
-    'delete_event': delete_event,
-    'update_event': update_event,
     'create_folder': create_folder,
     'create_label': create_label,
     'update_folder': update_folder,
     'delete_folder': delete_folder,
     'update_label': update_label,
-    'delete_label': delete_label
+    'delete_label': delete_label,
 }
+
+EVENT_ACTION_FUNCTION_MAP = {
+    'create_event': create_event,
+    'delete_event': delete_event,
+    'update_event': update_event,
+}
+
+
+def action_uses_crispin_client(action):
+    return action in MAIL_ACTION_FUNCTION_MAP
+
+
+def function_for_action(action):
+    if action in MAIL_ACTION_FUNCTION_MAP:
+        return MAIL_ACTION_FUNCTION_MAP[action]
+    return EVENT_ACTION_FUNCTION_MAP[action]
 
 
 ACTION_MAX_NR_OF_RETRIES = 20
@@ -107,6 +132,7 @@ class SyncbackService(gevent.Greenlet):
     def _batch_log_entries(self, db_session, log_entries):
         tasks = []
         semaphore = None
+        account_id = None
         for log_entry in log_entries:
             if log_entry is None:
                 self.log.error('Got no action, skipping')
@@ -121,9 +147,14 @@ class SyncbackService(gevent.Greenlet):
                 return None
 
             namespace = log_entry.namespace
+            if account_id is None:
+                account_id = namespace.account.id
+            else:
+                assert account_id is namespace.account.id
+
             if namespace.account.sync_state == 'invalid':
                 self.log.warning('Skipping action for invalid account',
-                                 account_id=namespace.account.id,
+                                 account_id=account_id,
                                  action_id=log_entry.id,
                                  action=log_entry.action)
 
@@ -136,24 +167,24 @@ class SyncbackService(gevent.Greenlet):
                     self.log.warning('Marking action as failed for '
                                      'invalid account, older than '
                                      'grace period',
-                                     account_id=namespace.account.id,
+                                     account_id=account_id,
                                      action_id=log_entry.id,
                                      action=log_entry.action)
                     statsd_client.incr('syncback.invalid_failed.total')
                     statsd_client.incr('syncback.invalid_failed.{}'.
-                                       format(namespace.account.id))
+                                       format(account_id))
                 continue
 
             if semaphore is None:
-                semaphore = self.account_semaphores[namespace.account_id]
+                semaphore = self.account_semaphores[account_id]
             else:
-                assert semaphore is self.account_semaphores[namespace.account_id]
+                assert semaphore is self.account_semaphores[account_id]
             tasks.append(
                 SyncbackTask(action_name=log_entry.action,
                              semaphore=semaphore,
                              action_log_id=log_entry.id,
                              record_id=log_entry.record_id,
-                             account_id=namespace.account_id,
+                             account_id=account_id,
                              provider=namespace.account.
                              verbose_provider,
                              service=self,
@@ -169,7 +200,7 @@ class SyncbackService(gevent.Greenlet):
                           action_id=task.action_log_id,
                           msg=task.action_name,
                           task_count=self.task_queue.qsize())
-        return SyncbackBatchTask(semaphore, tasks)
+        return SyncbackBatchTask(semaphore, tasks, account_id)
 
     def _process_log(self):
         before = datetime.utcnow()
@@ -258,17 +289,29 @@ class SyncbackService(gevent.Greenlet):
 
 
 class SyncbackBatchTask(object):
-    def __init__(self, semaphore, tasks):
+    def __init__(self, semaphore, tasks, account_id):
         self.semaphore = semaphore
         self.tasks = tasks
+        self.account_id = account_id
+
+    def _crispin_client_or_none(self):
+        if self.uses_crispin_client():
+            return writable_connection_pool(self.account_id).get()
+        else:
+            return DummyContextManager()
 
     def execute(self):
         log = logger.new()
         with self.semaphore:
-            log.info("Syncback running batch of actions",
-                     num_actions=len(self.tasks))
-            for task in self.tasks:
-                task.execute_with_lock()
+            with self._crispin_client_or_none() as crispin_client:
+                log.info("Syncback running batch of actions",
+                         num_actions=len(self.tasks))
+                for task in self.tasks:
+                    task.crispin_client = crispin_client
+                    task.execute_with_lock()
+
+    def uses_crispin_client(self):
+        return any([task.uses_crispin_client() for task in self.tasks])
 
     def timeout(self, per_task_timeout):
         return len(self.tasks) * per_task_timeout
@@ -300,13 +343,14 @@ class SyncbackTask(object):
         self.parent_service = weakref.ref(service)
         self.action_name = action_name
         self.semaphore = semaphore
-        self.func = ACTION_FUNCTION_MAP[action_name]
+        self.func = function_for_action(action_name)
         self.action_log_id = action_log_id
         self.record_id = record_id
         self.account_id = account_id
         self.provider = provider
         self.extra_args = extra_args
         self.retry_interval = retry_interval
+        self.crispin_client = None
 
     def _log_to_statsd(self, action_log_status, latency=None):
         metric_names = [
@@ -328,11 +372,13 @@ class SyncbackTask(object):
         for _ in range(ACTION_MAX_NR_OF_RETRIES):
             try:
                 before_func = datetime.utcnow()
+                func_args = [self.account_id, self.record_id]
                 if self.extra_args:
-                    self.func(self.account_id, self.record_id,
-                              self.extra_args)
-                else:
-                    self.func(self.account_id, self.record_id)
+                    func_args.append(self.extra_args)
+                if self.uses_crispin_client():
+                    assert self.crispin_client is not None
+                    func_args.insert(0, self.crispin_client)
+                self.func(*func_args)
                 after_func = datetime.utcnow()
 
                 with session_scope(self.account_id) as db_session:
@@ -378,6 +424,9 @@ class SyncbackTask(object):
             # provider suddenly starts having issues for a short period of
             # time.
             gevent.sleep(self.retry_interval)
+
+    def uses_crispin_client(self):
+        return action_uses_crispin_client(self.action_name)
 
     def action_log_ids(self):
         return [self.action_log_id]
