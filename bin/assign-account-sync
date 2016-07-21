@@ -33,7 +33,7 @@ print "before main"
               help="previous sync host zone")
 @click.argument('hostname')
 @click.argument('process-num')
-@click.argument('accountid')
+@click.argument('account-id')
 def main(previous_host_name, hostname, process_num, account_id):
     """
     Assigns the hostnme the account_id to sync
@@ -60,7 +60,7 @@ def main(previous_host_name, hostname, process_num, account_id):
     qc = QueueClient(zone)
 
     host = '{}:{}'.format(hostname, process_num)
-    qc.transfer_account(accountid, host, previous_zone)
+    qc.transfer_account(account_id, host, previous_zone)
 
 if __name__ == '__main__':
     main()
