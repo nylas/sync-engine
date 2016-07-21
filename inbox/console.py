@@ -9,8 +9,26 @@ import IPython
 
 def user_console(user_email_address):
     with global_session_scope() as db_session:
-        account = db_session.query(Account).filter_by(
-            email_address=user_email_address).first()
+        result = db_session.query(Account).filter_by(
+            email_address=user_email_address).all()
+
+        account = None
+
+        if len(result) == 1:
+            account = result[0]
+        elif len(result) > 1:
+            print "\n{} accounts found for that email.\n".format(len(result))
+            for acc in result:
+                choice = raw_input("[y/n] Do you want to select the {} "\
+                "account\n{} {}\n".format(acc.provider, 
+                    acc.namespace.email_address, 
+                    acc.namespace.public_id))
+                if choice == 'y':
+                    account = acc
+                    break
+            if account is None:
+                print "No account selected..."
+                return
 
         if account is None:
             print "No account found with email '{}'".format(user_email_address)
