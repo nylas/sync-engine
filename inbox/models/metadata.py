@@ -47,6 +47,8 @@ class Metadata(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin,
 
     value = Column(JSON)
 
+    queryable_value = Column(Integer, nullable=True, index=True)
+
     version = Column(Integer, nullable=True, server_default='0')
 
 Index('ix_obj_public_id_app_id',
