@@ -75,6 +75,7 @@ class QueueClient(object):
         """
         Returns all keys being tracked (either pending in the queue, or
         already assigned).
+
         """
         p = self.redis.pipeline(transaction=True)
         p.hgetall(self._hash)

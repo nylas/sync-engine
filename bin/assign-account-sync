@@ -25,8 +25,6 @@ def get_zone_for_instance(hostname):
 
     return instances[0].placement
 
-print "before main"
-
 
 @click.command()
 @click.option('--previous-host-name', type=str,
@@ -43,7 +41,6 @@ def main(previous_host_name, hostname, process_num, account_id):
     sync host with certain account
     """
 
-    print "hello"
     zone = get_zone_for_instance(hostname)
     if previous_host_name is None:
         message = 'You have not provided a --previous-host-name option'\
@@ -58,9 +55,19 @@ def main(previous_host_name, hostname, process_num, account_id):
     else:
         previous_zone = get_zone_for_instance(previous_host_name)
     qc = QueueClient(zone)
+    other_qc = QueueClient(previous_zone)
 
+    print "before transfer"
+    
+    print "account in destination zone? {}".format(int(account_id) in qc.assigned())
+    print "account in source zone? {}".format(int(account_id) in other_qc.assigned())
+    
     host = '{}:{}'.format(hostname, process_num)
     qc.transfer_account(account_id, host, previous_zone)
+
+    print "\n after transfer"
+    print "account in destination zone? {}".format(int(account_id) in qc.assigned())
+    print "account in source zone? {}".format(int(account_id) in other_qc.assigned())
 
 if __name__ == '__main__':
     main()
