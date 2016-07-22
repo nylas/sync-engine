@@ -24,7 +24,7 @@ def upgrade():
                     existing_nullable=False)
 
     op.add_column('secret', sa.Column('encryption_scheme', sa.Integer(),
-                  server_default='0', nullable=False))
+                                      server_default='0', nullable=False))
     op.add_column('secret', sa.Column('_secret', sa.BLOB(),
                                       nullable=False))
 

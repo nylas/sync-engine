@@ -107,7 +107,7 @@ class ContactSearchIndexService(Greenlet):
                         transactions, key=lambda t: t.created_at)
                     current_timestamp = datetime.utcnow()
                     latency = (current_timestamp -
-                                oldest_transaction.created_at).seconds
+                               oldest_transaction.created_at).seconds
                     self._report_transactions_latency(latency)
                     new_pointer = transactions[-1].id
                     self.update_pointer(new_pointer, key, db_session)

@@ -17,5 +17,6 @@ import sqlalchemy as sa
 def upgrade():
     op.alter_column('imapuid', 'extra_flags', type_=sa.String(255))
 
+
 def downgrade():
     op.alter_column('imapuid', 'extra_flags', type_=sa.String(40))

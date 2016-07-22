@@ -52,43 +52,43 @@ def sorted_gmail_threads(db, default_account):
 def sorted_gmail_messages(db, default_account, sorted_gmail_threads, folder):
     thread1, thread2, thread3 = sorted_gmail_threads
     message1 = add_fake_message(db.session, default_account.namespace.id,
-                                 thread=thread1,
-                                 g_msgid=1,
-                                 from_addr=[{'name': 'Ben Bitdiddle',
-                                             'email': 'ben@bitdiddle.com'}],
-                                 to_addr=[{'name': 'Barrack Obama',
-                                           'email': 'barrack@obama.com'}],
-                                 received_date=datetime.
-                                 datetime(2015, 7, 9, 23, 50, 7),
-                                 subject='YOO!')
+                                thread=thread1,
+                                g_msgid=1,
+                                from_addr=[{'name': 'Ben Bitdiddle',
+                                            'email': 'ben@bitdiddle.com'}],
+                                to_addr=[{'name': 'Barrack Obama',
+                                          'email': 'barrack@obama.com'}],
+                                received_date=datetime.
+                                datetime(2015, 7, 9, 23, 50, 7),
+                                subject='YOO!')
 
     add_fake_imapuid(db.session, default_account.id, message1,
                      folder, 3000)
 
     message2 = add_fake_message(db.session, default_account.namespace.id,
-                                 thread=thread2,
-                                 g_msgid=2,
-                                 from_addr=[{'name': 'Ben Bitdiddle',
-                                             'email': 'ben@bitdiddle.com'}],
-                                 to_addr=[{'name': 'Barrack Obama',
-                                           'email': 'barrack@obama.com'}],
-                                 received_date=datetime.
-                                 datetime(2014, 7, 9, 23, 50, 7),
-                                 subject='Hey!')
+                                thread=thread2,
+                                g_msgid=2,
+                                from_addr=[{'name': 'Ben Bitdiddle',
+                                            'email': 'ben@bitdiddle.com'}],
+                                to_addr=[{'name': 'Barrack Obama',
+                                          'email': 'barrack@obama.com'}],
+                                received_date=datetime.
+                                datetime(2014, 7, 9, 23, 50, 7),
+                                subject='Hey!')
 
     add_fake_imapuid(db.session, default_account.id, message2,
                      folder, 3001)
 
     message3 = add_fake_message(db.session, default_account.namespace.id,
-                                 thread=thread3,
-                                 g_msgid=3,
-                                 from_addr=[{'name': 'Ben Bitdiddle',
-                                             'email': 'ben@bitdiddle.com'}],
-                                 to_addr=[{'name': 'Barrack Obama',
-                                           'email': 'barrack@obama.com'}],
-                                 received_date=datetime.
-                                 datetime(2013, 7, 9, 23, 50, 7),
-                                 subject='Sup?')
+                                thread=thread3,
+                                g_msgid=3,
+                                from_addr=[{'name': 'Ben Bitdiddle',
+                                            'email': 'ben@bitdiddle.com'}],
+                                to_addr=[{'name': 'Barrack Obama',
+                                          'email': 'barrack@obama.com'}],
+                                received_date=datetime.
+                                datetime(2013, 7, 9, 23, 50, 7),
+                                subject='Sup?')
 
     add_fake_imapuid(db.session, default_account.id, message3,
                      folder, 3002)
@@ -109,43 +109,43 @@ def sorted_imap_threads(db, generic_account):
 def sorted_imap_messages(db, generic_account, sorted_imap_threads, imap_folder):
     thread1, thread2, thread3 = sorted_imap_threads
     message1 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread1,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2015, 7, 9, 23, 50, 7),
-                                 subject='YOO!')
+                                thread=thread1,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2015, 7, 9, 23, 50, 7),
+                                subject='YOO!')
 
     add_fake_imapuid(db.session, generic_account.id, message1,
                      imap_folder, 2000)
 
     message2 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread2,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2014, 7, 9, 23, 50, 7),
-                                 subject='Hey!')
+                                thread=thread2,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2014, 7, 9, 23, 50, 7),
+                                subject='Hey!')
 
     add_fake_imapuid(db.session, generic_account.id, message2,
                      imap_folder, 2001)
 
     message3 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread3,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2013, 7, 9, 23, 50, 7),
-                                 subject='Sup?')
+                                thread=thread3,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2013, 7, 9, 23, 50, 7),
+                                subject='Sup?')
 
     add_fake_imapuid(db.session, generic_account.id, message3,
                      imap_folder, 2002)
@@ -167,43 +167,43 @@ def different_imap_messages(db, generic_account, different_sorted_imap_threads,
                             different_imap_folder):
     thread1, thread2, thread3 = different_sorted_imap_threads
     message1 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread1,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2015, 7, 9, 23, 50, 7),
-                                 subject='LOL')
+                                thread=thread1,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2015, 7, 9, 23, 50, 7),
+                                subject='LOL')
 
     add_fake_imapuid(db.session, generic_account.id, message1,
                      different_imap_folder, 5000)
 
     message2 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread2,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2014, 7, 9, 23, 50, 7),
-                                 subject='ROTFLMO')
+                                thread=thread2,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2014, 7, 9, 23, 50, 7),
+                                subject='ROTFLMO')
 
     add_fake_imapuid(db.session, generic_account.id, message2,
                      different_imap_folder, 5001)
 
     message3 = add_fake_message(db.session, generic_account.namespace.id,
-                                 thread=thread3,
-                                 from_addr=[{'name': '',
-                                             'email':
-                                                'inboxapptest@example.com'}],
-                                 to_addr=[{'name': 'Ben Bitdiddle',
-                                           'email': 'ben@bitdiddle.com'}],
-                                 received_date=datetime.
-                                 datetime(2013, 7, 9, 23, 50, 7),
-                                 subject='ROFLCOPTER')
+                                thread=thread3,
+                                from_addr=[{'name': '',
+                                            'email':
+                                            'inboxapptest@example.com'}],
+                                to_addr=[{'name': 'Ben Bitdiddle',
+                                          'email': 'ben@bitdiddle.com'}],
+                                received_date=datetime.
+                                datetime(2013, 7, 9, 23, 50, 7),
+                                subject='ROFLCOPTER')
 
     add_fake_imapuid(db.session, generic_account.id, message3,
                      different_imap_folder, 5002)

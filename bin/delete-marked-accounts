@@ -48,4 +48,3 @@ def delete_account_data(host, throttle, dry_run):
 
 if __name__ == '__main__':
     run()
-

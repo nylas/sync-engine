@@ -92,7 +92,7 @@ def test_gmail_handle_folder_renames(db, default_account):
         assert folder.category is not None
 
     original_categories = {f.canonical_name: f.category.display_name for f in
-                            original_folders}
+                           original_folders}
 
     for folder in folder_names_and_roles:
         display_name, role = folder
@@ -111,7 +111,7 @@ def test_gmail_handle_folder_renames(db, default_account):
         assert folder.category is not None
 
     renamed_categories = {f.canonical_name: f.category.display_name for f in
-                            renamed_folders}
+                          renamed_folders}
 
     for folder in folders_renamed:
         display_name, role = folder
@@ -201,7 +201,7 @@ def test_imap_remote_delete(db, default_account):
         assert label.category is not None
 
     original_categories = {f.canonical_name: f.category.display_name for f in
-                            original_folders}
+                           original_folders}
 
     for folder in folders:
         display_name, role = folder
@@ -220,7 +220,7 @@ def test_imap_remote_delete(db, default_account):
         assert folder.category is not None
 
     renamed_categories = {f.canonical_name: f.category.display_name for f in
-                            renamed_folders}
+                          renamed_folders}
 
     for folder in new_folders:
         display_name, role = folder
@@ -246,6 +246,5 @@ def test_not_deleting_canonical_folders(empty_db, default_account):
     monitor.save_folder_names(empty_db.session, raw_folders)
 
     label = empty_db.session.query(Label).get(label.id)
-    assert label.deleted_at == None
+    assert label.deleted_at is None
     assert label.category.deleted_at == EPOCH
-

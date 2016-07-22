@@ -16,7 +16,6 @@ setproctitle('nylas-contact-search-index-service')
 monkey.patch_all()
 
 
-
 @click.command()
 @click.option('--prod/--no-prod', default=False,
               help='Disables the autoreloader and potentially other '

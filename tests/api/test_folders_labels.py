@@ -245,7 +245,7 @@ def test_duplicate_label_create(label_client):
     data = label_client.get_raw('/labels/')
     label = json.loads(data.data)[0]
     data = label_client.post_data('/labels/',
-                                   {"display_name": label['display_name']})
+                                  {"display_name": label['display_name']})
     assert data.status_code == 400
 
     # Deleting the label and re-creating (with the same name) succeeds.

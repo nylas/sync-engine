@@ -34,9 +34,9 @@ def upgrade():
     with session_scope(versioned=False) as db_session:
         for thread in page_query(db_session.query(Thread)):
             last_message = db_session.query(Message). \
-                    filter(Message.thread_id == thread.id,
-                           not_(Message.categories.any(name="sent"))). \
-                    order_by(desc(Message.received_date)).first()
+                filter(Message.thread_id == thread.id,
+                       not_(Message.categories.any(name="sent"))). \
+                order_by(desc(Message.received_date)).first()
             if last_message:
                 thread.receivedrecentdate = last_message.received_date
 

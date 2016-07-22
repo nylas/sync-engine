@@ -19,6 +19,7 @@ def upgrade():
     op.alter_column('account', 'email_address', type_=mysql.VARCHAR(191))
     op.alter_column('contact', 'email_address', type_=mysql.VARCHAR(191))
 
+
 def downgrade():
     op.alter_column('account', 'email_address', type_=mysql.VARCHAR(254))
     op.alter_column('contact', 'email_address', type_=mysql.VARCHAR(191))

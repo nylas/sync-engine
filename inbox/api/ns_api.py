@@ -628,7 +628,7 @@ def folder_label_delete_api(public_id):
         deleted_at = datetime.utcnow()
         category.deleted_at = deleted_at
         folders = category.folders if g.namespace.account.discriminator \
-                  != 'easaccount' else category.easfolders
+            != 'easaccount' else category.easfolders
         for folder in folders:
             folder.deleted_at = deleted_at
 

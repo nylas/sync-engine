@@ -14,6 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
+
 def upgrade():
     op.alter_column('thread', 'g_thrid', type_=mysql.BIGINT)
     op.execute('OPTIMIZE TABLE thread')

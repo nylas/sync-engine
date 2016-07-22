@@ -59,8 +59,8 @@ def upgrade():
                           ['replyto_thread_id'], ['id'])
 
     op.add_column('spoolmessage', sa.Column('state', sa.Enum('draft',
-                  'sending', 'sending failed', 'sent'), server_default='draft',
-                  nullable=False))
+                                                             'sending', 'sending failed', 'sent'), server_default='draft',
+                                            nullable=False))
 
 
 def downgrade():

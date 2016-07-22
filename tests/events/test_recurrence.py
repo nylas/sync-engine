@@ -128,7 +128,7 @@ def test_linking_events_from_different_calendars(db, default_account,
 
     assert isinstance(override, RecurringEventOverride)
     link_events(db.session, override)
-    assert override.master == None
+    assert override.master is None
 
 
 def test_link_events_from_master(db, default_account, calendar):

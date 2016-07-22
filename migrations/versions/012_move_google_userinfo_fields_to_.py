@@ -65,15 +65,15 @@ def upgrade():
 
     for r in results:
         op.execute(
-          imapaccount.update().where(imapaccount.c.id==r[0]).values({
-            'family_name': r[1],
-            'google_id': r[2],
-            'g_plus_url': r[3],
-            'g_picture_url': r[4],
-            'g_gender': r[5],
-            'given_name': r[6],
-            'g_locale': r[7]
-          })
+            imapaccount.update().where(imapaccount.c.id == r[0]).values({
+                'family_name': r[1],
+                'google_id': r[2],
+                'g_plus_url': r[3],
+                'g_picture_url': r[4],
+                'g_gender': r[5],
+                'given_name': r[6],
+                'g_locale': r[7]
+            })
         )
 
     # DROP:
@@ -134,15 +134,15 @@ def downgrade():
 
     for r in results:
         op.execute(
-          account.update().where(account.c.id==r[0]).values({
-            'family_name': r[1],
-            'google_id': r[2],
-            'g_plus_url': r[3],
-            'g_picture_url': r[4],
-            'g_gender': r[5],
-            'given_name': r[6],
-            'g_locale': r[7]
-          })
+            account.update().where(account.c.id == r[0]).values({
+                'family_name': r[1],
+                'google_id': r[2],
+                'g_plus_url': r[3],
+                'g_picture_url': r[4],
+                'g_gender': r[5],
+                'given_name': r[6],
+                'g_locale': r[7]
+            })
         )
 
     # DROP:

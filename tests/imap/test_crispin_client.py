@@ -488,7 +488,7 @@ def check_missing_generic(role, folder_base, generic_role_names,
     '''
     assert folder_base is not None
     role_map = constants['gmail_role_map'] \
-               if provider == 'gmail' else constants['imap_role_map']
+        if provider == 'gmail' else constants['imap_role_map']
     # role_map is close, but not quite right, because it has a role key
     keys_to_remove = []
     # done in two loops to avoid modifying map while iterating through it
@@ -501,8 +501,8 @@ def check_missing_generic(role, folder_base, generic_role_names,
         # add in a folder with name of role alias, without it's role flag
         folders = folder_base + [(('\\HasNoChildren'), '/', role_alias)]
         client = patch_gmail_client(monkeypatch, folders) \
-                 if provider == 'gmail' \
-                    else patch_generic_client(monkeypatch, folders)
+            if provider == 'gmail' \
+            else patch_generic_client(monkeypatch, folders)
 
         raw_folders = client.folders()
         role_map[role_alias] = role

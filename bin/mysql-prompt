@@ -6,6 +6,7 @@ import subprocess
 from inbox.config import config
 from setproctitle import setproctitle
 
+
 @click.command()
 @click.option('--shard-num', type=int)
 def main(shard_num):

@@ -15,6 +15,7 @@ import sqlalchemy as sa
 revision = '5305d4ae30b4'
 down_revision = '1f746c93e8fd'
 
+
 def upgrade():
     conn = op.get_bind()
     conn.execute(text("ALTER TABLE event ADD COLUMN participants LONGTEXT;"))

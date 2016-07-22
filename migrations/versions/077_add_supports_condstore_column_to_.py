@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 def upgrade():
     op.add_column('genericaccount', sa.Column('supports_condstore',
-                  sa.Boolean(), nullable=True))
+                                              sa.Boolean(), nullable=True))
 
 
 def downgrade():

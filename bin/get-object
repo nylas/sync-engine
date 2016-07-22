@@ -26,6 +26,7 @@ try:
 except ImportError:
     pass
 
+
 @click.command()
 @click.option('--type', '-t', type=str, required=True)
 @click.option('--id', type=str, default=None)

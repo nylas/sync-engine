@@ -212,11 +212,11 @@ class FolderSyncEngine(Greenlet):
                               ' row. Stopping sync.')
 
                     with session_scope(self.namespace_id) as db_session:
-                            account = db_session.query(Account).get(self.account_id)
-                            account.disable_sync('Detected endless uidvalidity '
-                                                 'resync loop')
-                            account.sync_state = 'stopped'
-                            db_session.commit()
+                        account = db_session.query(Account).get(self.account_id)
+                        account.disable_sync('Detected endless uidvalidity '
+                                             'resync loop')
+                        account.sync_state = 'stopped'
+                        db_session.commit()
 
                     raise MailsyncDone()
 

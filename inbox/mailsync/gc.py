@@ -155,6 +155,7 @@ class LabelRenameHandler(gevent.Greenlet):
     This isn't elegant but it beats having to issue a complex query to the db.
 
     """
+
     def __init__(self, account_id, namespace_id, label_name, semaphore):
         bind_context(self, 'renamehandler', account_id)
         self.account_id = account_id
@@ -187,7 +188,7 @@ class LabelRenameHandler(gevent.Greenlet):
                     crispin_client.select_folder(folder_name, uidvalidity_cb)
 
                     found_uids = crispin_client.search_uids(['X-GM-LABELS',
-                         utf7_encode(self.label_name)])
+                                                             utf7_encode(self.label_name)])
 
                     for chnk in chunk(found_uids, 200):
                         flags = crispin_client.flags(chnk)

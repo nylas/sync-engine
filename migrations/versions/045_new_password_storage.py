@@ -30,7 +30,10 @@ def decrypt_aes(ciphertext, key):
     decrypted message as a byte string.
     """
     from Crypto.Cipher import AES
-    unpad = lambda s: s[:-ord(s[-1])]
+
+    def unpad(s):
+        return s[:-ord(s[-1])]
+
     iv = ciphertext[:AES.block_size]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     plaintext = unpad(cipher.decrypt(ciphertext))[AES.block_size:]

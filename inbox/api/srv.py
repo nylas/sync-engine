@@ -41,13 +41,13 @@ for code in default_exceptions.iterkeys():
 def auth():
     """ Check for account ID on all non-root URLS """
     if request.path in ('/accounts', '/accounts/', '/') \
-                       or request.path.startswith('/w/'):
+            or request.path.startswith('/w/'):
         return
 
     if not request.authorization or not request.authorization.username:
 
         AUTH_ERROR_MSG = ("Could not verify access credential.", 401,
-                             {'WWW-Authenticate': 'Basic realm="API '
+                          {'WWW-Authenticate': 'Basic realm="API '
                               'Access Token Required"'})
 
         auth_header = request.headers.get('Authorization', None)

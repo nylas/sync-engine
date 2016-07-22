@@ -11,8 +11,8 @@ from inbox.sqlalchemy_ext.util import bakery
 
 
 def _threads_filters(namespace_id, thread_public_id, started_before,
-                    started_after, last_message_before, last_message_after,
-                    subject):
+                     started_after, last_message_before, last_message_after,
+                     subject):
     filters = [Thread.namespace_id == namespace_id]
     if thread_public_id is not None:
         filters.append(Thread.public_id == thread_public_id)
@@ -39,60 +39,60 @@ def _threads_subqueries(namespace_id, from_addr, to_addr, cc_addr, bcc_addr,
     subqueries = []
     if from_addr is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(MessageContactAssociation).
-            join(Contact).
-            filter(Contact.email_address == from_addr,
-                   Contact.namespace_id == namespace_id,
-                   MessageContactAssociation.field == 'from_addr').subquery())
+                          join(MessageContactAssociation).
+                          join(Contact).
+                          filter(Contact.email_address == from_addr,
+                                 Contact.namespace_id == namespace_id,
+                                 MessageContactAssociation.field == 'from_addr').subquery())
 
     if to_addr is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(MessageContactAssociation).
-            join(Contact).
-            filter(Contact.email_address == to_addr,
-                   Contact.namespace_id == namespace_id,
-                   MessageContactAssociation.field == 'to_addr').subquery())
+                          join(MessageContactAssociation).
+                          join(Contact).
+                          filter(Contact.email_address == to_addr,
+                                 Contact.namespace_id == namespace_id,
+                                 MessageContactAssociation.field == 'to_addr').subquery())
 
     if cc_addr is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(MessageContactAssociation).
-            join(Contact).
-            filter(Contact.email_address == cc_addr,
-                   Contact.namespace_id == namespace_id,
-                   MessageContactAssociation.field == 'cc_addr').subquery())
+                          join(MessageContactAssociation).
+                          join(Contact).
+                          filter(Contact.email_address == cc_addr,
+                                 Contact.namespace_id == namespace_id,
+                                 MessageContactAssociation.field == 'cc_addr').subquery())
 
     if bcc_addr is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(MessageContactAssociation).
-            join(Contact).
-            filter(Contact.email_address == bcc_addr,
-                   Contact.namespace_id == namespace_id,
-                   MessageContactAssociation.field == 'bcc_addr').subquery())
+                          join(MessageContactAssociation).
+                          join(Contact).
+                          filter(Contact.email_address == bcc_addr,
+                                 Contact.namespace_id == namespace_id,
+                                 MessageContactAssociation.field == 'bcc_addr').subquery())
 
     if any_email is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(MessageContactAssociation).
-            join(Contact).
-            filter(Contact.email_address.in_(any_email),
-                   Contact.namespace_id == namespace_id).subquery())
+                          join(MessageContactAssociation).
+                          join(Contact).
+                          filter(Contact.email_address.in_(any_email),
+                                 Contact.namespace_id == namespace_id).subquery())
 
     if filename is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            join(Part).
-            join(Block).
-            filter(Block.filename == filename,
-                   Block.namespace_id == namespace_id).subquery())
+                          join(Part).
+                          join(Block).
+                          filter(Block.filename == filename,
+                                 Block.namespace_id == namespace_id).subquery())
 
     if unread is not None:
         read = not unread
         subqueries.append(db_session.query(Message.thread_id).
-            filter(Message.namespace_id == namespace_id,
-                   Message.is_read == read).subquery())
+                          filter(Message.namespace_id == namespace_id,
+                                 Message.is_read == read).subquery())
 
     if starred is not None:
         subqueries.append(db_session.query(Message.thread_id).
-            filter(Message.namespace_id == namespace_id,
-                   Message.is_starred == starred).subquery())
+                          filter(Message.namespace_id == namespace_id,
+                                 Message.is_starred == starred).subquery())
     return subqueries
 
 

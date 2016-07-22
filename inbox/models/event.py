@@ -35,7 +35,9 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
             'raw_data': MAX_TEXT_LENGTH}
 EVENT_STATUSES = ["confirmed", "tentative", "cancelled"]
 
-time_parse = lambda x: arrow.get(x).to('utc').naive
+
+def time_parse(x):
+    return arrow.get(x).to('utc').naive
 
 
 class FlexibleDateTime(TypeDecorator):

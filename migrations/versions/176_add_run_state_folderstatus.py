@@ -16,8 +16,8 @@ import sqlalchemy as sa
 
 def upgrade():
     op.add_column('imapfoldersyncstatus', sa.Column('sync_should_run',
-                  sa.Boolean(), server_default=sa.sql.expression.true(),
-                  nullable=False))
+                                                    sa.Boolean(), server_default=sa.sql.expression.true(),
+                                                    nullable=False))
 
 
 def downgrade():

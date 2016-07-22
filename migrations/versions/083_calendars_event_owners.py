@@ -41,28 +41,28 @@ def upgrade():
     )
 
     op.add_column('account', sa.Column('default_calendar_id', sa.Integer(),
-                  nullable=True))
+                                       nullable=True))
 
     op.create_foreign_key('account_ibfk_10',
                           'account', 'calendar',
                           ['default_calendar_id'], ['id'])
     op.add_column('event', sa.Column('calendar_id', sa.Integer(),
-                  nullable=False))
+                                     nullable=False))
 
     op.create_foreign_key('event_ibfk_2',
                           'event', 'calendar',
                           ['calendar_id'], ['id'])
 
     op.add_column('event', sa.Column('owner', sa.String(length=255),
-                  nullable=True))
+                                     nullable=True))
 
     op.add_column('event', sa.Column('is_owner', sa.Boolean(),
-                  default=True,
-                  nullable=False))
+                                     default=True,
+                                     nullable=False))
 
     op.add_column('eventparticipant', sa.Column('guests', sa.Integer(),
-                  default=0,
-                  nullable=False))
+                                                default=0,
+                                                nullable=False))
 
     op.alter_column('eventparticipant', 'status',
                     existing_type=sa.Enum('yes', 'no', 'maybe', 'awaiting'),
@@ -72,11 +72,11 @@ def upgrade():
     op.drop_column('event', 'locked')
     op.drop_column('event', 'time_zone')
     op.add_column('event', sa.Column('start_date', sa.Date(),
-                  nullable=True))
+                                     nullable=True))
     op.add_column('event', sa.Column('end_date', sa.Date(),
-                  nullable=True))
+                                     nullable=True))
     op.add_column('event', sa.Column('read_only', sa.Boolean(),
-                  nullable=False, default=False))
+                                     nullable=False, default=False))
 
 
 def downgrade():
@@ -86,9 +86,9 @@ def downgrade():
                     existing_nullable=False)
     op.drop_column('event', 'read_only')
     op.add_column('event', sa.Column('locked', sa.Boolean(),
-                  nullable=False))
+                                     nullable=False))
     op.add_column('event', sa.Column('time_zone', sa.Integer(),
-                  nullable=False))
+                                     nullable=False))
     op.drop_constraint('default_calendar_ibfk_1', 'account',
                        type_='foreignkey')
     op.drop_constraint('event_ibfk_2', 'event',

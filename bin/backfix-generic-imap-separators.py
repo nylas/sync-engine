@@ -13,6 +13,7 @@ from inbox.models.session import (session_scope, global_session_scope,
 configure_logging()
 log = get_logger(purpose='separator-backfix')
 
+
 @click.command()
 @click.option('--min-id', type=int, default=None)
 @click.option('--max-id', type=int, default=None)

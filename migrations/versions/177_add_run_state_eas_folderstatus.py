@@ -20,8 +20,8 @@ def upgrade():
     if not engine.has_table('easfoldersyncstatus'):
         return
     op.add_column('easfoldersyncstatus', sa.Column('sync_should_run',
-                  sa.Boolean(), server_default=sa.sql.expression.true(),
-                  nullable=False))
+                                                   sa.Boolean(), server_default=sa.sql.expression.true(),
+                                                   nullable=False))
 
 
 def downgrade():

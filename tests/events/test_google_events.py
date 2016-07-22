@@ -427,7 +427,7 @@ def test_handle_api_not_enabled():
             'message': 'Access Not Configured.',
             'errors': [
                 {'domain': 'usageLimits', 'message': 'Access Not Configured',
-                  'reason': 'accessNotConfigured',
+                 'reason': 'accessNotConfigured',
                  'extendedHelp': 'https://console.developers.google.com'}
             ]
         }

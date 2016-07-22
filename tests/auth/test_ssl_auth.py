@@ -97,7 +97,7 @@ def test_smtp_connection(settings):
         account = _create_account(settings, ssl=False)
         smtp_client = SMTPClient(account)
         with smtp_client._get_connection():
-                pass
+            pass
 
 
 @pytest.mark.parametrize('settings', settings)

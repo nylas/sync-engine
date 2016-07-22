@@ -28,6 +28,7 @@ def upgrade():
                       "FOREIGN KEY (emailed_events_calendar_id) REFERENCES "
                       "calendar(id) ON DELETE SET NULL"))
 
+
 def downgrade():
     conn = op.get_bind()
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))

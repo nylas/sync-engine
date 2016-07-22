@@ -19,9 +19,9 @@ def user_console(user_email_address):
         elif len(result) > 1:
             print "\n{} accounts found for that email.\n".format(len(result))
             for idx, acc in enumerate(result):
-                print "[{}] - {} {} {}".format(idx, acc.provider, 
-                    acc.namespace.email_address, 
-                    acc.namespace.public_id)
+                print "[{}] - {} {} {}".format(idx, acc.provider,
+                                               acc.namespace.email_address,
+                                               acc.namespace.public_id)
             choice = int(raw_input("\nWhich # do you want to select? "))
             account = result[choice]
 

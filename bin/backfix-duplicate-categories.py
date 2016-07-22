@@ -32,16 +32,16 @@ def backfix_shard(shard_id, dry_run):
                                           Category.name)
 
         duplicate_attrs = category_query. \
-                group_by(Category.display_name,
-                         Category.namespace_id,
-                         Category.name).having(
-                            func.count(Category.id) > 1).all()
+            group_by(Category.display_name,
+                     Category.namespace_id,
+                     Category.name).having(
+                func.count(Category.id) > 1).all()
 
     for namespace_id, display_name, name in duplicate_attrs:
         duplicates = db_session.query(Category.id). \
-                filter(Category.namespace_id == namespace_id,
-                       Category.display_name == display_name,
-                       Category.name == name).all()
+            filter(Category.namespace_id == namespace_id,
+                   Category.display_name == display_name,
+                   Category.name == name).all()
 
         # duplicates is an array of tuples where each tuple is
         # (Category.id,). We flatten the tuples here so that each item in
@@ -63,7 +63,7 @@ def backfix_shard(shard_id, dry_run):
         # into the master
         grouped_categories.sort()
         master_id = grouped_categories[0]
-	categories_affected += len(grouped_categories)
+        categories_affected += len(grouped_categories)
 
         # Iterate over all of the duplicate categories except master
         for category_id in grouped_categories[1:]:
@@ -106,7 +106,7 @@ def backfix_shard(shard_id, dry_run):
                             mc_exists = db_session.query(exists().where(and_(
                                 MessageCategory.category_id == master_id,
                                 MessageCategory.message_id == mc.message_id)))\
-                                        .scalar()
+                                .scalar()
 
                             if not dry_run:
                                 # If mc_exists == True, then there's a

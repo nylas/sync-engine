@@ -43,7 +43,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('id'),
     )
     op.add_column('account', sa.Column('last_synced_events', sa.DateTime(),
-                  nullable=True))
+                                       nullable=True))
 
 
 def downgrade():

@@ -55,7 +55,7 @@ def test_deleting_from_a_message_with_multiple_uids(db, default_account,
     inbox_folder = Folder.find_or_create(db.session, default_account, 'inbox',
                                          'inbox')
     sent_folder = Folder.find_or_create(db.session, default_account, 'sent',
-                                         'sent')
+                                        'sent')
 
     add_fake_imapuid(db.session, default_account.id, message, sent_folder,
                      1337)

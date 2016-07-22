@@ -564,8 +564,8 @@ def send_invite(ical_txt, event, account, invite_type='request'):
                       event_id=event.id, account_id=account.id,
                       logstash_tag='invite_sending', exception=str(e))
 
-        if (account.provider == 'eas' and not account.outlook_account
-                and invite_type in ['request', 'update']):
+        if (account.provider == 'eas' and not account.outlook_account and
+                invite_type in ['request', 'update']):
             # Exchange very surprisingly goes out of the way to send an invite
             # to all participants (though Outlook.com doesn't).
             # We only do this for invites and not cancelled because Exchange

@@ -21,7 +21,7 @@ from sqlalchemy.sql import table, column
 def upgrade():
     t = table('imapuid', column('deleted_at', sa.DateTime()))
 
-    op.execute(t.delete().where(t.c.deleted_at != None))
+    op.execute(t.delete().where(t.c.deleted_at is not None))
 
 
 def downgrade():

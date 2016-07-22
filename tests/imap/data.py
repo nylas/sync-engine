@@ -96,6 +96,7 @@ uids = s.dictionaries(
 class MockIMAPClient(object):
     """A bare-bones stand-in for an IMAPClient instance, used to test sync
     logic without requiring a real IMAP account and server."""
+
     def __init__(self):
         self._data = {}
         self.selected_folder = None
@@ -150,8 +151,8 @@ class MockIMAPClient(object):
                              if uid_dict[u]['MODSEQ'][0] > modseq}
         for u in items:
             if u in uid_dict:
-                resp[u] = {k: v for k, v in uid_dict[u].items() if k in data
-                           or k == 'MODSEQ'}
+                resp[u] = {k: v for k, v in uid_dict[u].items() if k in data or
+                           k == 'MODSEQ'}
         return resp
 
     def append(self, folder_name, mimemsg, flags, date):
@@ -169,13 +170,12 @@ class MockIMAPClient(object):
 
     def copy(self, matching_uids, folder_name):
         """
-        Note: _moves_ one or more messages from the currently selected folder to
-        folder_name
+        Note: _moves_ one or more messages from the currently selected folder
+        to folder_name
         """
         for u in matching_uids:
             self._data[folder_name][u] = self._data[self.selected_folder][u]
         self.delete_messages(matching_uids)
-
 
     def capabilities(self):
         return []

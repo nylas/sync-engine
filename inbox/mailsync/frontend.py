@@ -10,6 +10,7 @@ class HTTPFrontend(object):
     """This is a lightweight embedded HTTP server that runs inside a mailsync
     process. It allows you can programmatically interact with the process:
     to get profile/memory/load metrics, or to schedule new account syncs."""
+
     def __init__(self, sync_service, port, trace_greenlets, profile):
         self.sync_service = sync_service
         self.port = port

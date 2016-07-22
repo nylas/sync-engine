@@ -188,6 +188,7 @@ def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
 
     # We're using a list here because of weird monkeypatching shenanigans.
     uidinvalid_count = []
+
     def fake_poll_function(self):
         uidinvalid_count.append(1)
         raise UidInvalid
@@ -277,7 +278,7 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
 
 
 def test_imap_message_deduplication(db, generic_account, inbox_folder,
-                                     generic_trash_folder, mock_imapclient):
+                                    generic_trash_folder, mock_imapclient):
     uid = 22
     uid_values = uid_data.example()
 
@@ -291,21 +292,21 @@ def test_imap_message_deduplication(db, generic_account, inbox_folder,
                                     {uid: uid_values})
 
     folder_sync_engine = FolderSyncEngine(
-                         generic_account.id,
-                         generic_account.namespace.id,
-                         inbox_folder.name,
-                         generic_account.email_address,
-                         'custom',
-                         BoundedSemaphore(1))
+        generic_account.id,
+        generic_account.namespace.id,
+        inbox_folder.name,
+        generic_account.email_address,
+        'custom',
+        BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
 
     trash_folder_sync_engine = FolderSyncEngine(
-                               generic_account.id,
-                               generic_account.namespace.id,
-                               generic_trash_folder.name,
-                               generic_account.email_address,
-                               'custom',
-                               BoundedSemaphore(1))
+        generic_account.id,
+        generic_account.namespace.id,
+        generic_trash_folder.name,
+        generic_account.email_address,
+        'custom',
+        BoundedSemaphore(1))
     trash_folder_sync_engine.initial_sync()
 
     # Check that we have two uids, but just one message.

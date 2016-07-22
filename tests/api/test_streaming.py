@@ -145,7 +145,7 @@ def test_longpoll_delta_newitem(db, api_client,
     parsed_responses = json.loads(longpoll_greenlet.value.data)
     assert len(parsed_responses['deltas']) == 3
     assert set(k['object'] for k in parsed_responses['deltas']) == \
-           set([u'message', u'contact', u'thread'])
+        set([u'message', u'contact', u'thread'])
 
 
 def test_longpoll_delta_timeout(db, api_client,

@@ -31,7 +31,7 @@ def upgrade():
         sa.Column('secret', sa.String(length=512), nullable=True),
         sa.PrimaryKeyConstraint('id'))
     op.add_column('gmailaccount', sa.Column('refresh_token_id',
-                  sa.Integer(), nullable=True))
+                                            sa.Integer(), nullable=True))
 
     Base = declarative_base()
     Base.metadata.reflect(engine)
@@ -90,7 +90,7 @@ def downgrade():
         __table__ = Base.metadata.tables['secret']
 
     op.add_column('gmailaccount', sa.Column('refresh_token',
-                  sa.String(length=512), nullable=True))
+                                            sa.String(length=512), nullable=True))
 
     with session_scope(versioned=False) \
             as db_session:

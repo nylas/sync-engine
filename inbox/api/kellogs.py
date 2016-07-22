@@ -370,6 +370,7 @@ class APIEncoder(object):
         public id of the namespace to which the object to serialize belongs.
 
     """
+
     def __init__(self, namespace_public_id=None, expand=False, is_n1=False):
         self.encoder_class = self._encoder_factory(namespace_public_id, expand, is_n1=is_n1)
 

@@ -127,6 +127,7 @@ class QueuePopulator(object):
     Polls the database for account ids to sync and queues them. Run one of
     these per zone.
     """
+
     def __init__(self, zone, poll_interval=1):
         self.zone = zone
         self.poll_interval = poll_interval

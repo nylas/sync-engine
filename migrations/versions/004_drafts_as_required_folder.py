@@ -14,7 +14,6 @@ from alembic import op
 import sqlalchemy as sa
 
 
-
 def upgrade():
     op.add_column('imapaccount', sa.Column('drafts_folder_name', sa.String(255), nullable=True))
 

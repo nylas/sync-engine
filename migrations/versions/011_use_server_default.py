@@ -71,7 +71,7 @@ def upgrade():
     op.alter_column('foldersync', 'state',
                     server_default='initial',
                     existing_type=sa.Enum('initial', 'initial uidinvalid',
-                        'poll', 'poll uidinvalid', 'finish'),
+                                          'poll', 'poll uidinvalid', 'finish'),
                     existing_server_default=sa.sql.expression.null(),
                     existing_nullable=False)
 
@@ -107,7 +107,7 @@ def upgrade():
     op.alter_column('easfoldersync', 'state',
                     server_default='initial',
                     existing_type=sa.Enum('initial', 'initial uidinvalid',
-                        'poll', 'poll uidinvalid', 'finish'),
+                                          'poll', 'poll uidinvalid', 'finish'),
                     existing_server_default=sa.sql.expression.null(),
                     existing_nullable=False)
     op.alter_column('easfoldersync', 'eas_folder_sync_key',

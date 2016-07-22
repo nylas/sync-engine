@@ -24,7 +24,7 @@ def upgrade():
                     existing_type=sa.Text(),
                     existing_nullable=True)
     op.add_column('calendar', sa.Column('provider_name',
-                  sa.String(length=64), nullable=False))
+                                        sa.String(length=64), nullable=False))
 
     op.alter_column('event', 'subject', new_column_name='title',
                     existing_type=sa.String(1024),
@@ -68,7 +68,7 @@ def upgrade():
     op.drop_constraint('uuid', 'calendar', type_='unique')
 
     op.create_unique_constraint('uuid', 'calendar', ['name', 'provider_name',
-                                'account_id'])
+                                                     'account_id'])
 
     op.create_foreign_key(None, "calendar", "account", ["account_id"], ["id"],
                           ondelete='CASCADE')

@@ -32,14 +32,14 @@ def test_category_delete(db, gmail_account):
         assert resp.status_code == 200
 
     associated_mcs = db.session.query(MessageCategory). \
-            filter(MessageCategory.category_id == category_id).all()
+        filter(MessageCategory.category_id == category_id).all()
     assert len(associated_mcs) == 10
 
     db.session.delete(category)
     db.session.commit()
 
     assert db.session.query(MessageCategory). \
-            filter(MessageCategory.category_id == category_id).all() == []
+        filter(MessageCategory.category_id == category_id).all() == []
 
 
 def test_message_delete(db, gmail_account):
@@ -67,11 +67,11 @@ def test_message_delete(db, gmail_account):
     assert resp.status_code == 200
 
     associated_mcs = db.session.query(MessageCategory). \
-            filter(MessageCategory.message_id == gen_message.id).all()
+        filter(MessageCategory.message_id == gen_message.id).all()
     assert len(associated_mcs) == 10
 
     db.session.delete(gen_message)
     db.session.commit()
 
     assert db.session.query(MessageCategory). \
-            filter(MessageCategory.message_id == gen_message.id).all() == []
+        filter(MessageCategory.message_id == gen_message.id).all() == []

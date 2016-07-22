@@ -117,11 +117,10 @@ def test_filtering(db, api_client, default_namespace):
 
     # Test multiple any_email params
     multiple_results = api_client.get_data('/messages?any_email={},{},{}'.
-                                  format('inboxapptest@gmail.com',
-                                         'bob@foocorp.com',
-                                         'unused@gmail.com'))
+                                           format('inboxapptest@gmail.com',
+                                                  'bob@foocorp.com',
+                                                  'unused@gmail.com'))
     assert len(multiple_results) > len(results)
-
 
     # Check that we canonicalize when searching.
     alternate_results = api_client.get_data('/threads?any_email={}'.

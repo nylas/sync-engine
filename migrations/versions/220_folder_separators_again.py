@@ -20,16 +20,16 @@ def upgrade():
 
     # Check if the folder_separator column is defined or not.
     res = conn.execute(text("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE "
-                      "TABLE_NAME = 'genericaccount' AND COLUMN_NAME "
-                      "= 'folder_separator' AND TABLE_SCHEMA = DATABASE()"))
+                            "TABLE_NAME = 'genericaccount' AND COLUMN_NAME "
+                            "= 'folder_separator' AND TABLE_SCHEMA = DATABASE()"))
 
     if res.fetchall() == []:
         # Execute migration only if the field isn't defined yet.
         conn.execute(text("ALTER TABLE genericaccount ADD COLUMN folder_separator varchar(16)"))
 
     res = conn.execute(text("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE "
-                      "TABLE_NAME = 'genericaccount' AND COLUMN_NAME "
-                      "= 'folder_prefix' AND TABLE_SCHEMA = DATABASE()"))
+                            "TABLE_NAME = 'genericaccount' AND COLUMN_NAME "
+                            "= 'folder_prefix' AND TABLE_SCHEMA = DATABASE()"))
 
     # Check if the folder_prefix column is defined or not.
     if res.fetchall() == []:

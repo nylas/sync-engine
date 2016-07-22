@@ -188,10 +188,10 @@ class GmailSyncMonitor(ImapSyncMonitor):
                 db_session.expunge(label)
 
                 rename_handler = LabelRenameHandler(
-                     account_id=self.account_id,
-                     namespace_id=self.namespace_id,
-                     label_name=label.name,
-                     semaphore=self.label_rename_semaphore)
+                    account_id=self.account_id,
+                    namespace_id=self.namespace_id,
+                    label_name=label.name,
+                    semaphore=self.label_rename_semaphore)
 
                 rename_handler.start()
 

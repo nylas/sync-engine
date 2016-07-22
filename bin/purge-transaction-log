@@ -45,10 +45,9 @@ def purge_old_transactions(host, days_ago, limit, throttle, dry_run):
                                    dry_run)
             else:
                 log.info("Will not spawn process for disabled shard",
-                          shard_id=shard['ID'])
+                         shard_id=shard['ID'])
         gevent.sleep(600)
 
 
 if __name__ == '__main__':
     run()
-

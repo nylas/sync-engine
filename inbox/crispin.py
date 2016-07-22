@@ -70,12 +70,12 @@ CONN_RETRY_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES + (imaplib.IMAP4.error,)
 
 # Exception classes on which connections should be discarded.
 CONN_DISCARD_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES +  \
-                           (ssl.CertificateError, imaplib.IMAP4.error)
+    (ssl.CertificateError, imaplib.IMAP4.error)
 
 # Exception classes which indicate the IMAP connection has become
 # unusable.
 CONN_UNUSABLE_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES + \
-                            (ssl.CertificateError, imaplib.IMAP4.abort)
+    (ssl.CertificateError, imaplib.IMAP4.abort)
 
 
 class FolderMissingError(Exception):
@@ -775,7 +775,7 @@ class CrispinClient(object):
         """
         drafts_folder_name = self.folder_names()['drafts'][0]
         log.info('Trying to delete draft',
-                message_id_header=message_id_header, folder=drafts_folder_name)
+                 message_id_header=message_id_header, folder=drafts_folder_name)
         self.conn.select_folder(drafts_folder_name)
         draft_deleted = self._delete_message(message_id_header)
         if draft_deleted:
@@ -825,7 +825,7 @@ class CrispinClient(object):
         data = self.conn.fetch('1:*', ['FLAGS'],
                                modifiers=['CHANGEDSINCE {}'.format(modseq)])
         return {uid: Flags(ret['FLAGS'], ret['MODSEQ'][0]
-                if 'MODSEQ' in ret else None)
+                           if 'MODSEQ' in ret else None)
                 for uid, ret in data.items()}
 
 
@@ -1056,7 +1056,7 @@ class GmailCrispinClient(CrispinClient):
         """
 
         log.info('Trying to delete gmail draft',
-                message_id_header=message_id_header)
+                 message_id_header=message_id_header)
         drafts_folder_name = self.folder_names()['drafts'][0]
         trash_folder_name = self.folder_names()['trash'][0]
 

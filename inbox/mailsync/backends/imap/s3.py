@@ -188,7 +188,7 @@ class S3FolderSyncEngine(FolderSyncEngine):
 
         for chnk in chunk(uids, BATCH_SIZE):
             to_download = [uid for uid in chnk if _message_missing_s3_object(
-                            self.account_id, self.folder_id, uid)]
+                self.account_id, self.folder_id, uid)]
             self.download_and_commit_uids(crispin_client, to_download)
 
             # FIXME: publish some heartbeats.

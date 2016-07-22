@@ -14,8 +14,8 @@ def test_contact_rankings(db, api_client, default_namespace):
     namespace_id = default_namespace.id
     try:
         cached_data = db.session.query(DataProcessingCache) \
-                      .filter(DataProcessingCache.namespace_id ==
-                              namespace_id).one()
+            .filter(DataProcessingCache.namespace_id ==
+                    namespace_id).one()
         cached_data.contact_rankings_last_updated = None
         db.session.add(cached_data)
         db.session.commit()
@@ -69,8 +69,8 @@ def test_contact_rankings(db, api_client, default_namespace):
 
     try:
         cached_data = db.session.query(DataProcessingCache) \
-                      .filter(DataProcessingCache.namespace_id ==
-                              namespace_id).one()
+            .filter(DataProcessingCache.namespace_id ==
+                    namespace_id).one()
         assert cached_data.contact_rankings_last_updated is not None
     except (NoResultFound, AssertionError):
         assert False, "Contact rankings not cached"
@@ -81,8 +81,8 @@ def test_contact_groups(db, api_client, default_namespace):
     namespace_id = default_namespace.id
     try:
         cached_data = db.session.query(DataProcessingCache) \
-                      .filter(DataProcessingCache.namespace_id ==
-                              namespace_id).one()
+            .filter(DataProcessingCache.namespace_id ==
+                    namespace_id).one()
         cached_data.contact_groups_last_updated = None
         db.session.add(cached_data)
         db.session.commit()
@@ -93,23 +93,23 @@ def test_contact_groups(db, api_client, default_namespace):
     namespace_email = default_namespace.email_address
     me = ('me', namespace_email)
     recipients = ([[('a', 'a@nylas.com'),
-                   ('b', 'b@nylas.com'),
-                   ('c', 'c@nylas.com')]] * 8 +
+                    ('b', 'b@nylas.com'),
+                    ('c', 'c@nylas.com')]] * 8 +
                   [[('b', 'b@nylas.com'),
-                     ('c', 'c@nylas.com'),
-                     ('d', 'd@nylas.com')]] * 8 +
+                    ('c', 'c@nylas.com'),
+                    ('d', 'd@nylas.com')]] * 8 +
                   [[('d', 'd@nylas.com'),
-                     ('e', 'e@nylas.com'),
-                     ('f', 'f@nylas.com')]] * 8 +
+                    ('e', 'e@nylas.com'),
+                    ('f', 'f@nylas.com')]] * 8 +
                   [[('g', 'g@nylas.com'),
-                     ('h', 'h@nylas.com'),
-                     ('i', 'i@nylas.com'),
-                     ('j', 'j@nylas.com')]] * 5 +
-                   [[('g', 'g@nylas.com'),
-                     ('h', 'h@nylas.com'),
-                     ('i', 'i@nylas.com')]] * 2 +
+                    ('h', 'h@nylas.com'),
+                    ('i', 'i@nylas.com'),
+                    ('j', 'j@nylas.com')]] * 5 +
+                  [[('g', 'g@nylas.com'),
+                    ('h', 'h@nylas.com'),
+                    ('i', 'i@nylas.com')]] * 2 +
                   [[('k', 'k@nylas.com'),
-                     ('l', 'l@nylas.com')]] * 3)
+                    ('l', 'l@nylas.com')]] * 3)
 
     for recipients_list in recipients:
         fake_thread = add_fake_thread(db.session, namespace_id)
@@ -141,8 +141,8 @@ def test_contact_groups(db, api_client, default_namespace):
 
     try:
         cached_data = db.session.query(DataProcessingCache) \
-                      .filter(DataProcessingCache.namespace_id ==
-                              namespace_id).one()
+            .filter(DataProcessingCache.namespace_id ==
+                    namespace_id).one()
         assert cached_data.contact_groups_last_updated is not None
     except (NoResultFound, AssertionError):
         assert False, "Contact groups not cached"

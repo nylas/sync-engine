@@ -14,6 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
+
 def upgrade():
     op.drop_column(u'transaction', 'snapshot')
 

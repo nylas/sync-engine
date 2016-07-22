@@ -40,12 +40,14 @@ def test_matching_subdomains(monkeypatch):
     assert matching_subdomains('test.servers.co.uk', 'evil.co.uk') is False
 
     addresses = ['127.0.0.1', '192.168.1.11']
+
     def gethostbyname_patch(x):
         return addresses.pop()
 
     monkeypatch.setattr(socket, 'gethostbyname', gethostbyname_patch)
 
     addresses = ['127.0.0.1', '192.168.1.11']
+
     def gethostbyname_patch(x):
         return addresses.pop()
 

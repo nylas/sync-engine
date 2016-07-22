@@ -48,6 +48,7 @@ class SyncService(object):
     poll_interval : int
         Seconds between polls for account changes.
     """
+
     def __init__(self, process_identifier, process_number,
                  poll_interval=SYNC_POLL_INTERVAL):
         self.host = platform.node()

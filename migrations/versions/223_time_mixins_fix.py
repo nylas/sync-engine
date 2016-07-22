@@ -48,34 +48,34 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     op.add_column('transaction', sa.Column('updated_at', mysql.DATETIME(),
-                  nullable=False))
+                                           nullable=False))
     op.add_column('transaction', sa.Column('deleted_at', mysql.DATETIME(),
-                  nullable=True))
+                                           nullable=True))
     op.create_index('ix_transaction_updated_at', 'transaction', ['updated_at'],
                     unique=False)
     op.create_index('ix_transaction_deleted_at', 'transaction', ['deleted_at'],
                     unique=False)
 
     op.add_column('thread', sa.Column('deleted_at', mysql.DATETIME(),
-                  nullable=True))
+                                      nullable=True))
     op.create_index('ix_thread_deleted_at', 'thread', ['deleted_at'],
                     unique=False)
     op.create_index('ix_thread_namespace_id_recentdate_deleted_at', 'thread',
                     ['namespace_id', 'recentdate', 'deleted_at'], unique=False)
 
     op.add_column('messagecontactassociation', sa.Column('updated_at',
-                  mysql.DATETIME(), nullable=False))
+                                                         mysql.DATETIME(), nullable=False))
     op.add_column('messagecontactassociation', sa.Column('deleted_at',
-                  mysql.DATETIME(), nullable=True))
+                                                         mysql.DATETIME(), nullable=True))
     op.create_index('ix_messagecontactassociation_updated_at',
                     'messagecontactassociation', ['updated_at'], unique=False)
     op.create_index('ix_messagecontactassociation_deleted_at',
                     'messagecontactassociation', ['deleted_at'], unique=False)
 
     op.add_column('messagecategory', sa.Column('updated_at', mysql.DATETIME(),
-                  nullable=False))
+                                               nullable=False))
     op.add_column('messagecategory', sa.Column('deleted_at', mysql.DATETIME(),
-                  nullable=True))
+                                               nullable=True))
     op.create_index('ix_messagecategory_updated_at', 'messagecategory',
                     ['updated_at'], unique=False)
     op.create_index('ix_messagecategory_deleted_at', 'messagecategory',
@@ -91,4 +91,3 @@ def downgrade():
         op.add_column('easdevice', sa.Column('deleted_at', mysql.DATETIME(), nullable=True))
         op.create_index('ix_easdevice_updated_at', 'easdevice', ['updated_at'], unique=False)
         op.create_index('ix_easdevice_deleted_at', 'easdevice', ['deleted_at'], unique=False)
-

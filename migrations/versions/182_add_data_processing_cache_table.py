@@ -25,7 +25,7 @@ def upgrade():
         sa.Column('namespace_id', sa.Integer(), nullable=False),
         sa.Column('contact_rankings', mysql.MEDIUMBLOB(), nullable=True),
         sa.Column('contact_rankings_last_updated', sa.DateTime(),
-                   nullable=True),
+                  nullable=True),
         sa.Column('contact_groups', mysql.MEDIUMBLOB(), nullable=True),
         sa.Column('contact_groups_last_updated', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['namespace_id'], [u'namespace.id'],

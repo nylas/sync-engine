@@ -102,7 +102,7 @@ def get_accounts_to_delete(shard_id):
 
 
 def delete_marked_accounts(shard_id, ids_to_delete, throttle=False,
-                            dry_run=False):
+                           dry_run=False):
     start = time.time()
 
     deleted_count = 0
@@ -318,8 +318,8 @@ def check_throttle():
             now.hour < min(backup_start_hour_utc + backup_duration_hours, 24)):
         return True
     elif (backup_end_hour_utc <= backup_start_hour_utc and
-              now.hour < backup_end_hour_utc and
-              now.hour >= (backup_end_hour_utc - backup_duration_hours)):
+          now.hour < backup_end_hour_utc and
+          now.hour >= (backup_end_hour_utc - backup_duration_hours)):
         return True
     else:
         return False
@@ -353,7 +353,7 @@ def purge_transactions(shard_id, days_ago=60, limit=1000, throttle=False,
                 if dry_run:
                     rowcount = db_session.execute("{} OFFSET {}".
                                                   format(query, offset)).\
-                                                    rowcount
+                        rowcount
                     offset += rowcount
                 else:
                     rowcount = db_session.execute(query).rowcount

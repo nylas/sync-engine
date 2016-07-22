@@ -179,6 +179,7 @@ class ContactsProviderStub(object):
     supply_contact().
 
     """
+
     def __init__(self, provider_name='test_provider'):
         self._contacts = []
         self._next_uid = 1
@@ -407,7 +408,7 @@ def folder(db, default_account):
 def label(db, default_account):
     from inbox.models import Label
     return Label.find_or_create(db.session, default_account,
-                                 'Inbox', 'inbox')
+                                'Inbox', 'inbox')
 
 
 @fixture

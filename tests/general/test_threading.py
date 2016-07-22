@@ -10,8 +10,8 @@ def test_message_cleanup():
     assert cleanup_subject("Re: Birthday") == "Birthday"
     assert cleanup_subject("Re:Birthday") == "Birthday"
     assert cleanup_subject("Re:FWD:   Birthday") == "Birthday"
-    assert (cleanup_subject("Re: RE: Alors, comment ça s'est passé ?")
-                == "Alors, comment ça s'est passé ?")
+    assert (cleanup_subject("Re: RE: Alors, comment ça s'est passé ?") ==
+            "Alors, comment ça s'est passé ?")
     assert cleanup_subject("Re: FWD:FWD: Re:La chaise") == "La chaise"
 
     assert cleanup_subject("Aw: über cool") == "über cool"
@@ -48,7 +48,7 @@ def test_basic_message_grouping(db, default_namespace):
     msg3 = add_fake_message(db.session, default_namespace.id, thread=None)
     msg3.subject = 'Re: Some kind of test'
     msg3.from_addr = [('Eben Freeman', 'emfree@nilas.com')]
-    msg3.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+    msg3.to_addr = [('Karim Hamidou', 'karim@nilas.com')]
 
     matched_thread = fetch_corresponding_thread(db.session, default_namespace.id, msg3)
     assert matched_thread is first_thread, "Should match on participants"

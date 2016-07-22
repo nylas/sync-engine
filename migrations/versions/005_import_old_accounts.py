@@ -71,7 +71,7 @@ def upgrade():
                 scope=acct.o_scope,
                 refresh_token=acct.o_refresh_token,
                 verified_email=acct.o_verified_email
-                )
+            )
 
             new_account = gmail.create_account(db_session,
                                                acct.email_address,

@@ -11,7 +11,6 @@ revision = 'bb4f204f192'
 down_revision = '2a748760ac63'
 
 
-
 def upgrade():
     if 'easfoldersyncstatus' in Base.metadata.tables:
         from inbox.ignition import main_engine

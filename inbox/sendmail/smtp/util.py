@@ -47,7 +47,7 @@ SMTP_ERRORS = {
         "5.7.1": (429, "Daily sending quota exceeded"),
 
         "This message was classified as SPAM and may not be delivered.": (402,
-            "Message blocked due to spam content in the message."),
+                                                                          "Message blocked due to spam content in the message."),
         "exceeded recipient rate limit": (429, "Daily email quota for this "
                                                "address exceeded."),
         "has exceeded its 24-hour sending limit.": (429, "Daily email quota for this "

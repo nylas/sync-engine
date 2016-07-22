@@ -73,7 +73,7 @@ def test_verify_account(db, patched_gmail_client):
     account = handler.create_account(settings['email'], settings)
     db.session.add(account)
     db.session.commit()
-    assert account.sync_email == True
+    assert account.sync_email is True
     # Verify an exception is raised if there is an email settings error.
     with pytest.raises(ImapSupportDisabledError):
         handler.verify_account(account)
@@ -85,7 +85,7 @@ def test_verify_account(db, patched_gmail_client):
     account = handler.create_account(updated_settings['email'], updated_settings)
     db.session.add(account)
     db.session.commit()
-    assert account.sync_email == False
+    assert account.sync_email is False
     # Verify an exception is NOT raised if there is an email settings error.
     account = handler.verify_account(account)
 

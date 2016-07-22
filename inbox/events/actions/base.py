@@ -30,7 +30,7 @@ def create_event(account_id, event_id, extra_args):
                 event.status = 'cancelled'
                 event.participants = cancelled_participants
                 ical_file = generate_icalendar_invite(event,
-                      invite_type='cancel').to_ical()
+                                                      invite_type='cancel').to_ical()
                 send_invite(ical_file, event, account, invite_type='cancel')
 
 

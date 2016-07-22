@@ -17,7 +17,6 @@ from sqlalchemy.sql import table, column
 from sqlalchemy.ext.declarative import declarative_base
 
 
-
 def upgrade():
     genericize_imapaccount()
     genericize_thread()
@@ -37,6 +36,7 @@ def genericize_imapaccount():
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
+
     class ImapAccount_(Base):
         __table__ = Base.metadata.tables['imapaccount']
 
@@ -77,6 +77,7 @@ def genericize_thread():
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
+
     class Thread_(Base):
         __table__ = Base.metadata.tables['thread']
 
@@ -145,6 +146,7 @@ def downgrade_imapaccount():
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
+
     class ImapAccount_(Base):
         __table__ = Base.metadata.tables['imapaccount']
 
@@ -191,6 +193,7 @@ def downgrade_imapthread():
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
+
     class ImapThread_(Base):
         __table__ = Base.metadata.tables['imapthread']
 

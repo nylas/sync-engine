@@ -42,7 +42,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
     op.add_column(u'event', sa.Column('type', sa.String(length=30),
-                  nullable=True))
+                                      nullable=True))
     op.create_index('ix_recurringeventoverride_master_event_uid',
                     'recurringeventoverride', ['master_event_uid'],
                     unique=False)

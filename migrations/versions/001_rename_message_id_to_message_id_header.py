@@ -23,4 +23,3 @@ def downgrade():
     print "WARNING: This removes data about messages that do not contain a Message-Id header!"
     op.execute("UPDATE message SET message_id_header=0 WHERE message_id_header IS NULL")
     op.execute("ALTER TABLE message CHANGE message_id_header message_id VARCHAR(255) NOT NULL")
-

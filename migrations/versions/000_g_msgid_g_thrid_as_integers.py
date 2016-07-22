@@ -15,12 +15,14 @@ import sqlalchemy as sa
 
 from sqlalchemy.dialects import mysql
 
+
 def upgrade():
     op.alter_column('message', 'g_msgid', type_=mysql.BIGINT)
     op.alter_column('message', 'g_thrid', type_=mysql.BIGINT)
 
     op.create_index('ix_message_g_msgid', 'message', ['g_msgid'], unique=False)
     op.create_index('ix_message_g_thrid', 'message', ['g_thrid'], unique=False)
+
 
 def downgrade():
     op.alter_column('message', 'g_msgid', type_=mysql.VARCHAR(40))

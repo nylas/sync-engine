@@ -6,6 +6,7 @@ import sys
 
 DICT_FILE = '/etc/dictionaries-common/words'
 
+
 def get_words():
     words = []
     try:
@@ -14,7 +15,7 @@ def get_words():
     except IOError:
         try:
             with open('LICENSE', 'r') as f:
-                words.extend(f.read().translate(string.maketrans("",""),
+                words.extend(f.read().translate(string.maketrans("", ""),
                                                 string.punctuation).split())
         except IOError:
             print json.dumps({'error': "couldn't open dictionary file",
@@ -22,7 +23,7 @@ def get_words():
     return words
 
 
-def random_words(count=int(random.uniform(1,500)), sig='me'):
+def random_words(count=int(random.uniform(1, 500)), sig='me'):
     words = get_words()
     random_word_list = []
 
@@ -30,9 +31,8 @@ def random_words(count=int(random.uniform(1,500)), sig='me'):
         word_index = int(random.uniform(1, len(words)))
         random_word = words[word_index]
 
-        salutation = ['Hey', 'Hi', 'Ahoy', 'Yo'][int(random.uniform(0,3))]
+        salutation = ['Hey', 'Hi', 'Ahoy', 'Yo'][int(random.uniform(0, 3))]
         random_word_list.append("{} {},\n\n".format(salutation, random_word))
-
 
     just_entered = False
     for i in range(count):
@@ -44,14 +44,14 @@ def random_words(count=int(random.uniform(1,500)), sig='me'):
 
         just_entered = False
 
-        if int(random.uniform(1,15)) == 1:
+        if int(random.uniform(1, 15)) == 1:
             random_word += ('.')
 
-            if int(random.uniform(1,3)) == 1 and sig:
+            if int(random.uniform(1, 3)) == 1 and sig:
                 random_word += ('\n')
                 just_entered = True
 
-            if int(random.uniform(1,3)) == 1 and sig:
+            if int(random.uniform(1, 3)) == 1 and sig:
                 random_word += ('\n')
                 just_entered = True
 
@@ -59,14 +59,14 @@ def random_words(count=int(random.uniform(1,500)), sig='me'):
 
     text = ''.join(random_word_list) + '.'
     if sig:
-        if int(random.uniform(1,2)) == 1:
-            salutation = ['Cheers', 'Adios', 'Ciao', 'Bye'][int(random.uniform(0,3))]
-            punct = ['.', ',', '!', ''][int(random.uniform(0,3))]
+        if int(random.uniform(1, 2)) == 1:
+            salutation = ['Cheers', 'Adios', 'Ciao', 'Bye'][int(random.uniform(0, 3))]
+            punct = ['.', ',', '!', ''][int(random.uniform(0, 3))]
             text += "\n\n{}{}\n".format(salutation, punct)
         else:
             text += '\n\n'
 
-        punct = ['-', '- ', '--', '-- '][int(random.uniform(0,3))]
+        punct = ['-', '- ', '--', '-- '][int(random.uniform(0, 3))]
         text += '{}{}'.format(punct, sig)
 
     return text

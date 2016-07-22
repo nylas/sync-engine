@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 def upgrade():
     op.add_column('account', sa.Column('sync_should_run', sa.Boolean(),
-                  server_default='1', nullable=True))
+                                       server_default='1', nullable=True))
 
 
 def downgrade():
