@@ -189,10 +189,9 @@ class HeartbeatStore(object):
         # A magic one-liner to group account ids by shard.
         # http://stackoverflow.com/questions/8793772/how-to-split-a-sequence-according-to-a-predicate
         shard_num = heartbeat_config.account_redis_shard_number
-        account_ids_grouped_by_shards = [list(v[1]) for v in
-                                         itertools.groupby(
-            sorted(account_ids, key=shard_num),
-            key=shard_num)]
+        account_ids_grouped_by_shards = [
+            list(v[1]) for v in itertools.groupby(sorted(account_ids, key=shard_num), key=shard_num)
+        ]
 
         results = dict()
         for account_group in account_ids_grouped_by_shards:

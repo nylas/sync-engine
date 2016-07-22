@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 from tests.util.base import (generic_account, gmail_account, db,
                              add_fake_yahoo_account)
 from tests.api.base import api_client, new_api_client

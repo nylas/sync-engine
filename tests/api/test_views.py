@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import pytest
 from tests.api.base import api_client, new_api_client
 from tests.util.base import generic_account

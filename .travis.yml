@@ -3,7 +3,6 @@ before_install:
 install:
   - sudo pip install flake8
   - sudo ./setup.sh
-before_script:
-  flake8 .
 script:
+  - flake8 .
   - INBOX_ENV=test py.test tests

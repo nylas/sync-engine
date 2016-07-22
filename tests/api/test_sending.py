@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa: F811
 import smtplib
 import json
 import time
