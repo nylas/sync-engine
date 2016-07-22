@@ -38,9 +38,9 @@ def upgrade():
 
         for acc, sec in db_session.query(GmailAccount, Secret) \
             .filter(GmailAccount.refresh_token_id == Secret.id,
-                    GmailAccount.scope is not None,
-                    GmailAccount.g_id_token is not None) \
-                .all():
+                    GmailAccount.scope != None,
+                    GmailAccount.g_id_token != None) \
+                .all():  # noqa: E711
 
             # Create a new GmailAuthCredentials entry if
             # we don't have one already

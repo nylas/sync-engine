@@ -11,7 +11,6 @@ revision = 'adc646e1f11'
 down_revision = '41a7e825d108'
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 import os.path
 

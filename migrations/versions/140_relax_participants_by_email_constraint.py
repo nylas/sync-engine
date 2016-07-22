@@ -11,7 +11,6 @@ revision = '3f01a3f1b4cc'
 down_revision = '1fd7b3e0b662'
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 

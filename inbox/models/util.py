@@ -351,9 +351,8 @@ def purge_transactions(shard_id, days_ago=60, limit=1000, throttle=False,
             with session_scope_by_shard_id(shard_id, versioned=False) as \
                     db_session:
                 if dry_run:
-                    rowcount = db_session.execute("{} OFFSET {}".
-                                                  format(query, offset)).\
-                        rowcount
+                    rowcount = db_session.execute(
+                        "{} OFFSET {}".format(query, offset)).rowcount
                     offset += rowcount
                 else:
                     rowcount = db_session.execute(query).rowcount

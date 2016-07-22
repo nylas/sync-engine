@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa: F401, F811
 import datetime
 import json
 import mock

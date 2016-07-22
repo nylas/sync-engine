@@ -1,3 +1,4 @@
+# flake8: noqa: F401, F811
 # -*- coding: utf-8 -*-
 """Sanity-check our construction of a Message object from raw synced data."""
 import datetime

@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 from datetime import datetime
 from inbox.events.remote_sync import EventSync
 from inbox.events.util import CalendarSyncResponse

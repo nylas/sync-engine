@@ -12,7 +12,6 @@ down_revision = '2f97277cd86d'
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import text
 
 

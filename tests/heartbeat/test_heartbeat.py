@@ -1,3 +1,4 @@
+# flake8: noqa: F401, F811
 import pytest
 import json
 import time

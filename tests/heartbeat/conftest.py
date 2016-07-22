@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 import pytest
 from mockredis import mock_strict_redis_client
 

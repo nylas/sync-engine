@@ -2,7 +2,6 @@
 import string
 import random
 import json
-import sys
 
 DICT_FILE = '/etc/dictionaries-common/words'
 

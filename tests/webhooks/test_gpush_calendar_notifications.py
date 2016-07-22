@@ -1,5 +1,4 @@
 import pytest
-import time
 from datetime import datetime, timedelta
 
 from inbox.models.calendar import Calendar

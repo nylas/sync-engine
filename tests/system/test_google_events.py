@@ -1,3 +1,5 @@
+# flake8: noqa: F401, F811
+
 # Google calendar-specific event creation tests.
 #
 # This is a little hackish -- test_events.py defines a bunch of helper

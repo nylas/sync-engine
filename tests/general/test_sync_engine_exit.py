@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 # test that we correctly exit a sync engine instance if the folder we are
 # trying to sync comes back as deleted while syncing
 

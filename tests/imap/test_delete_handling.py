@@ -1,3 +1,4 @@
+# flake8: noqa: F401, F811
 from datetime import datetime, timedelta
 import pytest
 from sqlalchemy import desc

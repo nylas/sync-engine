@@ -11,8 +11,6 @@ revision = '55f0ff54c776'
 down_revision = '1b6ceae51b43'
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
 
 from sqlalchemy.ext.declarative import declarative_base
 

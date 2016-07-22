@@ -1,3 +1,4 @@
+# flake8: noqa: F401, F811
 import pytest
 from hashlib import sha256
 from gevent.lock import BoundedSemaphore

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa: F401,F811
 from tests.util.base import event
 
 
@@ -66,7 +67,7 @@ Hélène (Ἑλένη)
 """
 
     event.participants = [{'email': 'hélène@nylas.com'}]
-    msg = generate_invite_message('empty', event, default_account)
+    generate_invite_message('empty', event, default_account)
 
     # That's it --- we just needed to make sure message
     # generation shouldn't blow up.

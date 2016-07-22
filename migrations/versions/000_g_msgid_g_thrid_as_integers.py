@@ -11,7 +11,6 @@ revision = '2605b23e1fe6'
 down_revision = None
 
 from alembic import op
-import sqlalchemy as sa
 
 from sqlalchemy.dialects import mysql
 

@@ -1,3 +1,6 @@
+# flake8: noqa: F821
+# Not 100% sure where Secret is, but it may have been refactored away.
+
 """generic_imap
 
 Revision ID: 43cd2de5ad85
