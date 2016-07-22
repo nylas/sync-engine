@@ -1,7 +1,7 @@
 before_install:
   - mysql -uroot -Dmysql -e 'UPDATE user SET password=PASSWORD("root") WHERE user="root"; FLUSH PRIVILEGES;'
 install:
-  - pip install flake8
+  - sudo pip install flake8
   - sudo ./setup.sh
 before_script:
   flake8 .
