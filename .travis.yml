@@ -1,3 +1,5 @@
+language: python
+cache: pip
 before_install:
   - mysql -uroot -Dmysql -e 'UPDATE user SET password=PASSWORD("root") WHERE user="root"; FLUSH PRIVILEGES;'
 install:
