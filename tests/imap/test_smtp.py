@@ -7,6 +7,7 @@ from inbox.sendmail.smtp.postel import SMTPConnection
 from nylas.logging import get_logger
 
 
+@pytest.mark.networkrequired
 def test_use_smtp_over_ssl():
     # Auth won't actually work but we just want to test connection
     # initialization here and below.
@@ -22,6 +23,7 @@ def test_use_smtp_over_ssl():
     assert isinstance(conn.connection, smtplib.SMTP_SSL)
 
 
+@pytest.mark.networkrequired
 def test_use_starttls():
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
@@ -34,6 +36,7 @@ def test_use_starttls():
     assert isinstance(conn.connection, smtplib.SMTP)
 
 
+@pytest.mark.networkrequired
 def test_use_plain():
     ssl = True
     with pytest.raises(SendMailException):
@@ -59,6 +62,7 @@ def test_use_plain():
 
 
 @pytest.mark.parametrize('smtp_port', [465, 587])
+@pytest.mark.networkrequired
 def test_handle_disconnect(monkeypatch, smtp_port):
     def simulate_disconnect(self):
         raise smtplib.SMTPServerDisconnected()

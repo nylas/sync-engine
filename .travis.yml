@@ -9,4 +9,4 @@ install:
   - sudo -H ./setup.sh
 script:
   - flake8 .
-  - INBOX_ENV=test py.test tests
+  - INBOX_ENV=test py.test tests -m "not networkrequired"

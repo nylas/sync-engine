@@ -46,6 +46,7 @@ creds = [
 
 
 @pytest.mark.parametrize('creds', creds)
+@pytest.mark.networkrequired
 def test_auth(creds):
     handler = GenericAuthHandler(creds['provider'])
     email = creds['settings']['email']

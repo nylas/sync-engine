@@ -187,6 +187,7 @@ def test_update_account_when_no_server_provided(db):
     assert acc_smtp_port == smtp_port
 
 
+@pytest.mark.networkrequired
 def test_double_auth(db):
     settings = {
         'provider': 'yahoo',
@@ -249,6 +250,7 @@ def test_parent_domain():
     assert parent_domain('company.co.uk') != parent_domain('evilcompany.co.uk')
 
 
+@pytest.mark.networkrequired
 def test_successful_reauth_resets_sync_state(db):
     settings = {
         'provider': 'yahoo',

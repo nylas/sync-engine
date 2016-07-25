@@ -61,6 +61,7 @@ def test_account_ssl_required():
 
 
 @pytest.mark.parametrize('settings', settings)
+@pytest.mark.networkrequired
 def test_imap_connection(settings):
     host = settings['settings']['imap_server_host']
     port = settings['settings']['imap_server_port']
@@ -80,6 +81,7 @@ def test_imap_connection(settings):
 
 
 @pytest.mark.parametrize('settings', settings)
+@pytest.mark.networkrequired
 def test_smtp_connection(settings):
     has_starttls = ('aol' in settings['settings']['smtp_server_host'])
 
@@ -101,6 +103,7 @@ def test_smtp_connection(settings):
 
 
 @pytest.mark.parametrize('settings', settings)
+@pytest.mark.networkrequired
 def test_auth(settings):
     handler = GenericAuthHandler(settings['provider'])
 
