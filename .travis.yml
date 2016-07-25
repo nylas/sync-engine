@@ -3,8 +3,8 @@ cache: pip
 before_install:
   - mysql -uroot -Dmysql -e 'UPDATE user SET password=PASSWORD("root") WHERE user="root"; FLUSH PRIVILEGES;'
 install:
-  - sudo pip install flake8
-  - sudo ./setup.sh
+  - sudo -H pip install flake8
+  - sudo -H ./setup.sh
 script:
   - flake8 .
   - INBOX_ENV=test py.test tests
