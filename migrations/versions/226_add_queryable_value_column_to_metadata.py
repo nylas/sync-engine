@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    op.add_column('metadata', sa.Column('queryable_value', sa.Integer(),
+    op.add_column('metadata', sa.Column('queryable_value', sa.BigInteger(),
                                         nullable=True))
     op.create_index(op.f('ix_metadata_queryable_value'), 'metadata',
                     ['queryable_value'], unique=False)

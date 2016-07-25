@@ -602,3 +602,32 @@ def metadata(namespace_id, app_id, view, limit, offset,
         return [x[0] for x in query.all()]
 
     return query.all()
+
+
+def metadata_for_app(app_id, limit, last, query_value, query_type, db_session):
+    if app_id is None:
+        raise ValueError('Must specify an app_id')
+
+    query = db_session.query(Metadata).filter(Metadata.app_id == app_id)
+    if last is not None:
+        query = query.filter(Metadata.id > last)
+
+    if query_type is not None:
+        if query_type not in METADATA_QUERY_OPERATORS:
+            raise ValueError(
+                'Invalid query operator for metadata query_type. Must be '
+                'one of {}'.format(', '.join(METADATA_QUERY_OPERATORS.keys())))
+        operator_filter = METADATA_QUERY_OPERATORS[query_type](query_value)
+        query = query.filter(operator_filter)
+
+    query = query.order_by(asc(Metadata.id)).limit(limit)
+    return query.all()
+
+METADATA_QUERY_OPERATORS = {
+    '>': lambda v: Metadata.queryable_value > v,
+    '>=': lambda v: Metadata.queryable_value >= v,
+    '<': lambda v: Metadata.queryable_value < v,
+    '<=': lambda v: Metadata.queryable_value <= v,
+    '==': lambda v: Metadata.queryable_value == v,
+    '!=': lambda v: Metadata.queryable_value != v,
+}

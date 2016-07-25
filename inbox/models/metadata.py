@@ -47,7 +47,7 @@ class Metadata(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin,
 
     value = Column(JSON)
 
-    queryable_value = Column(Integer, nullable=True, index=True)
+    queryable_value = Column(BigInteger, nullable=True, index=True)
 
     version = Column(Integer, nullable=True, server_default='0')
 
