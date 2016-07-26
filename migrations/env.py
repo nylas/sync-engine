@@ -53,7 +53,8 @@ def run_migrations_offline():
     engine_manager = EngineManager(config.get_required('DATABASE_HOSTS'),
                                    config.get_required('DATABASE_USERS'),
                                    include_disabled=True)
-    context.configure(engine=engine_manager.engines[shard_id])
+    engine = engine_manager.engines[shard_id]
+    context.configure(engine=engine, url=engine.url)
 
     with context.begin_transaction():
         context.run_migrations()
