@@ -49,7 +49,7 @@ def test_folder_name_translation(empty_db, generic_account, imap_api_client,
                                  mock_imapclient, monkeypatch):
     from inbox.transactions.actions import SyncbackService
     syncback = SyncbackService(syncback_id=0, process_number=0,
-                               total_processes=1)
+                               total_processes=1, num_workers=2)
 
     imap_namespaces = (((u'INBOX.', u'.'),),)
     mock_imapclient.create_folder = mock.Mock()
@@ -68,5 +68,7 @@ def test_folder_name_translation(empty_db, generic_account, imap_api_client,
     imap_api_client.post_data('/folders', folder_json)
 
     syncback._process_log()
-    gevent.joinall(list(syncback.workers))
+    syncback._restart_workers()
+    while not syncback.task_queue.empty():
+        gevent.sleep(0.1)
     mock_imapclient.create_folder.assert_called_with('INBOX.Taxes.Accounting')
