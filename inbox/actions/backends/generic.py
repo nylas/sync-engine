@@ -183,39 +183,43 @@ def remote_save_draft(account_id, message_id):
         crispin_client.save_draft(mimemsg)
 
 
-def remote_update_draft(account_id, message_id):
+def remote_update_draft(account_id, message_id, old_message_id_header):
     with session_scope(account_id) as db_session:
         account = db_session.query(Account).get(account_id)
         message = db_session.query(Message).get(message_id)
         message_id_header = message.message_id_header
-        message_public_id = message.public_id
-        version = message.version
         mimemsg = _create_email(account, message)
+
+    # Steps to updating draft:
+    # 1. Create the new message, unless it's somehow already there
+    # 2. Delete the old message the API user is updating
 
     with writable_connection_pool(account_id).get() as crispin_client:
         if 'drafts' not in crispin_client.folder_names():
-            log.info('Account has no detected drafts folder; not saving draft',
+            log.info('Account has no drafts folder. Will not save draft.',
                      account_id=account_id)
             return
         folder_name = crispin_client.folder_names()['drafts'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
-        existing_copy = crispin_client.find_by_header(
+        existing_new_draft = crispin_client.find_by_header(
             'Message-Id', message_id_header)
-        if not existing_copy:
+        if not existing_new_draft:
             crispin_client.save_draft(mimemsg)
         else:
-            log.info('Not saving draft; copy already exists on remote',
+            log.info('Draft has been saved, will not create a duplicate.',
                      message_id_header=message_id_header)
 
         # Check for an older version and delete it. (We can stop once we find
-        # one, to reduce the latency of this operation.)
-        for old_version in reversed(range(0, version)):
-            message_id_header = '<{}-{}@mailer.nylas.com>'.format(
-                message_public_id, old_version)
+        # one, to reduce the latency of this operation.). Note that the old
+        # draft does not always have a message id, in which case we can't
+        # replace it.
+        if old_message_id_header:
             old_version_deleted = crispin_client.delete_draft(
-                message_id_header)
+                old_message_id_header)
             if old_version_deleted:
-                break
+                log.info('Cleaned up old draft',
+                         old_message_id_header=old_message_id_header,
+                         message_id_header=message_id_header)
 
 
 def remote_delete_draft(account_id, inbox_uid, message_id_header):

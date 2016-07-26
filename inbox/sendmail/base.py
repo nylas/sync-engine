@@ -279,13 +279,24 @@ def update_draft(db_session, account, draft, to_addr=None,
     draft.contacts = []
     update_contacts_from_message(db_session, draft, account.namespace)
 
-    # Update version  + inbox_uid (is_created is already set)
+    # The draft we're updating may or may not be one authored through the API:
+    # - Ours: is_created = True, Message-Id = public_id+version
+    # - Not Ours: is_created = False, Message-Id = ???
+
+    # Mark that the draft is now created by us
+    draft.is_created = True
+
+    # Save the current Message-Id so we know which draft to delete in syncback
+    old_message_id_header = draft.message_id_header
+
+    # Increment version and rebuild the message ID header.
     draft.version += 1
     draft.regenerate_inbox_uid()
 
     # Sync to remote
     schedule_action('update_draft', draft, draft.namespace.id, db_session,
-                    version=draft.version)
+                    version=draft.version,
+                    old_message_id_header=old_message_id_header)
     db_session.commit()
     return draft
 

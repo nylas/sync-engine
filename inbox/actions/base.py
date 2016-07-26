@@ -118,6 +118,8 @@ def update_draft(account_id, message_id, args):
     with session_scope(account_id) as db_session:
         message = db_session.query(Message).get(message_id)
         version = args.get('version')
+        old_message_id_header = args.get('old_message_id_header')
+
         if message is None:
             log.info('tried to save nonexistent message as draft',
                      message_id=message_id, account_id=account_id)
@@ -131,7 +133,7 @@ def update_draft(account_id, message_id, args):
             log.warning('tried to save outdated version of draft')
             return
 
-    remote_update_draft(account_id, message_id)
+    remote_update_draft(account_id, message_id, old_message_id_header)
 
 
 def delete_draft(account_id, draft_id, args):
