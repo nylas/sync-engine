@@ -240,6 +240,8 @@ class ImapFolderInfo(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     highestmodseq = Column(BigInteger, nullable=True)
     uidnext = Column(Integer, nullable=True)
     last_slow_refresh = Column(DateTime)
+    fetchedmin = Column(Integer, nullable=True)
+    fetchedmax = Column(Integer, nullable=True)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 

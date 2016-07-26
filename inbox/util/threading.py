@@ -69,3 +69,33 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
                     return match.thread
 
     return
+
+
+def _count_thread_messages(self, thread_id, db_session):
+    count, = db_session.query(func.count(Message.id)). \
+        filter(Message.thread_id == thread_id).one()
+    return count
+
+def add_message_to_thread(self, db_session, message_obj, raw_message):
+    """Associate message_obj to the right Thread object, creating a new
+    thread if necessary."""
+    with db_session.no_autoflush:
+        # Disable autoflush so we don't try to flush a message with null
+        # thread_id.
+        parent_thread = fetch_corresponding_thread(
+            db_session, self.namespace_id, message_obj)
+        construct_new_thread = True
+
+        if parent_thread:
+            # If there's a parent thread that isn't too long already,
+            # add to it. Otherwise create a new thread.
+            parent_message_count = self._count_thread_messages(
+                parent_thread.id, db_session)
+            if parent_message_count < MAX_THREAD_LENGTH:
+                construct_new_thread = False
+
+        if construct_new_thread:
+            message_obj.thread = ImapThread.from_imap_message(
+                db_session, self.namespace_id, message_obj)
+        else:
+            parent_thread.messages.append(message_obj)

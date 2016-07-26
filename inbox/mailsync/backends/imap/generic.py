@@ -75,7 +75,8 @@ from inbox.util.concurrency import retry_with_logging
 from inbox.util.debug import bind_context
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
-from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
+from inbox.mailsync.backends.imap import metrics
+from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH, add_message_to_thread
 from inbox.util.stats import statsd_client
 from nylas.logging import get_logger
 log = get_logger()
@@ -96,8 +97,8 @@ from inbox.events.ical import import_attached_events
 # marked as read.
 IDLE_WAIT = 30
 DEFAULT_POLL_FREQUENCY = 30
-# Poll on the Inbox folder more often.
-INBOX_POLL_FREQUENCY = 10
+INBOX_POLL_FREQUENCY = 10  # Poll on the Inbox folder more often.
+
 FAST_FLAGS_REFRESH_LIMIT = 100
 SLOW_FLAGS_REFRESH_LIMIT = 2000
 SLOW_REFRESH_INTERVAL = timedelta(seconds=3600)
@@ -126,36 +127,26 @@ class FolderSyncEngine(Greenlet):
 
             self.folder_id = folder.id
             self.folder_role = folder.canonical_name
-            # Metric flags for sync performance
-            self.is_initial_sync = folder.initial_sync_end is None
-            self.is_first_sync = folder.initial_sync_start is None
-            self.is_first_message = self.is_first_sync
 
         bind_context(self, 'foldersyncengine', account_id, self.folder_id)
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.folder_name = folder_name
         self.email_address = email_address
-
-        if self.folder_name.lower() == 'inbox':
-            self.poll_frequency = INBOX_POLL_FREQUENCY
-        else:
-            self.poll_frequency = DEFAULT_POLL_FREQUENCY
         self.syncmanager_lock = syncmanager_lock
-        self.state = None
         self.provider_name = provider_name
-        self.last_fast_refresh = None
         self.flags_fetch_results = {}
         self.conn_pool = connection_pool(self.account_id)
 
-        self.state_handlers = {
-            'initial': self.initial_sync,
-            'initial uidinvalid': self.resync_uids,
-            'poll': self.poll,
-            'poll uidinvalid': self.resync_uids,
-        }
+        # Extend logging context to always include our info
+        self.log = log.new(account_id=self.account_id, folder=self.folder_name,
+                           folder_id=self.folder_id, provider=self.provider_name)
 
-        self.setup_heartbeats()
+        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
+                                                     self.folder_id,
+                                                     self.folder_name,
+                                                     self.email_address,
+                                                     self.provider_name)
         Greenlet.__init__(self)
 
         # Some generic IMAP servers are throwing UIDVALIDITY
@@ -165,274 +156,190 @@ class FolderSyncEngine(Greenlet):
         # MAX_UIDINVALID_RESYNCS.
         self.uidinvalid_count = 0
 
-    def setup_heartbeats(self):
-        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id,
-                                                     self.folder_name,
-                                                     self.email_address,
-                                                     self.provider_name)
-
     def _run(self):
-        # Bind greenlet-local logging context.
-        self.log = log.new(account_id=self.account_id, folder=self.folder_name,
-                           provider=self.provider_name)
-        # eagerly signal the sync status
-        self.heartbeat_status.publish()
-        return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name, logger=log)
-
-    def _run_impl(self):
         try:
-            saved_folder_status = self._load_state()
+            self._initialize_imap_state()
         except IntegrityError:
             # The state insert failed because the folder ID ForeignKey
             # was no longer valid, ie. the folder for this engine was deleted
             # while we were starting up.
             # Exit the sync and let the monitor sort things out.
-            log.info("Folder state loading failed due to IntegrityError",
-                     folder_id=self.folder_id, account_id=self.account_id)
+            self.log.info("Folder state loading failed due to IntegrityError")
             raise MailsyncDone()
 
+        return retry_with_logging(self._run_impl, account_id=self.account_id,
+                                  provider=self.provider_name, logger=log)
+
+    def _run_impl(self):
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
         while True:
-            old_state = self.state
             try:
-                self.state = self.state_handlers[old_state]()
-                self.heartbeat_status.publish(state=self.state)
+                self._sync_impl()
+                # We've been through a normal cycle without raising any
+                # error. It's safe to reset the uidvalidity counter.
+                self.uidinvalid_count = 0
             except UidInvalid:
-                self.state = self.state + ' uidinvalid'
-                self.uidinvalid_count += 1
-                self.heartbeat_status.publish(state=self.state)
-
-                # Check that we're not stuck in an endless uidinvalidity resync loop.
-                if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
-                    log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
-                              ' row. Stopping sync.')
-
-                    with session_scope(self.namespace_id) as db_session:
-                        account = db_session.query(Account).get(self.account_id)
-                        account.disable_sync('Detected endless uidvalidity '
-                                             'resync loop')
-                        account.sync_state = 'stopped'
-                        db_session.commit()
-
-                    raise MailsyncDone()
+                self.encountered_uidinvalidity()
 
             except FolderMissingError:
                 # Folder was deleted by monitor while its sync was running.
                 # TODO: Monitor should handle shutting down the folder engine.
-                log.info('Folder disappeared. Stopping sync.',
-                         account_id=self.account_id,
-                         folder_name=self.folder_name,
-                         folder_id=self.folder_id)
+                self.log.info('Folder disappeared. Stopping sync.')
                 raise MailsyncDone()
+
             except ValidationError as exc:
-                log.error('Error authenticating; stopping sync', exc_info=True,
-                          account_id=self.account_id, folder_id=self.folder_id,
-                          logstash_tag='mark_invalid')
+                self.log.error('Error authenticating; stopping sync',
+                                exc_info=True, logstash_tag='mark_invalid')
                 with session_scope(self.namespace_id) as db_session:
                     account = db_session.query(Account).get(self.account_id)
                     account.mark_invalid()
                     account.update_sync_error(str(exc))
                 raise MailsyncDone()
 
-            # State handlers are idempotent, so it's okay if we're
-            # killed between the end of the handler and the commit.
-            if self.state != old_state:
-                # Don't need to re-query, will auto refresh on re-associate.
-                with session_scope(self.namespace_id) as db_session:
-                    db_session.add(saved_folder_status)
-                    saved_folder_status.state = self.state
-                    db_session.commit()
+            finally:
+                self._update_imap_state()
 
-            if self.state == old_state and self.state in ['initial', 'poll']:
-                # We've been through a normal state transition without raising any
-                # error. It's safe to reset the uidvalidity counter.
-                self.uidinvalid_count = 0
-
-    def _load_state(self):
+    def _load_imap_folder_info(self):
         with session_scope(self.namespace_id) as db_session:
-            try:
-                state = ImapFolderSyncStatus.state
-                saved_folder_status = db_session.query(ImapFolderSyncStatus)\
-                    .filter_by(account_id=self.account_id,
-                               folder_id=self.folder_id).options(
-                        load_only(state)).one()
-            except NoResultFound:
-                saved_folder_status = ImapFolderSyncStatus(
-                    account_id=self.account_id, folder_id=self.folder_id)
-                db_session.add(saved_folder_status)
+            return imapfolderinfo
 
-            saved_folder_status.start_sync()
+    def _initialize_imap_state(self):
+        with session_scope(self.namespace_id) as db_session:
+            self.folder_info = db_session.query(ImapFolderInfo). \
+                filter(ImapFolderInfo.account_id == self.account_id,
+                       ImapFolderInfo.folder_id == self.folder_id). \
+                one()
+            db_session.expunge(self.folder_info)
+
+    def _update_imap_state(self):
+        self.heartbeat_status.publish(state='deprecated')
+        self.log.bind(state='deprecated')
+        self.folder_info.state = 'deprecated'
+
+        # Don't need to re-query, will auto refresh on re-associate.
+        with session_scope(self.namespace_id) as db_session:
+            db_session.add(self.folder_info)
             db_session.commit()
-            self.state = saved_folder_status.state
-            return saved_folder_status
 
     def set_stopped(self, db_session):
-        saved_folder_status = db_session.query(ImapFolderSyncStatus)\
-            .filter_by(account_id=self.account_id,
-                       folder_id=self.folder_id).one()
-
-        saved_folder_status.stop_sync()
-        self.state = saved_folder_status.state
-
-    def _report_initial_sync_start(self):
-        with session_scope(self.namespace_id) as db_session:
-            q = db_session.query(Folder).get(self.folder_id)
-            q.initial_sync_start = datetime.utcnow()
-
-    def _report_initial_sync_end(self):
-        with session_scope(self.namespace_id) as db_session:
-            q = db_session.query(Folder).get(self.folder_id)
-            q.initial_sync_end = datetime.utcnow()
+        self.folder_info.stop_sync()
 
     @retry_crispin
-    def initial_sync(self):
-        log.bind(state='initial')
-        log.info('starting initial sync')
-
-        if self.is_first_sync:
-            self._report_initial_sync_start()
-            self.is_first_sync = False
-
+    def _sync_impl(self):
         with self.conn_pool.get() as crispin_client:
-            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
-            # Ensure we have an ImapFolderInfo row created prior to sync start.
-            with session_scope(self.namespace_id) as db_session:
-                try:
-                    db_session.query(ImapFolderInfo). \
-                        filter(ImapFolderInfo.account_id == self.account_id,
-                               ImapFolderInfo.folder_id == self.folder_id). \
-                        one()
-                except NoResultFound:
-                    imapfolderinfo = ImapFolderInfo(
-                        account_id=self.account_id, folder_id=self.folder_id,
-                        uidvalidity=crispin_client.selected_uidvalidity,
-                        uidnext=crispin_client.selected_uidnext)
-                    db_session.add(imapfolderinfo)
-                db_session.commit()
+            if crispin_client.selected_folder_name != self.folder_name:
+                crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
+            highestmodseq = self.get_remote_highestmodseq(crispin_client)
+            uidnext = self.get_remote_uidnext(crispin_client)
 
-            self.initial_sync_impl(crispin_client)
+            # Initialize highestmodseq, to ensure we don't miss changes that occur
+            # between first message sync and first flag scan
+            if self.folder_info.highestmodseq is None:
+                self.folder_info.highestmodseq = highestmodseq
 
-        if self.is_initial_sync:
-            self._report_initial_sync_end()
-            self.is_initial_sync = False
+            # Old initial sync:
+            # - fetch entire list of UIDs
+            # - download them one by one, newest to oldest
+            # - separate worker does polling for imap
 
-        return 'poll'
+            # New initial sync:
+            #
+            # - Identify ranges we want
+            # - Fetch ranges
+            #   + no ranges? Idle.
+            # - Exit
+            first_sync = self.folder_info.fetchedmax is None
+            ranges = []
 
-    @retry_crispin
-    def poll(self):
-        log.bind(state='poll')
-        log.info('polling')
-        self.poll_impl()
-        return 'poll'
+            if first_sync:
+                ranges.append((uidnext - 500, uidnext))
+            else:
+                if self.folder_info.fetchedmax < uidnext:
+                    ranges.append((self.folder_info.fetchedmax, uidnext))
+                if self.folder_info.fetchedmin > 1:
+                    ranges.append((self.folder_info.fetchedmin - 500, self.folder_info.fetchedmin))
 
-    @retry_crispin
-    def resync_uids(self):
-        log.bind(state=self.state)
-        log.warning('UIDVALIDITY changed; initiating resync')
-        self.resync_uids_impl()
-        return 'initial'
+            if len(ranges) > 0:
+                self._sync_ranges(crispin_client, ranges)
 
-    def initial_sync_impl(self, crispin_client):
-        # We wrap the block in a try/finally because the change_poller greenlet
-        # needs to be killed when this greenlet is interrupted
-        change_poller = None
-        try:
-            assert crispin_client.selected_folder_name == self.folder_name
-            remote_uids = crispin_client.all_uids()
-            with self.syncmanager_lock:
-                with session_scope(self.namespace_id) as db_session:
-                    local_uids = common.local_uids(self.account_id, db_session,
-                                                   self.folder_id)
-                common.remove_deleted_uids(
-                    self.account_id, self.folder_id,
-                    set(local_uids).difference(remote_uids))
+            if crispin_client.condstore_supported():
+                self._sync_flags_condstore(crispin_client)
+            else:
+                self._sync_flags_generic(crispin_client)
 
-            new_uids = set(remote_uids).difference(local_uids)
-            with session_scope(self.namespace_id) as db_session:
-                account = db_session.query(Account).get(self.account_id)
-                throttled = account.throttled
-                self.update_uid_counts(
-                    db_session,
-                    remote_uid_count=len(remote_uids),
-                    # This is the initial size of our download_queue
-                    download_uid_count=len(new_uids))
+            if len(ranges) == 0:
+                self._sync_idle(crispin_client)
 
-            change_poller = spawn(self.poll_for_changes)
-            bind_context(change_poller, 'changepoller', self.account_id,
-                         self.folder_id)
-            uids = sorted(new_uids, reverse=True)
+            return
+
+    def _sync_ranges(self, crispin_client, ranges):
+        for (start, end) in ranges:
+            uids = sorted(range(start, end), reverse=True)
             count = 0
             for uid in uids:
                 # The speedup from batching appears to be less clear for
                 # non-Gmail accounts, so for now just download one-at-a-time.
                 self.download_and_commit_uids(crispin_client, [uid])
-                self.heartbeat_status.publish()
                 count += 1
-                if throttled and count >= THROTTLE_COUNT:
-                    # Throttled accounts' folders sync at a rate of
-                    # 1 message/ minute, after the first approx. THROTTLE_COUNT
-                    # messages per folder are synced.
-                    # Note this is an approx. limit since we use the #(uids),
-                    # not the #(messages).
-                    sleep(THROTTLE_WAIT)
-        finally:
-            if change_poller is not None:
-                # schedule change_poller to die
-                kill(change_poller)
 
-    def should_idle(self, crispin_client):
-        if not hasattr(self, '_should_idle'):
-            self._should_idle = (
-                crispin_client.idle_supported() and self.folder_name in
-                crispin_client.folder_names()['inbox']
-            )
-        return self._should_idle
-
-    def poll_impl(self):
-        with self.conn_pool.get() as crispin_client:
-            self.check_uid_changes(crispin_client)
-            if self.should_idle(crispin_client):
-                crispin_client.select_folder(self.folder_name,
-                                             self.uidvalidity_cb)
-                idling = True
-                try:
-                    crispin_client.idle(IDLE_WAIT)
-                except Exception as exc:
-                    # With some servers we get e.g.
-                    # 'Unexpected IDLE response: * FLAGS  (...)'
-                    if isinstance(exc, imaplib.IMAP4.error) and \
-                            exc.message.startswith('Unexpected IDLE response'):
-                        log.info('Error initiating IDLE, not idling',
-                                 error=exc)
-                        try:
-                            # Still have to take the connection out of IDLE
-                            # mode to reuse it though.
-                            crispin_client.conn.idle_done()
-                        except AttributeError:
-                            pass
-                        idling = False
-                    else:
-                        raise
+    def _sync_idle(self, crispin_client):
+        if not crispin_client.idle_supported() or self.folder_role != 'inbox':
+            if self.folder_name.lower() == 'inbox':
+                sleep(INBOX_POLL_FREQUENCY)
             else:
-                idling = False
-        # Close IMAP connection before sleeping
-        if not idling:
-            sleep(self.poll_frequency)
+                sleep(DEFAULT_POLL_FREQUENCY)
+            return
 
-    def resync_uids_impl(self):
+        try:
+            crispin_client.idle(IDLE_WAIT)
+        except Exception as exc:
+            # With some servers we get e.g.
+            # 'Unexpected IDLE response: * FLAGS  (...)'
+            if isinstance(exc, imaplib.IMAP4.error) and \
+                    exc.message.startswith('Unexpected IDLE response'):
+                self.log.info('Error initiating IDLE, not idling',
+                              error=exc)
+                try:
+                    # Still have to take the connection out of IDLE
+                    # mode to reuse it though.
+                    crispin_client.conn.idle_done()
+                except AttributeError:
+                    pass
+                idling = False
+            else:
+                raise
+
+    def encountered_uidinvalidity(self):
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
+            self.uidinvalid_count += 1
+
+            if self.uidinvalid_count < MAX_UIDINVALID_RESYNCS:
+                self._recover_from_uidinvalidity_impl(crispin_client)
+            else:
+                # Check that we're not stuck in an endless uidinvalidity resync loop.
+                self.log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
+                               ' row. Stopping sync.')
+
+                with session_scope(self.namespace_id) as db_session:
+                    account = db_session.query(Account).get(self.account_id)
+                    account.disable_sync('Detected endless uidvalidity resync loop')
+                    account.sync_state = 'stopped'
+                    db_session.commit()
+
+                raise MailsyncDone()
+
+    def _recover_from_uidinvalidity_impl(self, crispin_client):
         # First, let's check if the UIVDALIDITY change was spurious, if
         # it is, just discard it and go on.
-        with self.conn_pool.get() as crispin_client:
-            crispin_client.select_folder(self.folder_name, lambda *args: True)
-            remote_uidvalidity = crispin_client.selected_uidvalidity
-            remote_uidnext = crispin_client.selected_uidnext
-            if remote_uidvalidity <= self.uidvalidity:
-                log.debug('UIDVALIDITY unchanged')
-                return
+        remote_uidvalidity = crispin_client.selected_uidvalidity
+        remote_uidnext = crispin_client.selected_uidnext
+        if remote_uidvalidity <= self.folder_info.uidvalidity:
+            self.log.debug('UIDVALIDITY unchanged')
+            return
+
         # Otherwise, if the UIDVALIDITY really has changed, discard all saved
         # UIDs for the folder, mark associated messages for garbage-collection,
         # and return to the 'initial' state to resync.
@@ -444,18 +351,11 @@ class FolderSyncEngine(Greenlet):
                 filter_by(account_id=self.account_id,
                           folder_id=self.folder_id)
             }
-        common.remove_deleted_uids(self.account_id, self.folder_id,
-                                   invalid_uids)
-        self.uidvalidity = remote_uidvalidity
-        self.highestmodseq = None
-        self.uidnext = remote_uidnext
+        common.remove_deleted_uids(self.account_id, self.folder_id, invalid_uids)
 
-    @retry_crispin
-    def poll_for_changes(self):
-        log.new(account_id=self.account_id, folder=self.folder_name)
-        while True:
-            log.info('polling for changes')
-            self.poll_impl()
+        self.folder_info.highestmodseq = self.get_remote_highestmodseq(crispin_client)
+        self.folder_info.uidvalidity = remote_uidvalidity
+        self.folder_info.uidnext = remote_uidnext
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
@@ -466,13 +366,13 @@ class FolderSyncEngine(Greenlet):
             ImapUid.account_id == acct.id, ImapUid.folder_id == folder.id,
             ImapUid.msg_uid == msg.uid).first()
         if existing_imapuid is not None:
-            log.error('Expected to create imapuid, but existing row found',
-                      remote_msg_uid=msg.uid,
-                      existing_imapuid=existing_imapuid.id)
+            self.log.error('Expected to create imapuid, but existing row found',
+                           remote_msg_uid=msg.uid,
+                           existing_imapuid=existing_imapuid.id)
             return None
 
         new_uid = common.create_imap_message(db_session, acct, folder, msg)
-        self.add_message_to_thread(db_session, new_uid.message, msg)
+        add_message_to_thread(db_session, new_uid.message, msg)
 
         db_session.flush()
 
@@ -487,46 +387,9 @@ class FolderSyncEngine(Greenlet):
         # If we're in the polling state, then we want to report the metric
         # for latency when the message was received vs created
         if self.state == 'poll':
-            latency_millis = (
-                datetime.utcnow() - new_uid.message.received_date) \
-                .total_seconds() * 1000
-            metrics = [
-                '.'.join(['accounts', 'overall', 'message_latency']),
-                '.'.join(['providers', self.provider_name, 'message_latency']),
-            ]
-            for metric in metrics:
-                statsd_client.timing(metric, latency_millis)
+            metrics.report_message_creation_latency(new_uid.message)
 
         return new_uid
-
-    def _count_thread_messages(self, thread_id, db_session):
-        count, = db_session.query(func.count(Message.id)). \
-            filter(Message.thread_id == thread_id).one()
-        return count
-
-    def add_message_to_thread(self, db_session, message_obj, raw_message):
-        """Associate message_obj to the right Thread object, creating a new
-        thread if necessary."""
-        with db_session.no_autoflush:
-            # Disable autoflush so we don't try to flush a message with null
-            # thread_id.
-            parent_thread = fetch_corresponding_thread(
-                db_session, self.namespace_id, message_obj)
-            construct_new_thread = True
-
-            if parent_thread:
-                # If there's a parent thread that isn't too long already,
-                # add to it. Otherwise create a new thread.
-                parent_message_count = self._count_thread_messages(
-                    parent_thread.id, db_session)
-                if parent_message_count < MAX_THREAD_LENGTH:
-                    construct_new_thread = False
-
-            if construct_new_thread:
-                message_obj.thread = ImapThread.from_imap_message(
-                    db_session, self.namespace_id, message_obj)
-            else:
-                parent_thread.messages.append(message_obj)
 
     def download_and_commit_uids(self, crispin_client, uids):
         start = datetime.utcnow()
@@ -548,44 +411,13 @@ class FolderSyncEngine(Greenlet):
                         new_uids.add(uid)
                 db_session.commit()
 
-        log.info('Committed new UIDs',
-                 new_committed_message_count=len(new_uids))
+        self.log.info('Committed new UIDs',
+                      new_committed_message_count=len(new_uids))
         # If we downloaded uids, record message velocity (#uid / latency)
-        if self.state == 'initial' and len(new_uids):
-            self._report_message_velocity(datetime.utcnow() - start,
+        if len(new_uids):
+            metrics.report_message_velocity(datetime.utcnow() - start,
                                           len(new_uids))
-        if self.is_first_message:
-            self._report_first_message()
-            self.is_first_message = False
-
         return len(new_uids)
-
-    def _report_first_message(self):
-        now = datetime.utcnow()
-
-        with session_scope(self.namespace_id) as db_session:
-            account = db_session.query(Account).get(self.account_id)
-            account_created = account.created_at
-
-        latency = (now - account_created).total_seconds() * 1000
-        metrics = [
-            '.'.join(['providers', self.provider_name, 'first_message']),
-            '.'.join(['providers', 'overall', 'first_message'])
-        ]
-
-        for metric in metrics:
-            statsd_client.timing(metric, latency)
-
-    def _report_message_velocity(self, timedelta, num_uids):
-        latency = (timedelta).total_seconds() * 1000
-        latency_per_uid = float(latency) / num_uids
-        metrics = [
-            '.'.join(['providers', self.provider_name,
-                      'message_velocity']),
-            '.'.join(['providers', 'overall', 'message_velocity'])
-        ]
-        for metric in metrics:
-            statsd_client.timing(metric, latency_per_uid)
 
     def update_uid_counts(self, db_session, **kwargs):
         saved_status = db_session.query(ImapFolderSyncStatus).join(Folder). \
@@ -600,73 +432,49 @@ class FolderSyncEngine(Greenlet):
             metrics.update(kwargs)
             saved_status.update_metrics(metrics)
 
-    def get_new_uids(self, crispin_client):
+    def get_remote_uidnext(self, crispin_client):
         try:
-            remote_uidnext = crispin_client.conn.folder_status(
+            return crispin_client.conn.folder_status(
                 self.folder_name, ['UIDNEXT']).get('UIDNEXT')
-        except ValueError:
-            # Work around issue where ValueError is raised on parsing STATUS
-            # response.
-            log.warning('Error getting UIDNEXT', exc_info=True)
-            remote_uidnext = None
         except imaplib.IMAP4.error as e:
             if '[NONEXISTENT]' in e.message:
                 raise FolderMissingError()
             else:
                 raise e
-        if remote_uidnext is not None and remote_uidnext == self.uidnext:
-            return
-        log.info('UIDNEXT changed, checking for new UIDs',
-                 remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
 
-        crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
-        with session_scope(self.namespace_id) as db_session:
-            lastseenuid = common.lastseenuid(self.account_id, db_session,
-                                             self.folder_id)
-        latest_uids = crispin_client.conn.fetch('{}:*'.format(lastseenuid + 1),
-                                                ['UID']).keys()
-        new_uids = set(latest_uids) - {lastseenuid}
-        if new_uids:
-            for uid in sorted(new_uids):
-                self.download_and_commit_uids(crispin_client, [uid])
-        self.uidnext = remote_uidnext
-
-    def condstore_refresh_flags(self, crispin_client):
-        new_highestmodseq = crispin_client.conn.folder_status(
+    def get_remote_highestmodseq(self, crispin_client):
+        return crispin_client.conn.folder_status(
             self.folder_name, ['HIGHESTMODSEQ'])['HIGHESTMODSEQ']
-        # Ensure that we have an initial highestmodseq value stored before we
-        # begin polling for changes.
-        if self.highestmodseq is None:
-            self.highestmodseq = new_highestmodseq
+        # TODO Ben: Why is there no error handling for this?
 
-        if new_highestmodseq == self.highestmodseq:
+    def _sync_flags_condstore(self, crispin_client):
+        highestmodseq = self.folder_info.highestmodseq
+        assert(highestmodseq is not None)
+
+        new_highestmodseq = self.get_remote_highestmodseq()
+
+        if new_highestmodseq == highestmodseq:
             # Don't need to do anything if the highestmodseq hasn't
             # changed.
             return
-        elif new_highestmodseq < self.highestmodseq:
+
+        if new_highestmodseq < highestmodseq:
             # This should really never happen, but if it does, handle it.
-            log.warning('got server highestmodseq less than saved '
-                        'highestmodseq',
-                        new_highestmodseq=new_highestmodseq,
-                        saved_highestmodseq=self.highestmodseq)
+            self.log.warning('got server highestmodseq less than saved '
+                             'highestmodseq',
+                             new_highestmodseq=new_highestmodseq,
+                             cached_highestmodseq=highestmodseq)
             return
 
-        log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
-                 new_highestmodseq=new_highestmodseq,
-                 saved_highestmodseq=self.highestmodseq)
-        crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
-        changed_flags = crispin_client.condstore_changed_flags(
-            self.highestmodseq)
+        self.log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
+                      new_highestmodseq=new_highestmodseq,
+                      saved_highestmodseq=highestmodseq)
+
+        changed_flags = crispin_client.condstore_changed_flags(highestmodseq)
         remote_uids = crispin_client.all_uids()
 
-        # In order to be able to sync changes to tens of thousands of flags at
-        # once, we commit updates in batches. We do this in ascending order by
-        # modseq and periodically "checkpoint" our saved highestmodseq. (It's
-        # safe to checkpoint *because* we go in ascending order by modseq.)
-        # That way if the process gets restarted halfway through this refresh,
-        # we don't have to completely start over. It's also slow to load many
-        # objects into the SQLAlchemy session and then issue lots of commits;
-        # we avoid that by batching.
+        # Cap at 100 flag changes. Since this code runs as part of a larger
+        # sync loop, we'll get all of them as long as we go oldest => newest.
         flag_batches = chunk(
             sorted(changed_flags.items(), key=lambda (k, v): v.modseq),
             CONDSTORE_FLAGS_REFRESH_BATCH_SIZE)
@@ -677,47 +485,35 @@ class FolderSyncEngine(Greenlet):
                                        db_session)
             if len(flag_batch) == CONDSTORE_FLAGS_REFRESH_BATCH_SIZE:
                 interim_highestmodseq = max(v.modseq for k, v in flag_batch)
-                self.highestmodseq = interim_highestmodseq
+                self.folder_info.highestmodseq = interim_highestmodseq
 
         with session_scope(self.namespace_id) as db_session:
-            local_uids = common.local_uids(self.account_id, db_session,
-                                           self.folder_id)
+            local_uids = common.local_uids(self.account_id, db_session, self.folder_id)
             expunged_uids = set(local_uids).difference(remote_uids)
 
         if expunged_uids:
-            # If new UIDs have appeared since we last checked in
-            # get_new_uids, save them first. We want to always have the
-            # latest UIDs before expunging anything, in order to properly
-            # capture draft revisions.
-            with session_scope(self.namespace_id) as db_session:
-                lastseenuid = common.lastseenuid(self.account_id, db_session,
-                                                 self.folder_id)
-            if remote_uids and lastseenuid < max(remote_uids):
-                log.info('Downloading new UIDs before expunging')
-                self.get_new_uids(crispin_client)
-            common.remove_deleted_uids(self.account_id, self.folder_id,
-                                       expunged_uids)
-        self.highestmodseq = new_highestmodseq
+            common.remove_deleted_uids(self.account_id, self.folder_id, expunged_uids)
+        self.folder_info.highestmodseq = new_highestmodseq
 
-    def generic_refresh_flags(self, crispin_client):
+    def _sync_flags_generic(self, crispin_client):
         now = datetime.utcnow()
         slow_refresh_due = (
-            self.last_slow_refresh is None or
-            now > self.last_slow_refresh + SLOW_REFRESH_INTERVAL
+            self.folder_info.last_slow_refresh is None or
+            now > self.folder_info.last_slow_refresh + SLOW_REFRESH_INTERVAL
         )
         fast_refresh_due = (
-            self.last_fast_refresh is None or
-            now > self.last_fast_refresh + FAST_REFRESH_INTERVAL
+            self.folder_info.last_fast_refresh is None or
+            now > self.folder_info.last_fast_refresh + FAST_REFRESH_INTERVAL
         )
         if slow_refresh_due:
-            self.refresh_flags_impl(crispin_client, SLOW_FLAGS_REFRESH_LIMIT)
-            self.last_slow_refresh = datetime.utcnow()
+            self._sync_flags_to_depth(crispin_client, SLOW_FLAGS_REFRESH_LIMIT)
+            self.folder_info.last_fast_refresh = datetime.utcnow()
+            self.folder_info.last_slow_refresh = datetime.utcnow()
         elif fast_refresh_due:
-            self.refresh_flags_impl(crispin_client, FAST_FLAGS_REFRESH_LIMIT)
-            self.last_fast_refresh = datetime.utcnow()
+            self._sync_flags_to_depth(crispin_client, FAST_FLAGS_REFRESH_LIMIT)
+            self.folder_info.last_fast_refresh = datetime.utcnow()
 
-    def refresh_flags_impl(self, crispin_client, max_uids):
-        crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
+    def _sync_flags_to_depth(self, crispin_client, max_uids):
         with session_scope(self.namespace_id) as db_session:
             local_uids = common.local_uids(account_id=self.account_id,
                                            session=db_session,
@@ -729,11 +525,11 @@ class FolderSyncEngine(Greenlet):
                 self.flags_fetch_results[max_uids] == (local_uids, flags)):
             # If the flags fetch response is exactly the same as the last one
             # we got, then we don't need to persist any changes.
-            log.debug('Unchanged flags refresh response, '
-                      'not persisting changes', max_uids=max_uids)
+            self.log.debug('Unchanged flags refresh response, '
+                           'not persisting changes', max_uids=max_uids)
             return
-        log.debug('Changed flags refresh response, persisting changes',
-                  max_uids=max_uids)
+        self.log.debug('Changed flags refresh response, persisting changes',
+                       max_uids=max_uids)
         expunged_uids = set(local_uids).difference(flags.keys())
         common.remove_deleted_uids(self.account_id, self.folder_id,
                                    expunged_uids)
@@ -742,117 +538,23 @@ class FolderSyncEngine(Greenlet):
                                    self.folder_role, flags, db_session)
         self.flags_fetch_results[max_uids] = (local_uids, flags)
 
-    def check_uid_changes(self, crispin_client):
-        self.get_new_uids(crispin_client)
-        if crispin_client.condstore_supported():
-            self.condstore_refresh_flags(crispin_client)
-        else:
-            self.generic_refresh_flags(crispin_client)
-
-    @property
-    def uidvalidity(self):
-        if not hasattr(self, '_uidvalidity'):
-            self._uidvalidity = self._load_imap_folder_info().uidvalidity
-        return self._uidvalidity
-
-    @uidvalidity.setter
-    def uidvalidity(self, value):
-        self._update_imap_folder_info('uidvalidity', value)
-        self._uidvalidity = value
-
-    @property
-    def uidnext(self):
-        if not hasattr(self, '_uidnext'):
-            self._uidnext = self._load_imap_folder_info().uidnext
-        return self._uidnext
-
-    @uidnext.setter
-    def uidnext(self, value):
-        self._update_imap_folder_info('uidnext', value)
-        self._uidnext = value
-
-    @property
-    def last_slow_refresh(self):
-        # We persist the last_slow_refresh timestamp so that we don't end up
-        # doing a (potentially expensive) full flags refresh for every account
-        # on every process restart.
-        if not hasattr(self, '_last_slow_refresh'):
-            self._last_slow_refresh = self._load_imap_folder_info(). \
-                last_slow_refresh
-        return self._last_slow_refresh
-
-    @last_slow_refresh.setter
-    def last_slow_refresh(self, value):
-        self._update_imap_folder_info('last_slow_refresh', value)
-        self._last_slow_refresh = value
-
-    @property
-    def highestmodseq(self):
-        if not hasattr(self, '_highestmodseq'):
-            self._highestmodseq = self._load_imap_folder_info().highestmodseq
-        return self._highestmodseq
-
-    @highestmodseq.setter
-    def highestmodseq(self, value):
-        self._highestmodseq = value
-        self._update_imap_folder_info('highestmodseq', value)
-
-    def _load_imap_folder_info(self):
-        with session_scope(self.namespace_id) as db_session:
-            imapfolderinfo = db_session.query(ImapFolderInfo). \
-                filter(ImapFolderInfo.account_id == self.account_id,
-                       ImapFolderInfo.folder_id == self.folder_id). \
-                one()
-            db_session.expunge(imapfolderinfo)
-            return imapfolderinfo
-
-    def _update_imap_folder_info(self, attrname, value):
-        with session_scope(self.namespace_id) as db_session:
-            imapfolderinfo = db_session.query(ImapFolderInfo). \
-                filter(ImapFolderInfo.account_id == self.account_id,
-                       ImapFolderInfo.folder_id == self.folder_id). \
-                one()
-            setattr(imapfolderinfo, attrname, value)
-            db_session.commit()
-
     def uidvalidity_cb(self, account_id, folder_name, select_info):
         assert folder_name == self.folder_name
         assert account_id == self.account_id
+
+        uidvalidity = self.folder_info.uidvalidity
         selected_uidvalidity = select_info['UIDVALIDITY']
-        is_valid = (self.uidvalidity is None or
-                    selected_uidvalidity <= self.uidvalidity)
+
+        is_valid = (uidvalidity is None or selected_uidvalidity <= uidvalidity)
         if not is_valid:
             raise UidInvalid(
                 'folder: {}, remote uidvalidity: {}, '
                 'cached uidvalidity: {}'.format(folder_name.encode('utf-8'),
                                                 selected_uidvalidity,
-                                                self.uidvalidity))
+                                                uidvalidity))
         return select_info
 
 
 class UidInvalid(Exception):
     """Raised when a folder's UIDVALIDITY changes, requiring a resync."""
     pass
-
-
-# This version is elsewhere in the codebase, so keep it for now
-# TODO(emfree): clean this up.
-def uidvalidity_cb(account_id, folder_name, select_info):
-    assert folder_name is not None and select_info is not None, \
-        "must start IMAP session before verifying UIDVALIDITY"
-    with session_scope(account_id) as db_session:
-        saved_folder_info = common.get_folder_info(account_id, db_session,
-                                                   folder_name)
-        saved_uidvalidity = or_none(saved_folder_info, lambda i:
-                                    i.uidvalidity)
-    selected_uidvalidity = select_info['UIDVALIDITY']
-    if saved_folder_info:
-        is_valid = (saved_uidvalidity is None or
-                    selected_uidvalidity <= saved_uidvalidity)
-        if not is_valid:
-            raise UidInvalid(
-                'folder: {}, remote uidvalidity: {}, '
-                'cached uidvalidity: {}'.format(folder_name.encode('utf-8'),
-                                                selected_uidvalidity,
-                                                saved_uidvalidity))
-    return select_info
