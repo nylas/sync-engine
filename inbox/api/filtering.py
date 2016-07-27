@@ -125,14 +125,14 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         query = db_session.query(Thread)
 
     filters = _threads_filters(namespace_id, thread_public_id, started_before,
-                               started_after, last_message_before,
-                               last_message_after, subject)
+                              started_after, last_message_before,
+                              last_message_after, subject)
 
     query = _threads_join_category(query, namespace_id, in_)
     query = query.filter(*filters)
     for subquery in _threads_subqueries(namespace_id, from_addr, to_addr,
-                                        cc_addr, bcc_addr, any_email, filename,
-                                        unread, starred, db_session):
+                                       cc_addr, bcc_addr, any_email, filename,
+                                       unread, starred, db_session):
         query = query.filter(Thread.id.in_(subquery))
 
     if view == 'count':
@@ -203,16 +203,6 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query = bakery(lambda s: s.query(Message.public_id))
     else:
         query = bakery(lambda s: s.query(Message))
-
-        # Sometimes MySQL doesn't pick the right index. In the case of a
-        # regular /messages query, ix_message_ns_id_is_draft_received_date
-        # is the best index because we always filter on
-        # the namespace_id, is_draft and then order by received_date.
-        query += lambda q: q.with_hint(
-            Message,
-            'FORCE INDEX (ix_message_ns_id_is_draft_received_date)',
-            'mysql')
-
     query += lambda q: q.join(Thread)
     query += lambda q: q.filter(
         Message.namespace_id == bindparam('namespace_id'),
