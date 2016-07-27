@@ -65,5 +65,8 @@
 "FEATURE_FLAGS": "ical_autoimport",
 
 "THROTTLE_DELETION": false,
-"UMPIRE_BASE_URL": "127.0.0.1"
+"UMPIRE_BASE_URL": "127.0.0.1",
+
+"MAILGUN_DOMAIN": null,
+"MAILGUN_API_KEY": null
 }

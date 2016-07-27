@@ -1,8 +1,10 @@
 import sys
 import pytz
 import arrow
-import traceback
+import requests
 import icalendar
+import traceback
+from inbox.config import config
 from icalendar import Calendar as iCalendar
 from email.utils import formataddr
 from datetime import datetime, date
@@ -502,34 +504,20 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
 
     body = mime.create.multipart('alternative')
 
-    # Why do we have a switch here? Because Exchange silently drops messages
-    # which look too similar. Switching the order of headers seems to work.
-    #
-    # Oh, also Exchange strips our iCalendar file, so we add it as an
-    # attachment to make sure it makes it through. Luckily, Gmail is smart
-    # enough to cancel the event anyway.
-    # - karim
     if invite_type in ['request', 'update']:
         body.append(
             mime.create.text('plain', text_body),
             mime.create.text('html', html_body),
-            mime.create.text('calendar; method=REQUEST'.format(invite_type),
+            mime.create.text('calendar; method=REQUEST',
                              ical_txt, charset='utf8'))
         msg.append(body)
     elif invite_type == 'cancel':
         body.append(
-            mime.create.text('html', html_body),
             mime.create.text('plain', text_body),
-            mime.create.text('calendar; method=CANCEL'.format(invite_type),
+            mime.create.text('html', html_body),
+            mime.create.text('calendar; method=CANCEL',
                              ical_txt, charset='utf8'))
         msg.append(body)
-
-        attachment = mime.create.attachment(
-            'text/calendar; method=CANCEL',
-            ical_txt,
-            'invite.ics',
-            disposition='attachment')
-        msg.append(attachment)
 
     msg.headers['From'] = account.email_address
     msg.headers['Reply-To'] = account.email_address
@@ -545,7 +533,9 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
 
 
 def send_invite(ical_txt, event, account, invite_type='request'):
-    from inbox.sendmail.base import get_sendmail_client, SendMailException
+    MAILGUN_API_KEY = config.get('MAILGUN_API_KEY')
+    MAILGUN_DOMAIN = config.get('MAILGUN_DOMAIN')
+    assert MAILGUN_DOMAIN is not None and MAILGUN_API_KEY is not None
 
     for participant in event.participants:
         email = participant.get('email', None)
@@ -556,21 +546,15 @@ def send_invite(ical_txt, event, account, invite_type='request'):
         msg.headers['To'] = email
         final_message = msg.to_string()
 
-        try:
-            sendmail_client = get_sendmail_client(account)
-            sendmail_client.send_generated_email([email], final_message)
-        except SendMailException as e:
+        mg_url = 'https://api.mailgun.net/v3/{}/messages.mime'.format(MAILGUN_DOMAIN)
+        r = requests.post(mg_url, auth=("api", MAILGUN_API_KEY),
+                          data={"to": email},
+                          files={"message": final_message})
+
+        if r.status_code != 200:
             log.error("Couldnt send invite email for", email_address=email,
                       event_id=event.id, account_id=account.id,
-                      logstash_tag='invite_sending', exception=str(e))
-
-        if (account.provider == 'eas' and not account.outlook_account and
-                invite_type in ['request', 'update']):
-            # Exchange very surprisingly goes out of the way to send an invite
-            # to all participants (though Outlook.com doesn't).
-            # We only do this for invites and not cancelled because Exchange
-            # doesn't parse our cancellation messages as invites.
-            break
+                      logstash_tag='invite_sending', status_code=r.status_code)
 
 
 def _generate_rsvp(status, account, event):
