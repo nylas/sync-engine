@@ -300,6 +300,26 @@ class CrispinClient(object):
         """
         return self.conn.list_folders()
 
+    def select_folder_if_necessary(self, folder, uidvalidity_cb):
+        """ Selects a given folder if it isn't already the currently selected
+        folder.
+
+        Makes sure to set the 'selected_folder' attribute to a
+        (folder_name, select_info) pair.
+
+        Selecting a folder indicates the start of an IMAP session.  IMAP UIDs
+        are only guaranteed valid for sessions, so the caller must provide a
+        callback that checks UID validity.
+
+        If the folder is already the currently selected folder then we don't
+        reselect the folder which in turn won't initiate a new session, so if
+        you care about having a non-stale value for HIGHESTMODSEQ then don't
+        use this function.
+        """
+        if self.selected_folder is None or folder != self.selected_folder[0]:
+            return self.select_folder(folder, uidvalidity_cb)
+        return uidvalidity_cb(self.account_id, folder, self.selected_folder[1])
+
     def select_folder(self, folder, uidvalidity_cb):
         """ Selects a given folder.
 

@@ -64,7 +64,7 @@ def _set_flag(crispin_client, account_id, message_id, flag_name,
         return
 
     for folder_name, uids in uids_for_message.items():
-        crispin_client.select_folder(folder_name, uidvalidity_cb)
+        crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
         if is_add:
             crispin_client.conn.add_flags(uids, [flag_name])
         else:
@@ -90,7 +90,7 @@ def remote_move(crispin_client, account_id, message_id,
         return
 
     for folder_name, uids in uids_for_message.items():
-        crispin_client.select_folder(folder_name, uidvalidity_cb)
+        crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
         crispin_client.conn.copy(uids, destination)
         crispin_client.delete_uids(uids)
 
@@ -176,7 +176,7 @@ def remote_save_draft(crispin_client, account_id, message_id):
                  account_id=account_id)
         return
     folder_name = crispin_client.folder_names()['drafts'][0]
-    crispin_client.select_folder(folder_name, uidvalidity_cb)
+    crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
     crispin_client.save_draft(mimemsg)
 
 
@@ -197,7 +197,7 @@ def remote_update_draft(crispin_client, account_id, message_id,
                  account_id=account_id)
         return
     folder_name = crispin_client.folder_names()['drafts'][0]
-    crispin_client.select_folder(folder_name, uidvalidity_cb)
+    crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
     existing_new_draft = crispin_client.find_by_header(
         'Message-Id', message_id_header)
     if not existing_new_draft:
@@ -255,5 +255,5 @@ def remote_save_sent(crispin_client, account_id, message_id):
         return
 
     folder_name = crispin_client.folder_names()['sent'][0]
-    crispin_client.select_folder(folder_name, uidvalidity_cb)
+    crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
     crispin_client.create_message(mimemsg)
