@@ -125,14 +125,14 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         query = db_session.query(Thread)
 
     filters = _threads_filters(namespace_id, thread_public_id, started_before,
-                              started_after, last_message_before,
-                              last_message_after, subject)
+                               started_after, last_message_before,
+                               last_message_after, subject)
 
     query = _threads_join_category(query, namespace_id, in_)
     query = query.filter(*filters)
     for subquery in _threads_subqueries(namespace_id, from_addr, to_addr,
-                                       cc_addr, bcc_addr, any_email, filename,
-                                       unread, starred, db_session):
+                                        cc_addr, bcc_addr, any_email, filename,
+                                        unread, starred, db_session):
         query = query.filter(Thread.id.in_(subquery))
 
     if view == 'count':
