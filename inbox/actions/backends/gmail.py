@@ -23,10 +23,12 @@ def remote_change_labels(crispin_client, account_id, message_id,
 
     for folder_name, uids in uids_for_message.items():
         crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
-        crispin_client.conn.add_gmail_labels(
-            uids, _encode_labels(added_labels))
-        crispin_client.conn.remove_gmail_labels(
-            uids, _encode_labels(removed_labels))
+        if len(added_labels) > 0:
+            crispin_client.conn.add_gmail_labels(
+                uids, _encode_labels(added_labels))
+        if len(removed_labels) > 0:
+            crispin_client.conn.remove_gmail_labels(
+                uids, _encode_labels(removed_labels))
 
 
 def remote_create_label(crispin_client, account_id, category_id):
