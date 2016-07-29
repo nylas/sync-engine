@@ -15,7 +15,7 @@ from inbox.models.backends.oauth import token_manager
 
 class OAuthAuthHandler(AuthHandler):
 
-    def connect_account(self, account):
+    def connect_account(self, account, use_timeout=True):
         """
         Returns an authenticated IMAP connection for the given account.
 
@@ -30,14 +30,15 @@ class OAuthAuthHandler(AuthHandler):
             If errors occurred establishing the connection or logging in.
 
         """
-        conn = self._get_IMAP_connection(account)
+        conn = self._get_IMAP_connection(account, use_timeout)
         self._authenticate_IMAP_connection(account, conn)
         return conn
 
-    def _get_IMAP_connection(self, account):
+    def _get_IMAP_connection(self, account, use_timeout=True):
         host, port = account.imap_endpoint
         try:
-            conn = create_imap_connection(host, port, ssl_required=True)
+            conn = create_imap_connection(host, port, ssl_required=True,
+                                          use_timeout=use_timeout)
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,

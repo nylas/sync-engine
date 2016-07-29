@@ -112,7 +112,7 @@ class GenericAuthHandler(AuthHandler):
         account.enable_sync()
         return account
 
-    def connect_account(self, account):
+    def connect_account(self, account, use_timeout=True):
         """
         Returns an authenticated IMAP connection for the given account.
 
@@ -127,7 +127,8 @@ class GenericAuthHandler(AuthHandler):
         host, port = account.imap_endpoint
         ssl_required = account.ssl_required
         try:
-            conn = create_imap_connection(host, port, ssl_required)
+            conn = create_imap_connection(host, port, ssl_required,
+                                          use_timeout)
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,
@@ -336,7 +337,7 @@ def _auth_is_invalid(exc):
                AUTH_INVALID_PREFIXES)
 
 
-def create_imap_connection(host, port, ssl_required):
+def create_imap_connection(host, port, ssl_required, use_timeout=True):
     """
     Return a connection to the IMAP server.
     The connection is encrypted if the specified port is the default IMAP
@@ -346,11 +347,12 @@ def create_imap_connection(host, port, ssl_required):
 
     """
     use_ssl = port == 993
+    timeout = 120 if use_timeout else None
 
     # TODO: certificate pinning for well known sites
     context = create_default_context()
     conn = IMAPClient(host, port=port, use_uid=True,
-                      ssl=use_ssl, ssl_context=context, timeout=120)
+                      ssl=use_ssl, ssl_context=context, timeout=timeout)
 
     if not use_ssl:
         # If STARTTLS is available, always use it. If it's not/ it fails, use

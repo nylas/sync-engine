@@ -79,7 +79,7 @@ class AuthHandler(object):
         self.provider_name = provider_name
 
     # Optional
-    def connect_account(self, account):
+    def connect_account(self, account, use_timeout=True):
         """
         Return an authenticated IMAPClient instance for the given account.
 

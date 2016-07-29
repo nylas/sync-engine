@@ -146,6 +146,18 @@ class CrispinConnectionPool(object):
         self._sem = BoundedSemaphore(num_connections)
         self._set_account_info()
 
+    def _should_timeout_connection(self):
+        # Writable pools don't need connection timeouts because
+        # SyncbackBatchTasks properly scope the IMAP connection across its
+        # constituent SyncbackTasks.
+        return self.readonly
+
+    def _logout(self, client):
+        try:
+            client.logout()
+        except Exception:
+            log.info('Error on IMAP logout', exc_info=True)
+
     @contextlib.contextmanager
     def get(self):
         """ Get a connection from the pool, or instantiate a new one if needed.
@@ -164,6 +176,10 @@ class CrispinConnectionPool(object):
             if client is None:
                 client = self._new_connection()
             yield client
+
+            if not self._should_timeout_connection():
+                self._logout(client)
+                client = None
         except CONN_DISCARD_EXC_CLASSES as exc:
             # Discard the connection on socket or IMAP errors. Technically this
             # isn't always necessary, since if you got e.g. a FETCH failure you
@@ -173,10 +189,7 @@ class CrispinConnectionPool(object):
                      exc_info=True)
             if client is not None and \
                not isinstance(exc, CONN_UNUSABLE_EXC_CLASSES):
-                try:
-                    client.logout()
-                except Exception:
-                    log.info('Error on IMAP logout', exc_info=True)
+                self._logout(client)
             client = None
             raise exc
         except:
@@ -211,7 +224,8 @@ class CrispinConnectionPool(object):
                 ).get(self.account_id)
             db_session.expunge(account)
 
-        return self.auth_handler.connect_account(account)
+        return self.auth_handler.connect_account(
+            account, self._should_timeout_connection())
 
     def _new_connection(self):
         conn = self._new_raw_connection()
