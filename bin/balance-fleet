@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+# A tiny script to balance accounts for a set of managed machines.
+import click
+import redis
+import requests
+import operator
+
+from boto import ec2
+
+from inbox.scheduling.queue import QueueClient
+
+NUM_PROCESSES_PER_HOST = 16
+
+
+def get_zone_for_instance(hostname):
+    conn = ec2.connect_to_region('us-west-2')
+
+    instances = []
+    for r in conn.get_all_instances():
+        for i in r.instances:
+            instances.append(i)
+
+    instances = [i for i in instances if i.tags.get('Name') == hostname and
+                 i.tags.get('Role') == 'sync']
+
+    if not instances:
+        raise Exception("No sync host with hostname '{}'".format(hostname))
+
+    assert len(instances) == 1
+
+    return instances[0].placement
+
+
+@click.command()
+@click.option('--dry-run', is_flag=True, default=False)
+@click.argument('hostnames')
+def main(dry_run, hostnames):
+    hostnames = [host.strip() for host in hostnames.split(',')]
+    load_per_account = dict()
+    BUCKETS = len(hostnames) * NUM_PROCESSES_PER_HOST
+
+    for host in hostnames:
+        for i in range(NUM_PROCESSES_PER_HOST):
+            url = "http://{}:{}/load".format(host, 16384 + i)
+            load_profile = requests.get(url).json()
+            total_time = load_profile['total_time']
+
+            for run_time in load_profile['times']:
+                # run_time is a string of the form <object>:id:<opt>. e.g:
+                # "easfoldersyncengine:1:22:2": 0.0002319812774658203
+
+                if run_time in ['hub', 'null']:
+                    # This is the gevent hub, which is called when the process
+                    # is idle.
+                    continue
+
+                splat = run_time.split(':')
+                account_id = int(splat[1])
+
+                time = load_profile['times'][run_time]
+
+                if account_id not in load_per_account:
+                    load_per_account[account_id] = 0.0
+
+                load_per_account[account_id] += time
+
+    print load_per_account
+
+    # Partition equitably in n-buckets.
+    # http://stackoverflow.com/a/6670011
+    sorted_loads = sorted(load_per_account.items(), key=operator.itemgetter(1), reverse=True)
+    buckets = [[] for i in range(BUCKETS)]
+    bucket_totals = [0.0 for i in range(BUCKETS)]
+
+    i = 0
+    for account, load in sorted_loads[0:BUCKETS]:
+        buckets[i].append(account)
+        bucket_totals[i] += load
+        i += 1
+
+    for account, load in sorted_loads[BUCKETS:]:
+        # Find the less loaded bucket:
+        i = bucket_totals.index(min(bucket_totals))
+        buckets[i].append(account)
+        bucket_totals[i] += load
+
+    print "Would reassign accounts like this:"
+    print buckets
+    #zone = get_zone_for_instance(hostname)
+    #qc = QueueClient(zone)
+    ## hosts in redis are of the format hostname:<cpu_id>
+    #to_unschedule = [(account_id, host) for account_id, host in
+    #                 qc.assigned().items() if host.startswith(hostname)]
+    #if number:
+    #    to_unschedule = to_unschedule[:number]
+
+    #if to_unschedule:
+    #    if dry_run:
+    #        for account_id, host in to_unschedule:
+    #            print "Would unassign", account_id
+    #    else:
+    #        for account_id, host in to_unschedule:
+    #            try:
+    #                print "Unassigning", account_id
+    #                qc.unassign(account_id, host)
+    #            except redis.exceptions.TimeoutError:
+    #                print "Couldn't unassign", account_id, "due to redis timeout"
+    #else:
+    #    print "No syncs to unschedule for", hostname
+
+if __name__ == '__main__':
+    main()

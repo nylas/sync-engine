@@ -99,6 +99,10 @@ class QueueClient(object):
         s = self.redis.register_script(self.ASSIGN)
         return s(keys=[self._queue, self._hash], args=[value])
 
+    def assign(self, value):
+        """Syntaxic sugar over claim_next()"""
+        return self.claim_next(value)
+
     def unassign(self, key, value):
         """
         Removes `key` from the hash, if and only if it is present and set to
