@@ -2,6 +2,7 @@ import abc
 import uuid
 import struct
 import weakref
+import inspect
 
 from bson import json_util, EPOCH_NAIVE
 # Monkeypatch to not include tz_info in decoded JSON.
@@ -15,6 +16,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext import baked
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.expression import Select
 
 from inbox.util.encoding import base36encode, base36decode
 
@@ -31,6 +34,24 @@ bakery = baked.bakery()
 
 query_counts = weakref.WeakKeyDictionary()
 
+@compiles(Select)
+def prefix_selects(select, compiler, **kw):
+    stack = inspect.stack()
+    # Walk the stack backwards until we find the first SQLAlchemy-related
+    # frame.
+    call_frame = (None, "unavailable", "")
+    for i in reversed(range(len(stack))):
+        if 'sqlalchemy' in stack[i][1]:
+            # Found the first SQLAlchemy frame!
+            # The frame just before it is necessarily
+            # the calling frame.
+            if i + 1 < len(stack):
+                call_frame = stack[i + 1]
+            break
+
+    comment = "/* {}:{} */".format(call_frame[1], call_frame[2])
+
+    return compiler.visit_select(select.prefix_with(comment), **kw)
 
 @event.listens_for(Engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement,
