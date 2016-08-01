@@ -576,17 +576,13 @@ class FolderSyncEngine(Greenlet):
         try:
             remote_uidnext = crispin_client.conn.folder_status(
                 self.folder_name, ['UIDNEXT']).get('UIDNEXT')
-        except ValueError:
-            # Work around issue where ValueError is raised on parsing STATUS
-            # response.
-            self.log.warning('Error getting UIDNEXT', exc_info=True)
-            remote_uidnext = None
         except imaplib.IMAP4.error as e:
             if '[NONEXISTENT]' in e.message:
                 raise FolderMissingError()
             else:
                 raise e
-        if remote_uidnext is not None and remote_uidnext == self.uidnext:
+
+        if remote_uidnext == self.uidnext:
             return
         self.log.info('UIDNEXT changed, checking for new UIDs',
                       remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
