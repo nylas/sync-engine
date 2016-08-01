@@ -179,7 +179,7 @@ class FolderSyncEngine(Greenlet):
         # eagerly signal the sync status
         self.heartbeat_status.publish()
         return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name, logger=log)
+                                  provider=self.provider_name, logger=self.log)
 
     def _run_impl(self):
         try:
@@ -189,8 +189,7 @@ class FolderSyncEngine(Greenlet):
             # was no longer valid, ie. the folder for this engine was deleted
             # while we were starting up.
             # Exit the sync and let the monitor sort things out.
-            log.info("Folder state loading failed due to IntegrityError",
-                     folder_id=self.folder_id, account_id=self.account_id)
+            self.log.info("Folder state loading failed due to IntegrityError")
             raise MailsyncDone()
 
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
@@ -208,8 +207,8 @@ class FolderSyncEngine(Greenlet):
 
                 # Check that we're not stuck in an endless uidinvalidity resync loop.
                 if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
-                    log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
-                              ' row. Stopping sync.')
+                    self.log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
+                                   ' row. Stopping sync.')
 
                     with session_scope(self.namespace_id) as db_session:
                         account = db_session.query(Account).get(self.account_id)
@@ -223,15 +222,11 @@ class FolderSyncEngine(Greenlet):
             except FolderMissingError:
                 # Folder was deleted by monitor while its sync was running.
                 # TODO: Monitor should handle shutting down the folder engine.
-                log.info('Folder disappeared. Stopping sync.',
-                         account_id=self.account_id,
-                         folder_name=self.folder_name,
-                         folder_id=self.folder_id)
+                self.log.info('Folder disappeared. Stopping sync.')
                 raise MailsyncDone()
             except ValidationError as exc:
-                log.error('Error authenticating; stopping sync', exc_info=True,
-                          account_id=self.account_id, folder_id=self.folder_id,
-                          logstash_tag='mark_invalid')
+                self.log.error('Error authenticating; stopping sync', exc_info=True,
+                                logstash_tag='mark_invalid')
                 with session_scope(self.namespace_id) as db_session:
                     account = db_session.query(Account).get(self.account_id)
                     account.mark_invalid()
@@ -290,8 +285,8 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def initial_sync(self):
-        log.bind(state='initial')
-        log.info('starting initial sync')
+        self.log.bind(state='initial')
+        self.log.info('starting initial sync')
 
         if self.is_first_sync:
             self._report_initial_sync_start()
@@ -324,15 +319,15 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def poll(self):
-        log.bind(state='poll')
-        log.info('polling')
+        self.log.bind(state='poll')
+        self.log.info('polling')
         self.poll_impl()
         return 'poll'
 
     @retry_crispin
     def resync_uids(self):
-        log.bind(state=self.state)
-        log.warning('UIDVALIDITY changed; initiating resync')
+        self.log.bind(state=self.state)
+        self.log.warning('UIDVALIDITY changed; initiating resync')
         self.resync_uids_impl()
         return 'initial'
 
@@ -406,7 +401,7 @@ class FolderSyncEngine(Greenlet):
                     # 'Unexpected IDLE response: * FLAGS  (...)'
                     if isinstance(exc, imaplib.IMAP4.error) and \
                             exc.message.startswith('Unexpected IDLE response'):
-                        log.info('Error initiating IDLE, not idling',
+                        self.log.info('Error initiating IDLE, not idling',
                                  error=exc)
                         try:
                             # Still have to take the connection out of IDLE
@@ -431,7 +426,7 @@ class FolderSyncEngine(Greenlet):
             remote_uidvalidity = crispin_client.selected_uidvalidity
             remote_uidnext = crispin_client.selected_uidnext
             if remote_uidvalidity <= self.uidvalidity:
-                log.debug('UIDVALIDITY unchanged')
+                self.log.debug('UIDVALIDITY unchanged')
                 return
         # Otherwise, if the UIDVALIDITY really has changed, discard all saved
         # UIDs for the folder, mark associated messages for garbage-collection,
@@ -452,9 +447,7 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def poll_for_changes(self):
-        log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
-            log.info('polling for changes')
             self.poll_impl()
 
     def create_message(self, db_session, acct, folder, msg):
@@ -466,9 +459,8 @@ class FolderSyncEngine(Greenlet):
             ImapUid.account_id == acct.id, ImapUid.folder_id == folder.id,
             ImapUid.msg_uid == msg.uid).first()
         if existing_imapuid is not None:
-            log.error('Expected to create imapuid, but existing row found',
-                      remote_msg_uid=msg.uid,
-                      existing_imapuid=existing_imapuid.id)
+            self.log.error('Expected to create imapuid, but existing row found',
+                           remote_msg_uid=msg.uid, existing_imapuid=existing_imapuid.id)
             return None
 
         new_uid = common.create_imap_message(db_session, acct, folder, msg)
@@ -548,8 +540,7 @@ class FolderSyncEngine(Greenlet):
                         new_uids.add(uid)
                 db_session.commit()
 
-        log.info('Committed new UIDs',
-                 new_committed_message_count=len(new_uids))
+        self.log.info('Committed new UIDs', new_committed_message_count=len(new_uids))
         # If we downloaded uids, record message velocity (#uid / latency)
         if self.state == 'initial' and len(new_uids):
             self._report_message_velocity(datetime.utcnow() - start,
@@ -607,7 +598,7 @@ class FolderSyncEngine(Greenlet):
         except ValueError:
             # Work around issue where ValueError is raised on parsing STATUS
             # response.
-            log.warning('Error getting UIDNEXT', exc_info=True)
+            self.log.warning('Error getting UIDNEXT', exc_info=True)
             remote_uidnext = None
         except imaplib.IMAP4.error as e:
             if '[NONEXISTENT]' in e.message:
@@ -616,8 +607,8 @@ class FolderSyncEngine(Greenlet):
                 raise e
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
-        log.info('UIDNEXT changed, checking for new UIDs',
-                 remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
+        self.log.info('UIDNEXT changed, checking for new UIDs',
+                      remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
 
         crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
         with session_scope(self.namespace_id) as db_session:
@@ -645,15 +636,15 @@ class FolderSyncEngine(Greenlet):
             return
         elif new_highestmodseq < self.highestmodseq:
             # This should really never happen, but if it does, handle it.
-            log.warning('got server highestmodseq less than saved '
-                        'highestmodseq',
-                        new_highestmodseq=new_highestmodseq,
-                        saved_highestmodseq=self.highestmodseq)
+            self.log.warning('got server highestmodseq less than saved '
+                             'highestmodseq',
+                             new_highestmodseq=new_highestmodseq,
+                             saved_highestmodseq=self.highestmodseq)
             return
 
-        log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
-                 new_highestmodseq=new_highestmodseq,
-                 saved_highestmodseq=self.highestmodseq)
+        self.log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
+                      new_highestmodseq=new_highestmodseq,
+                      saved_highestmodseq=self.highestmodseq)
         crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
         changed_flags = crispin_client.condstore_changed_flags(
             self.highestmodseq)
@@ -693,7 +684,7 @@ class FolderSyncEngine(Greenlet):
                 lastseenuid = common.lastseenuid(self.account_id, db_session,
                                                  self.folder_id)
             if remote_uids and lastseenuid < max(remote_uids):
-                log.info('Downloading new UIDs before expunging')
+                self.log.info('Downloading new UIDs before expunging')
                 self.get_new_uids(crispin_client)
             common.remove_deleted_uids(self.account_id, self.folder_id,
                                        expunged_uids)
@@ -729,11 +720,11 @@ class FolderSyncEngine(Greenlet):
                 self.flags_fetch_results[max_uids] == (local_uids, flags)):
             # If the flags fetch response is exactly the same as the last one
             # we got, then we don't need to persist any changes.
-            log.debug('Unchanged flags refresh response, '
-                      'not persisting changes', max_uids=max_uids)
+            self.log.debug('Unchanged flags refresh response, '
+                           'not persisting changes', max_uids=max_uids)
             return
-        log.debug('Changed flags refresh response, persisting changes',
-                  max_uids=max_uids)
+        self.log.debug('Changed flags refresh response, persisting changes',
+                       max_uids=max_uids)
         expunged_uids = set(local_uids).difference(flags.keys())
         common.remove_deleted_uids(self.account_id, self.folder_id,
                                    expunged_uids)
