@@ -189,8 +189,7 @@ class FolderSyncEngine(Greenlet):
             # was no longer valid, ie. the folder for this engine was deleted
             # while we were starting up.
             # Exit the sync and let the monitor sort things out.
-            self.log.info("Folder state loading failed due to IntegrityError")
-            raise MailsyncDone()
+            raise MailsyncDone("Folder state loading failed due to IntegrityError")
 
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
@@ -200,6 +199,11 @@ class FolderSyncEngine(Greenlet):
             try:
                 self.state = self.state_handlers[old_state]()
                 self.heartbeat_status.publish(state=self.state)
+
+                # We've been through a normal state transition without raising any
+                # error. It's safe to reset the uidvalidity counter.
+                self.uidinvalid_count = 0
+
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
                 self.uidinvalid_count += 1
@@ -207,31 +211,13 @@ class FolderSyncEngine(Greenlet):
 
                 # Check that we're not stuck in an endless uidinvalidity resync loop.
                 if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
-                    self.log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
-                                   ' row. Stopping sync.')
-
-                    with session_scope(self.namespace_id) as db_session:
-                        account = db_session.query(Account).get(self.account_id)
-                        account.disable_sync('Detected endless uidvalidity '
-                                             'resync loop')
-                        account.sync_state = 'stopped'
-                        db_session.commit()
-
-                    raise MailsyncDone()
+                    raise MailsyncError('Detected endless uidvalidity resync loop')
 
             except FolderMissingError:
-                # Folder was deleted by monitor while its sync was running.
-                # TODO: Monitor should handle shutting down the folder engine.
-                self.log.info('Folder disappeared. Stopping sync.')
-                raise MailsyncDone()
+                raise MailsyncDone('Folder disappeared')
+
             except ValidationError as exc:
-                self.log.error('Error authenticating; stopping sync', exc_info=True,
-                                logstash_tag='mark_invalid')
-                with session_scope(self.namespace_id) as db_session:
-                    account = db_session.query(Account).get(self.account_id)
-                    account.mark_invalid()
-                    account.update_sync_error(str(exc))
-                raise MailsyncDone()
+                raise MailsyncError('Error authenticating ' + exc.message)
 
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
@@ -241,11 +227,6 @@ class FolderSyncEngine(Greenlet):
                     db_session.add(saved_folder_status)
                     saved_folder_status.state = self.state
                     db_session.commit()
-
-            if self.state == old_state and self.state in ['initial', 'poll']:
-                # We've been through a normal state transition without raising any
-                # error. It's safe to reset the uidvalidity counter.
-                self.uidinvalid_count = 0
 
     def _load_state(self):
         with session_scope(self.namespace_id) as db_session:
@@ -633,13 +614,6 @@ class FolderSyncEngine(Greenlet):
         if new_highestmodseq == self.highestmodseq:
             # Don't need to do anything if the highestmodseq hasn't
             # changed.
-            return
-        elif new_highestmodseq < self.highestmodseq:
-            # This should really never happen, but if it does, handle it.
-            self.log.warning('got server highestmodseq less than saved '
-                             'highestmodseq',
-                             new_highestmodseq=new_highestmodseq,
-                             saved_highestmodseq=self.highestmodseq)
             return
 
         self.log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
