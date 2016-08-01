@@ -43,7 +43,7 @@ def _create_email(account, message):
     msg = create_email(from_name=from_name,
                        from_email=from_email,
                        reply_to=message.reply_to,
-                       inbox_uid=message.inbox_uid,
+                       nylas_uid=message.nylas_uid,
                        to_addr=message.to_addr,
                        cc_addr=message.cc_addr,
                        bcc_addr=message.bcc_addr,
@@ -219,7 +219,7 @@ def remote_update_draft(crispin_client, account_id, message_id,
                      message_id_header=message_id_header)
 
 
-def remote_delete_draft(crispin_client, account_id, inbox_uid,
+def remote_delete_draft(crispin_client, account_id, nylas_uid,
                         message_id_header):
     if 'drafts' not in crispin_client.folder_names():
         log.info(

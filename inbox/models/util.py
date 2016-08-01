@@ -30,18 +30,18 @@ def reconcile_message(new_message, session):
     """
     from inbox.models.message import Message
 
-    if new_message.inbox_uid is None:
+    if new_message.nylas_uid is None:
         # try to reconcile using other means
         q = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.data_sha256 == new_message.data_sha256)
         return q.first()
 
-    if '-' not in new_message.inbox_uid:
+    if '-' not in new_message.nylas_uid:
         # Old X-Inbox-Id format; use the old reconciliation strategy.
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
-            Message.inbox_uid == new_message.inbox_uid,
+            Message.nylas_uid == new_message.nylas_uid,
             Message.is_created).first()
         version = None
     else:
@@ -50,7 +50,7 @@ def reconcile_message(new_message, session):
         # * not commit a new, separate Message object for it
         # * not update the current draft with the old header values in the code
         #   below.
-        expected_public_id, version = new_message.inbox_uid.split('-')
+        expected_public_id, version = new_message.nylas_uid.split('-')
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.public_id == expected_public_id,
