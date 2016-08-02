@@ -60,7 +60,7 @@ address = s.builds(
 addresslist = s.lists(
     s.tuples(basic_text, address),
     min_size=1,
-    max_size=10
+    max_size=5
 )
 
 
@@ -90,7 +90,8 @@ uid_data = s.builds(
 uids = s.dictionaries(
     s.integers(min_value=22),
     uid_data,
-    min_size=24)
+    min_size=5,
+    max_size=10)
 
 
 class MockIMAPClient(object):
