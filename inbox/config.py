@@ -2,6 +2,14 @@ import errno
 import os
 import yaml
 
+# TODO[mike]: This should be removed once we've updated python to 2.7.9 which has better ssl support
+import urllib3.contrib.pyopenssl
+urllib3.contrib.pyopenssl.inject_into_urllib3()
+
+# TODO[mike]: This shold be removed once we've updated our base OS. openssl 1.0.1 doesn't support cross-signed certs
+# https://github.com/certifi/python-certifi/issues/26#issuecomment-138322515
+os.environ["REQUESTS_CA_BUNDLE"] = "/usr/local/lib/python2.7/dist-packages/certifi/weak.pem"
+
 __all__ = ['config']
 
 

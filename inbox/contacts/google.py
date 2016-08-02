@@ -85,8 +85,8 @@ class GoogleContactsProvider(object):
                     account, force_refresh=True)
                 return self._google_client(retry_conn_errors=False)
 
-            except ConnectionError:
-                self.log.error('Connection error')
+            except ConnectionError as e:
+                self.log.error('Connection error', error=e)
                 raise
 
     def _parse_contact_result(self, google_contact):
