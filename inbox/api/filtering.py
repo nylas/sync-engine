@@ -203,6 +203,23 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query = bakery(lambda s: s.query(Message.public_id))
     else:
         query = bakery(lambda s: s.query(Message))
+
+        # Sometimes MySQL doesn't pick the right index. In the case of a
+        # regular /messages query, ix_message_ns_id_is_draft_received_date
+        # is the best index because we always filter on
+        # the namespace_id, is_draft and then order by received_date.
+        # For other "exotic" queries, we let the MySQL query planner
+        # pick the right index.
+        if all(v is None for v in [subject, from_addr, to_addr, cc_addr,
+                                   bcc_addr, any_email, thread_public_id,
+                                   filename, in_, started_before,
+                                   started_after, last_message_before,
+                                   last_message_after]):
+            query += lambda q: q.with_hint(
+                Message,
+                'FORCE INDEX (ix_message_ns_id_is_draft_received_date)',
+                'mysql')
+
     query += lambda q: q.join(Thread)
     query += lambda q: q.filter(
         Message.namespace_id == bindparam('namespace_id'),
