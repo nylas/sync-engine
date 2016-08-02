@@ -24,13 +24,16 @@ def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
         Configures what to retry on. If specified, func is retried only if one
         of these exceptions is raised. Default is to retry on all exceptions.
     fail_classes: list of Exception subclasses, optional
-        Configures what not to retry on. If specified, func is /not/ retried if
-        one of these exceptions is raised.
+        Configures what not to retry on. If specified, func is /not/ retried
+        only when one of these exceptions is raised.
     """
     if (fail_classes and retry_classes and
             set(fail_classes).intersection(retry_classes)):
         raise ValueError("Can't include exception classes in both fail_on and "
                          "retry_on")
+
+    if fail_classes is None and retry_classes is None:
+        raise ValueError("retry requires either fail_classes or retry_classes.")
 
     def should_retry_on(exc):
         if fail_classes and isinstance(exc, tuple(fail_classes)):
