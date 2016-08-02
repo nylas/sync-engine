@@ -1,21 +1,21 @@
 {
-"DATABASE_HOSTS": [
-    {
-        "HOSTNAME": "localhost",
-        "ZONE": "testzone",
-        "PORT": 3306,
-        "SHARDS": [
-            {
-                "ID": 0,
-                "SCHEMA_NAME": "test_prod",
-                "OPEN": true
-            },
-            {
-                "ID": 1,
-                "SCHEMA_NAME": "test_1_prod",
-                "OPEN": false
-            }
-        ]
-    }
-]
+    "DATABASE_HOSTS": [
+        {
+            "HOSTNAME": "localhost",
+            "ZONE": "testzone",
+            "PORT": 3306,
+            "SHARDS": [
+                {
+                    "ID": 0,
+                    "SCHEMA_NAME": "test_prod",
+                    "OPEN": true
+                },
+                {
+                    "ID": 1,
+                    "SCHEMA_NAME": "test_1_prod",
+                    "OPEN": false
+                }
+            ]
+        }
+    ]
 }
