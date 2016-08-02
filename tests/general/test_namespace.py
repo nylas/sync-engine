@@ -188,8 +188,7 @@ def test_deletion_no_throttle(db, patch_requests_no_throttle):
 
     to_delete = get_accounts_to_delete(0)
     greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
-    gevent.sleep(5)
-    gevent.kill(greenlet)
+    greenlet.join()
 
     alive_accounts = db.session.query(Account.id).all()
 
@@ -214,8 +213,7 @@ def test_deletion_metric_throttle(db, patch_requests_throttle):
 
     to_delete = get_accounts_to_delete(0)
     greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
-    gevent.sleep(5)
-    gevent.kill(greenlet)
+    greenlet.join()
 
     alive_accounts = [acc.id for acc in db.session.query(Account).all()]
 
@@ -241,8 +239,7 @@ def test_deletion_time_throttle(db, patch_requests_no_throttle):
 
     to_delete = get_accounts_to_delete(0)
     greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
-    gevent.sleep(2)
-    gevent.kill(greenlet)
+    greenlet.join()
 
     alive_accounts = [acc.id for acc in db.session.query(Account).all()]
 
