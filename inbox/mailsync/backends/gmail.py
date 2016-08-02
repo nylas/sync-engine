@@ -260,6 +260,8 @@ class GmailFolderSyncEngine(FolderSyncEngine):
             else:
                 uids_to_download = sorted(unknown_uids)
 
+            raise Exception("LALALA")
+
             for uids in chunk(reversed(uids_to_download), 1024):
                 g_metadata = crispin_client.g_metadata(uids)
                 # UIDs might have been expunged since sync started, in which
@@ -269,6 +271,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 uids = [u for u in uids if u in g_metadata and u not in
                         self.saved_uids]
                 self.batch_download_uids(crispin_client, uids, g_metadata)
+
         finally:
             if change_poller is not None:
                 # schedule change_poller to die

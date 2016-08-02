@@ -2,11 +2,17 @@ import functools
 import random
 
 import gevent
+from gevent import socket
+from backports import ssl
 
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 log = get_logger()
 BACKOFF_DELAY = 30  # seconds to wait before retrying after a failure
+
+# Exception classes which indicate the network connection to the IMAP
+# server is broken.
+CONN_NETWORK_EXC_CLASSES = (socket.error, ssl.SSLError)
 
 
 def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,

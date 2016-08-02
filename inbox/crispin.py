@@ -27,12 +27,11 @@ from collections import namedtuple, defaultdict
 
 import gevent
 from backports import ssl
-from gevent import socket
 from gevent.lock import BoundedSemaphore
 from gevent.queue import Queue
 from sqlalchemy.orm import joinedload
 
-from inbox.util.concurrency import retry
+from inbox.util.concurrency import retry, CONN_NETWORK_EXC_CLASSES
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.basicauth import GmailSettingError
@@ -61,10 +60,6 @@ RawFolder = namedtuple('RawFolder', 'display_name role')
 # This prevents multiple greenlets from concurrently creating duplicate
 # connection pools for a given account.
 _lock_map = defaultdict(threading.Lock)
-
-# Exception classes which indicate the network connection to the IMAP
-# server is broken.
-CONN_NETWORK_EXC_CLASSES = (socket.error, ssl.SSLError)
 
 # Exception classes on which operations should be retried.
 CONN_RETRY_EXC_CLASSES = CONN_NETWORK_EXC_CLASSES + (imaplib.IMAP4.error,)

@@ -86,7 +86,7 @@ class SyncService(object):
             self.rolling_cpu_counts.append(null_cpu_values)
 
     def run(self):
-        retry_with_logging(self._run_impl, self.log)
+        retry_with_logging(self._run_impl, self.log, fail_classes=[])
 
     def _run_impl(self):
         """

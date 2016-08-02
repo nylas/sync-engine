@@ -10,7 +10,7 @@ import gevent._threading  # This is a clone of the *real* threading module
 import greenlet
 import psutil
 from inbox.config import config
-from inbox.util.concurrency import retry_with_logging
+from inbox.util.concurrency import retry_with_logging, CONN_NETWORK_EXC_CLASSES
 from inbox.util.stats import get_statsd_client
 from nylas.logging import get_logger
 
@@ -202,7 +202,8 @@ class GreenletTracer(object):
     def _monitoring_thread(self):
         # Logger needs to be instantiated in new thread.
         self.log = get_logger()
-        retry_with_logging(self._run_impl, self.log)
+        retry_with_logging(self._run_impl, self.log,
+                           retry_classes=CONN_NETWORK_EXC_CLASSES)
 
     def _run_impl(self):
         try:

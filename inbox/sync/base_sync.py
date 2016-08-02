@@ -48,7 +48,8 @@ class BaseSyncMonitor(Greenlet):
         # Bind greenlet-local logging context.
         self.log = self.log.new(account_id=self.account_id)
         return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name, logger=self.log)
+                                  provider=self.provider_name, logger=self.log,
+                                  fail_classes=[])
 
     def _run_impl(self):
         try:
