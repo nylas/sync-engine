@@ -18,6 +18,7 @@ from inbox.models.namespace import Namespace
 from inbox.models.message import Message
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 from email.utils import parseaddr
+from inbox.util.encoding import unicode_truncate
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -144,7 +145,10 @@ class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
                'raw_data')
     def validate_length(self, key, value):
         max_len = _LENGTHS[key]
-        return value if value is None else value[:max_len]
+        if isinstance(value, unicode):
+            return value if value is None else unicode_truncate(value, max_len)
+        else:
+            return value if value is None else value[:max_len]
 
     @property
     def when(self):
