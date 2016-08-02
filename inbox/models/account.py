@@ -194,6 +194,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         self._sync_status['sync_start_time'] = current_time
         self._sync_status['sync_end_time'] = None
         self._sync_status['sync_error'] = None
+        self._sync_status['sync_disabled_reason'] = None
+        self._sync_status['sync_disabled_on'] = None
+        self._sync_status['sync_disabled_by'] = None
 
         self.sync_state = 'running'
 
