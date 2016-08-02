@@ -8,5 +8,6 @@ install:
   - sudo -H pip install flake8
   - sudo -H ./setup.sh
 script:
-  - flake8 .
+  - flake8 --select=F inbox
+  - pylint -d all -e w0631 inbox
   - INBOX_ENV=test py.test tests -m "not networkrequired"
