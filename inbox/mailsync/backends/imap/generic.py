@@ -87,7 +87,6 @@ from inbox.models.session import session_scope
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (MailsyncDone, MailsyncError,
                                           THROTTLE_COUNT, THROTTLE_WAIT)
-from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
 
 
@@ -155,7 +154,6 @@ class FolderSyncEngine(Greenlet):
             'poll uidinvalid': self.resync_uids,
         }
 
-        self.setup_heartbeats()
         Greenlet.__init__(self)
 
         # Some generic IMAP servers are throwing UIDVALIDITY
@@ -165,19 +163,10 @@ class FolderSyncEngine(Greenlet):
         # MAX_UIDINVALID_RESYNCS.
         self.uidinvalid_count = 0
 
-    def setup_heartbeats(self):
-        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id,
-                                                     self.folder_name,
-                                                     self.email_address,
-                                                     self.provider_name)
-
     def _run(self):
         # Bind greenlet-local logging context.
         self.log = log.new(account_id=self.account_id, folder=self.folder_name,
                            provider=self.provider_name)
-        # eagerly signal the sync status
-        self.heartbeat_status.publish()
         return retry_with_logging(self._run_impl, account_id=self.account_id,
                                   provider=self.provider_name, logger=self.log)
 
@@ -197,8 +186,8 @@ class FolderSyncEngine(Greenlet):
         while True:
             old_state = self.state
             try:
+                self.log.bind(state=self.state)
                 self.state = self.state_handlers[old_state]()
-                self.heartbeat_status.publish(state=self.state)
 
                 # We've been through a normal state transition without raising any
                 # error. It's safe to reset the uidvalidity counter.
@@ -207,7 +196,6 @@ class FolderSyncEngine(Greenlet):
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
                 self.uidinvalid_count += 1
-                self.heartbeat_status.publish(state=self.state)
 
                 # Check that we're not stuck in an endless uidinvalidity resync loop.
                 if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
@@ -266,9 +254,6 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def initial_sync(self):
-        self.log.bind(state='initial')
-        self.log.info('starting initial sync')
-
         if self.is_first_sync:
             self._report_initial_sync_start()
             self.is_first_sync = False
@@ -300,15 +285,11 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def poll(self):
-        self.log.bind(state='poll')
-        self.log.info('polling')
         self.poll_impl()
         return 'poll'
 
     @retry_crispin
     def resync_uids(self):
-        self.log.bind(state=self.state)
-        self.log.warning('UIDVALIDITY changed; initiating resync')
         self.resync_uids_impl()
         return 'initial'
 
@@ -346,7 +327,6 @@ class FolderSyncEngine(Greenlet):
                 # The speedup from batching appears to be less clear for
                 # non-Gmail accounts, so for now just download one-at-a-time.
                 self.download_and_commit_uids(crispin_client, [uid])
-                self.heartbeat_status.publish()
                 count += 1
                 if throttled and count >= THROTTLE_COUNT:
                     # Throttled accounts' folders sync at a rate of

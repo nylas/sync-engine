@@ -470,7 +470,6 @@ class GmailFolderSyncEngine(FolderSyncEngine):
             if not batch:
                 return
             self.download_and_commit_uids(crispin_client, batch)
-            self.heartbeat_status.publish()
             count += len(batch)
             if self.throttled and count >= THROTTLE_COUNT:
                 # Throttled accounts' folders sync at a rate of
