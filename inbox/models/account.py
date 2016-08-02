@@ -116,21 +116,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
     sync_host = Column(String(255), nullable=True)
 
-    # current state of this account
-    state = Column(Enum('live', 'down', 'invalid'), nullable=True)
-
-    # Based on account status, should the sync be running?
-    # (Note, this is stored via a mixin.)
-    # This is set to false if:
-    #  - Account credentials are invalid (see mark_invalid())
-    #  - External factors no longer require this account to sync
-    # The value of this bit should always equal the AND value of all its
-    # folders and heartbeats.
-
-    @property
-    def sync_enabled(self):
-        return self.sync_should_run
-
     sync_state = Column(Enum('running', 'stopped', 'killed',
                              'invalid', 'connerror'),
                         nullable=True)
@@ -149,10 +134,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         d.update(self._sync_status or {})
 
         return d
-
-    @property
-    def sync_error(self):
-        return self._sync_status.get('sync_error')
 
     @property
     def initial_sync_start(self):
@@ -174,31 +155,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
             return None
         return (self.initial_sync_end - self.initial_sync_end).total_seconds()
 
-    def update_sync_error(self, error=None):
-        self._sync_status['sync_error'] = error
-
-    def sync_started(self):
+    @property
+    def sync_enabled(self):
         """
-        Record transition to started state. Should be called after the
-        sync is actually started, not when the request to start it is made.
-
+        Based on account status, should the sync be running?
         """
-        current_time = datetime.utcnow()
-
-        # Never run before (vs restarting stopped/killed)
-        if self.sync_state is None and (
-                not self._sync_status or
-                self._sync_status.get('sync_end_time') is None):
-            self._sync_status['original_start_time'] = current_time
-
-        self._sync_status['sync_start_time'] = current_time
-        self._sync_status['sync_end_time'] = None
-        self._sync_status['sync_error'] = None
-        self._sync_status['sync_disabled_reason'] = None
-        self._sync_status['sync_disabled_on'] = None
-        self._sync_status['sync_disabled_by'] = None
-
-        self.sync_state = 'running'
+        return self.sync_should_run
 
     def enable_sync(self, sync_host=None):
         """ Tell the monitor that this account should be syncing. """
@@ -206,13 +168,16 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         if sync_host is not None:
             self.sync_host = sync_host
 
-    def disable_sync(self, reason):
+    def disable_sync(self, reason=None, exception=None):
         """ Tell the monitor that this account should stop syncing. """
         self.sync_should_run = False
         self._sync_status['sync_disabled_reason'] = reason
         self._sync_status['sync_disabled_on'] = datetime.utcnow()
-        self._sync_status['sync_disabled_by'] = os.environ.get('USER',
-                                                               'unknown')
+        self._sync_status['sync_disabled_by'] = os.environ.get('USER', 'unknown')
+        self._sync_status['sync_error'] = str(exception)
+
+    def mark_stopped(self):
+        self.sync_state = 'stopped'
 
     def mark_invalid(self, reason='invalid credentials', scope='mail'):
         """
@@ -236,23 +201,47 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         self.disable_sync('account deleted')
         self.sync_state = 'stopped'
 
-    def sync_stopped(self, requesting_host):
+    def assigned_to_host(self, host):
+        """
+        Record transition to started state. Should be called after the
+        sync is actually started, not when the request to start it is made.
+
+        """
+        current_time = datetime.utcnow()
+
+        # Never run before (vs restarting stopped/killed)
+        if self.sync_state is None and (
+                not self._sync_status or
+                self._sync_status.get('sync_end_time') is None):
+            self._sync_status['original_start_time'] = current_time
+
+        self._sync_status['sync_start_time'] = current_time
+        self._sync_status['sync_end_time'] = None
+        self._sync_status['sync_error'] = None
+        self._sync_status['sync_disabled_reason'] = None
+        self._sync_status['sync_disabled_on'] = None
+        self._sync_status['sync_disabled_by'] = None
+        self.sync_host = host
+        self.sync_state = 'running'
+
+    def unassigned_from_host(self, requesting_host):
         """
         Record transition to stopped state. Should be called after the
         sync is actually stopped, not when the request to stop it is made.
 
         """
-        if requesting_host == self.sync_host:
-            # Perform a compare-and-swap before updating these values.
-            # Only if the host requesting to update the account.sync_* attributes
-            # here still owns the account sync (i.e is account.sync_host),
-            # the request can proceed.
-            self.sync_host = None
-            if self.sync_state == 'running':
-                self.sync_state = 'stopped'
-            self._sync_status['sync_end_time'] = datetime.utcnow()
-            return True
-        return False
+        if requesting_host != self.sync_host:
+            return False
+
+        # Perform a compare-and-swap before updating these values.
+        # Only if the host requesting to update the account.sync_* attributes
+        # here still owns the account sync (i.e is account.sync_host),
+        # the request can proceed.
+        self.sync_host = None
+        if self.sync_state == 'running':
+            self.sync_state = 'stopped'
+        self._sync_status['sync_end_time'] = datetime.utcnow()
+        return True
 
     @classmethod
     def get(cls, id_, session):

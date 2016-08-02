@@ -91,7 +91,6 @@ class SyncService(object):
     def _run_impl(self):
         """
         Polls for newly registered accounts and checks for start/stop commands.
-
         """
         while True:
             self.poll()
@@ -185,7 +184,6 @@ class SyncService(object):
 
             if acc.id not in self.syncing_accounts:
                 try:
-                    acc.sync_host = self.process_identifier
                     if acc.sync_email:
                         monitor = self.monitor_cls_for[acc.provider](acc)
                         self.email_sync_monitors[acc.id] = monitor
@@ -215,7 +213,7 @@ class SyncService(object):
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
 
-                    acc.sync_started()
+                    acc.assigned_to_host(self.process_identifier)
                     self.syncing_accounts.add(acc.id)
                     db_session.commit()
                     self.log.info('Sync started', account_id=account_id,
@@ -256,7 +254,7 @@ class SyncService(object):
                 acc = db_session.query(Account).get(account_id)
                 if not acc.sync_should_run:
                     clear_heartbeat_status(acc.id)
-                if acc.sync_stopped(self.process_identifier):
+                if acc.unassigned_from_host(self.process_identifier):
                     self.log.info('sync stopped', account_id=account_id)
 
             r = self.queue_client.unassign(account_id, self.process_identifier)
