@@ -1,5 +1,6 @@
 import json
 
+from inbox.api.ns_api import API_VERSIONS
 from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Event, Calendar
 from tests.util.base import db, calendar, add_fake_event
@@ -152,6 +153,40 @@ def test_api_update_title(db, api_client, calendar, default_account):
     assert e_put_data['when']['time'] == e_data['when']['time']
 
 
+import pytest
+@pytest.mark.only
+def test_api_pessimistic_update(db, api_client, calendar, default_account):
+    e_data = {
+        'title': '',
+        'calendar_id': calendar.public_id,
+        'when': {'time': 1407542195},
+    }
+
+    e_resp = api_client.post_data('/events', e_data,
+                                  headers={ "Api-Version": API_VERSIONS[1] })
+
+    e_resp_data = json.loads(e_resp.data)
+    assert e_resp_data['object'] == 'event'
+    assert e_resp_data['account_id'] == default_account.namespace.public_id
+    assert e_resp_data['title'] == e_data['title']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
+    assert 'id' in e_resp_data
+    e_id = e_resp_data['id']
+
+    e_update_data = {'title': 'new title'}
+    e_put_resp = api_client.put_data('/events/' + e_id, e_update_data,
+                                     headers={ "Api-Version": API_VERSIONS[1] })
+
+    e_put_data = json.loads(e_put_resp.data)
+
+    assert e_put_data['object'] == 'event'
+    assert e_put_data['account_id'] == default_account.namespace.public_id
+    assert e_put_data['id'] == e_id
+    assert e_put_data['title'] == ''
+    assert e_put_data['when']['object'] == 'time'
+    assert e_put_data['when']['time'] == e_data['when']['time']
+
+
 def test_api_update_invalid(db, api_client, calendar):
     e_update_data = {'title': 'new title'}
     e_id = generate_public_id()
@@ -179,6 +214,30 @@ def test_api_delete(db, api_client, calendar, default_account):
 
     e_resp = api_client.get_data('/events/' + e_id)
     assert e_resp['status'] == 'cancelled'
+
+
+def test_api_pessimistic_delete(db, api_client, calendar, default_account):
+    e_data = {
+        'title': '',
+        'calendar_id': calendar.public_id,
+        'when': {'time': 1407542195},
+    }
+
+    e_resp = api_client.post_data('/events', e_data,
+                                  headers={ "Api-Version": API_VERSIONS[1] })
+    e_resp_data = json.loads(e_resp.data)
+    assert e_resp_data['object'] == 'event'
+    assert e_resp_data['title'] == e_data['title']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
+    assert 'id' in e_resp_data
+    e_id = e_resp_data['id']
+
+    e_delete_resp = api_client.delete('/events/' + e_id,
+                                      headers={ "Api-Version": API_VERSIONS[1] })
+    assert e_delete_resp.status_code == 200
+
+    e_resp = api_client.get_data('/events/' + e_id)
+    assert e_resp['status'] == 'confirmed'
 
 
 def test_api_delete_invalid(db, api_client, calendar):

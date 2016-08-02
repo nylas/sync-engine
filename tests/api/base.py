@@ -37,8 +37,9 @@ class TestAPIClient(object):
         headers.update(self.auth_header)
         return self.client.get(path, headers=headers)
 
-    def get_data(self, path):
-        return json.loads(self.client.get(path, headers=self.auth_header).data)
+    def get_data(self, path, headers={}):
+        headers.update(self.auth_header)
+        return json.loads(self.client.get(path, headers=headers).data)
 
     def post_data(self, path, data, headers={}):
         headers.update(self.auth_header)
@@ -48,10 +49,12 @@ class TestAPIClient(object):
         headers.update(self.auth_header)
         return self.client.post(path, data=data, headers=headers)
 
-    def put_data(self, path, data):
-        return self.client.put(path, headers=self.auth_header,
+    def put_data(self, path, data, headers={}):
+        headers.update(self.auth_header)
+        return self.client.put(path, headers=headers,
                                data=json.dumps(data))
 
-    def delete(self, path, data=None):
-        return self.client.delete(path, headers=self.auth_header,
+    def delete(self, path, data=None, headers={}):
+        headers.update(self.auth_header)
+        return self.client.delete(path, headers=headers,
                                   data=json.dumps(data))

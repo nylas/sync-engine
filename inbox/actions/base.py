@@ -71,26 +71,30 @@ def create_folder(crispin_client, account_id, category_id):
     remote_create_folder(crispin_client, account_id, category_id)
 
 
-def create_label(crispin_client, account_id, category_id):
-    remote_create_label(crispin_client, account_id, category_id)
-
-
-def delete_label(crispin_client, account_id, category_id):
-    remote_delete_label(crispin_client, account_id, category_id)
-
-
 def update_folder(crispin_client, account_id, category_id, args):
     old_name = args['old_name']
-    remote_update_folder(crispin_client, account_id, category_id, old_name)
+    new_name = args['new_name']
+    remote_update_folder(crispin_client, account_id, category_id,
+                         old_name, new_name)
 
 
 def delete_folder(crispin_client, account_id, category_id):
     remote_delete_folder(crispin_client, account_id, category_id)
 
 
+def create_label(crispin_client, account_id, category_id):
+    remote_create_label(crispin_client, account_id, category_id)
+
+
 def update_label(crispin_client, account_id, category_id, args):
     old_name = args['old_name']
-    remote_update_label(crispin_client, account_id, category_id, old_name)
+    new_name = args['new_name']
+    remote_update_label(crispin_client, account_id, category_id,
+                        old_name, new_name)
+
+
+def delete_label(crispin_client, account_id, category_id):
+    remote_delete_label(crispin_client, account_id, category_id)
 
 
 def save_draft(crispin_client, account_id, message_id, args):

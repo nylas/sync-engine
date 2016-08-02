@@ -5,6 +5,7 @@ from datetime import datetime
 import pytest
 from freezegun import freeze_time
 
+from inbox.api.ns_api import API_VERSIONS
 from inbox.models.category import Category, EPOCH
 
 from tests.util.base import (add_fake_message, thread, add_fake_thread,
@@ -91,41 +92,64 @@ def test_label_get(label_client):
     assert gid_data.status_code == 200
 
 
-def test_folder_put(db, folder_client):
+@pytest.mark.parametrize("api_version", API_VERSIONS)
+def test_folder_put(db, folder_client, api_version):
+    headers = dict()
+    headers['Api-Version'] = api_version
+
     # GET request for the folder ID
     g_data = folder_client.get_raw('/folders/')
     gen_folder = json.loads(g_data.data)[0]
 
     pu_data = folder_client.put_data('/folders/{}'.format(gen_folder['id']),
-                                     {"display_name": "Test_Folder_Renamed"})
+                                     {"display_name": "Test_Folder_Renamed"},
+                                     headers=headers)
     assert pu_data.status_code == 200
-    assert json.loads(pu_data.data)['display_name'] == 'Test_Folder_Renamed'
 
-    category_id = gen_folder['id']
-    category = db.session.query(Category).filter(
-        Category.public_id == category_id).one()
-    assert category.display_name == 'Test_Folder_Renamed'
-    assert category.name == ''
+    if api_version == API_VERSIONS[0]:
+        assert json.loads(pu_data.data)['display_name'] == 'Test_Folder_Renamed'
+
+        category_id = gen_folder['id']
+        category = db.session.query(Category).filter(
+            Category.public_id == category_id).one()
+        assert category.display_name == 'Test_Folder_Renamed'
+        assert category.name == ''
+    else:
+        assert json.loads(pu_data.data)['display_name'] == gen_folder['display_name']
 
 
-def test_label_put(db, label_client):
+@pytest.mark.parametrize("api_version", API_VERSIONS)
+def test_label_put(db, label_client, api_version):
+    headers = dict()
+    headers['Api-Version'] = api_version
+
     # GET request for the label ID
     g_data = label_client.get_raw('/labels/')
     gmail_label = json.loads(g_data.data)[0]
 
+    new_name = "Test_Label_Renamed {}".format(api_version)
     pu_data = label_client.put_data('/labels/{}'.format(gmail_label['id']),
-                                    {"display_name": "Test_Label_Renamed"})
+                                    {"display_name": new_name}, headers=headers)
     assert pu_data.status_code == 200
-    assert json.loads(pu_data.data)['display_name'] == 'Test_Label_Renamed'
 
-    category_id = gmail_label['id']
-    category = db.session.query(Category).filter(
-        Category.public_id == category_id).one()
-    assert category.display_name == 'Test_Label_Renamed'
-    assert category.name == ''
+    if api_version == API_VERSIONS[0]:
+        assert json.loads(pu_data.data)['display_name'] == new_name
+
+        category_id = gmail_label['id']
+        category = db.session.query(Category).filter(
+            Category.public_id == category_id).one()
+        assert category.display_name == new_name
+        assert category.name == ''
+    else:
+        # non-optimistic update
+        assert json.loads(pu_data.data)['display_name'] == gmail_label['display_name']
 
 
-def test_folder_delete(db, generic_account, folder_client):
+@pytest.mark.parametrize("api_version", API_VERSIONS)
+def test_folder_delete(db, generic_account, folder_client, api_version):
+    headers = dict()
+    headers['Api-Version'] = api_version
+
     # Make a new message
     generic_thread = add_fake_thread(db.session, generic_account.namespace.id)
     gen_message = add_fake_message(db.session,
@@ -149,33 +173,45 @@ def test_folder_delete(db, generic_account, folder_client):
     d_data = folder_client.delete('/folders/{}'.format(empty_folder['id']))
     assert d_data.status_code == 200
 
-    category_id = empty_folder['id']
-    category = db.session.query(Category).filter(
-        Category.public_id == category_id).one()
-    assert category.deleted_at != EPOCH
-    assert category.is_deleted is True
+    if api_version == API_VERSIONS[0]:
+        # Did we update things optimistically?
+        category_id = empty_folder['id']
+        category = db.session.query(Category).filter(
+            Category.public_id == category_id).one()
+        assert category.deleted_at != EPOCH
+        assert category.is_deleted is True
+
+    db.session.rollback()
 
 
-def test_label_delete(db, gmail_account, label_client):
+@pytest.mark.parametrize("api_version", API_VERSIONS)
+def test_label_delete(db, gmail_account, label_client, api_version):
+    headers = dict()
+    headers['Api-Version'] = api_version
+
     # Make a new message
     gmail_thread = add_fake_thread(db.session, gmail_account.namespace.id)
     gmail_message = add_fake_message(db.session,
                                      gmail_account.namespace.id, gmail_thread)
-    g_data = label_client.get_raw('/labels/')
+    g_data = label_client.get_raw('/labels/', headers=headers)
     # Add label to message
     gmail_label = json.loads(g_data.data)[0]
-    data = {"folder_id": gmail_label['id']}
-    label_client.put_data('/messages/{}'.format(gmail_message.public_id), data)
+    data = {"labels": [gmail_label['id']]}
+    label_client.put_data('/messages/{}'.format(gmail_message.public_id), data,
+                          headers=headers)
 
     # DELETE requests should work on labels whether or not messages have them
-    d_data = label_client.delete('/labels/{}'.format(gmail_label['id']))
+    d_data = label_client.delete('/labels/{}'.format(gmail_label['id']),
+                                 headers=headers)
     assert d_data.status_code == 200
 
-    category_id = gmail_label['id']
-    category = db.session.query(Category).filter(
-        Category.public_id == category_id).one()
-    assert category.deleted_at != EPOCH
-    assert category.is_deleted is True
+    if api_version == API_VERSIONS[0]:
+        # Optimistic update.
+        category_id = gmail_label['id']
+        category = db.session.query(Category).filter(
+            Category.public_id == category_id).one()
+        assert category.deleted_at != EPOCH
+        assert category.is_deleted is True
 
 
 def test_folder_exclusivity(folder_client):
