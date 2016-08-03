@@ -166,7 +166,7 @@ def create_message_from_json(data, namespace, db_session, is_draft):
         message.is_sent = False
         message.public_id = uid
         message.version = 0
-        message.regenerate_inbox_uid()
+        message.regenerate_nylas_uid()
 
         # Set the snippet
         message.snippet = message.calculate_html_snippet(body)
@@ -291,7 +291,7 @@ def update_draft(db_session, account, draft, to_addr=None,
 
     # Increment version and rebuild the message ID header.
     draft.version += 1
-    draft.regenerate_inbox_uid()
+    draft.regenerate_nylas_uid()
 
     # Sync to remote
     schedule_action('update_draft', draft, draft.namespace.id, db_session,
@@ -308,7 +308,7 @@ def delete_draft(db_session, account, draft):
 
     # Delete remotely.
     schedule_action('delete_draft', draft, draft.namespace.id, db_session,
-                    inbox_uid=draft.inbox_uid,
+                    nylas_uid=draft.nylas_uid,
                     message_id_header=draft.message_id_header)
 
     db_session.delete(draft)

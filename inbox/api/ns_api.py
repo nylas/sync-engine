@@ -1337,7 +1337,7 @@ def draft_send_api():
         draft = get_draft(draft_public_id, data.get('version'),
                           g.namespace.id, g.db_session)
         schedule_action('delete_draft', draft, draft.namespace.id,
-                        g.db_session, inbox_uid=draft.inbox_uid,
+                        g.db_session, nylas_uid=draft.nylas_uid,
                         message_id_header=draft.message_id_header)
     else:
         draft = create_message_from_json(data, g.namespace,
