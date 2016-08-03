@@ -360,6 +360,9 @@ class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
                 del kwargs[k]
         super(Event, self).__init__(**kwargs)
 
+# For API querying performance - default sort order is event.start ASC
+Index('idx_namespace_id_started', Event.namespace_id, Event.start)
+
 
 class RecurringEvent(Event):
     """ Represents an individual one-off instance of a recurring event,
