@@ -27,7 +27,6 @@ setup(
 
     scripts=['bin/inbox-start',
              'bin/inbox-console',
-             'bin/summary-stats',
              'bin/inbox-auth',
              'bin/delete-account-data',
              'bin/create-db',
