@@ -1,4 +1,5 @@
 import json
+import mock
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -501,3 +502,10 @@ def add_fake_msg_with_calendar_part(db_session, account, ics_str, thread=None):
 
     assert msg.has_attached_events
     return msg
+
+
+@yield_fixture
+def mock_gevent_sleep(monkeypatch):
+    monkeypatch.setattr('gevent.sleep', mock.Mock())
+    yield
+    monkeypatch.undo()
