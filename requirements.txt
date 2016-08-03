@@ -4,16 +4,16 @@ httplib2==0.8
 pytest==2.5.2
 pytest-xdist==1.11
 wsgiref==0.1.2
-git+https://github.com/mhahnenberg/sqlalchemy.git@d91084a3dcb0b770b6b0bb884d4a3f2e55770f60#egg=SQLAlchemy
+git+https://github.com/mhahnenberg/sqlalchemy.git@backport-fix#egg=SQLAlchemy
 pymongo==2.5.2  # For json_util in bson
 dnspython==1.11.1
 boto==2.10.0
 ipython==1.0.0
 Flask==0.10.1
-freezegun==0.3.6
+freezegun==0.3.7
 gevent==1.0.1
 gevent-socketio==0.3.5-rc2
-gunicorn==19.0.0
+gunicorn==19.4.5
 mysqlclient==1.3.7
 requests==2.4.3
 chardet==2.1.1

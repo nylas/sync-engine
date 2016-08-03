@@ -82,7 +82,7 @@ def test_smtp_ssl_verification_bad_cert(db, bad_cert_smtp_server,
                                         api_client, patched_smtp):
 
     api_client = new_api_client(db, local_smtp_account.namespace)
-    gevent.sleep(0.2)  # let SMTP daemon start up
+    gevent.sleep(0)  # let SMTP daemon start up
     r = api_client.post_data('/send', example_draft)
     assert r.status_code == 200
 

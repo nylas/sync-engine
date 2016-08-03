@@ -51,7 +51,7 @@ def user_console(user_email_address):
             http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
         """
 
-        IPython.embed(banner1=banner)
+                IPython.embed(banner1=banner)
 
 
 def start_console(user_email_address=None):
