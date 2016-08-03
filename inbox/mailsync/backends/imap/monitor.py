@@ -1,7 +1,6 @@
 from gevent import sleep
 from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
-from sqlalchemy.orm import load_only
 from inbox.basicauth import ValidationError
 from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
