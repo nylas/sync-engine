@@ -138,17 +138,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
-    inbox_uid = Column(String(64), nullable=True, index=True)
-
-    # Allow inbox_uid to be referenced as nylas_uid to make code less confusing,
-    # since many engineers no longer know Nylas was named Inbox.
-    @property
-    def nylas_uid(self):
-        return self.inbox_uid
-
-    @nylas_uid.setter
-    def nylas_uid(self, value):
-        self.inbox_uid = value
+    nylas_uid = Column(String(64), nullable=True, index=True, name='inbox_uid')
 
     def regenerate_nylas_uid(self):
         """
