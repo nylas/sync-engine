@@ -65,7 +65,6 @@ def test_draft_updates(db, default_account, mock_imapclient):
                  {'message_id_header': draft.message_id_header,
                   'nylas_uid': draft.nylas_uid, 'version': 5})
 
-        fix(lint): Whitespace autopep8 lint changes
         conn.select_folder('Drafts', lambda *args: True)
         all_uids = conn.all_uids()
         assert len(all_uids) == 0
