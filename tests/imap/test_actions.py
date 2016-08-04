@@ -63,7 +63,7 @@ def test_draft_updates(db, default_account, mock_imapclient):
 
         delete_draft(conn, default_account.id, draft.id,
                  {'message_id_header': draft.message_id_header,
-                  'inbox_uid': draft.inbox_uid, 'version': 5})
+                  'nylas_uid': draft.nylas_uid, 'version': 5})
         conn.select_folder('Drafts', lambda *args: True)
         all_uids = conn.all_uids()
         assert len(all_uids) == 0
