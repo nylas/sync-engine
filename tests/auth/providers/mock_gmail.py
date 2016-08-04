@@ -45,6 +45,7 @@ fake_responses = {
 
 
 class MockGmailAuthHandler(GmailAuthHandler):
+
     def create_account(self, email_address, response):
         # Override create_account to persist the 'login hint' email_address
         # rather than the canonical email that is contained in response.

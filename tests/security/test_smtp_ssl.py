@@ -23,6 +23,7 @@ SMTP_SERVER_PORT = SMTP_OVER_SSL_TEST_PORT
 
 
 class BadCertSMTPServer(smtpd.DebuggingServer):
+
     def __init__(self, localaddr, remoteaddr):
         smtpd.DebuggingServer.__init__(self, localaddr, remoteaddr)
         self.set_socket(ssl.wrap_socket(self.socket,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#throttle or unthrottle an account
+# throttle or unthrottle an account
 import sys
 import time
 from inbox.models.session import session_scope

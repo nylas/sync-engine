@@ -289,6 +289,7 @@ class SyncbackService(gevent.Greenlet):
 
 
 class SyncbackBatchTask(object):
+
     def __init__(self, semaphore, tasks, account_id):
         self.semaphore = semaphore
         self.tasks = tasks
@@ -440,6 +441,7 @@ class SyncbackTask(object):
 
 
 class SyncbackWorker(gevent.Greenlet):
+
     def __init__(self, parent_service, task_timeout=60):
         self.parent_service = weakref.ref(parent_service)
         self.task_timeout = task_timeout

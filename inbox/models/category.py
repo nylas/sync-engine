@@ -20,6 +20,7 @@ EPOCH = datetime.utcfromtimestamp(0)
 
 class Category(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
                DeletedAtMixin):
+
     @property
     def API_OBJECT_NAME(self):
         return self.type_

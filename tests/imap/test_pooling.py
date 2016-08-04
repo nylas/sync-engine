@@ -10,6 +10,7 @@ from inbox.crispin import CrispinConnectionPool
 
 
 class TestableConnectionPool(CrispinConnectionPool):
+
     def _set_account_info(self):
         pass
 

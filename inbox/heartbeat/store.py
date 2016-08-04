@@ -60,6 +60,7 @@ class HeartbeatStatusKey(object):
 
 
 class HeartbeatStatusProxy(object):
+
     def __init__(self, account_id, folder_id, folder_name=None,
                  email_address=None, provider_name=None, device_id=0):
         self.key = HeartbeatStatusKey(account_id, folder_id)

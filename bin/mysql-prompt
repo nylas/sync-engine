@@ -12,8 +12,8 @@ from setproctitle import setproctitle
 def main(shard_num):
     users = config.get_required('DATABASE_USERS')
 
-    creds = dict(hostname = None, username = None,
-                 password = None, db_name = None)
+    creds = dict(hostname=None, username=None,
+                 password=None, db_name=None)
 
     for database in config.get_required('DATABASE_HOSTS'):
         for shard in database['SHARDS']:

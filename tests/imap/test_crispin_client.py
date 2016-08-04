@@ -16,6 +16,7 @@ from inbox.crispin import (CrispinClient, GmailCrispinClient, GMetadata,
 
 
 class MockedIMAPClient(imapclient.IMAPClient):
+
     def _create_IMAP4(self):
         return mock.Mock()
 

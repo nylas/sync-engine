@@ -64,6 +64,8 @@ def test_draft_updates(db, default_account, mock_imapclient):
         delete_draft(conn, default_account.id, draft.id,
                  {'message_id_header': draft.message_id_header,
                   'nylas_uid': draft.nylas_uid, 'version': 5})
+
+        fix(lint): Whitespace autopep8 lint changes
         conn.select_folder('Drafts', lambda *args: True)
         all_uids = conn.all_uids()
         assert len(all_uids) == 0
@@ -84,11 +86,11 @@ def test_change_flags(db, default_account, message, folder, mock_imapclient):
         mock_imapclient.remove_flags.assert_called_with([22], ['\\Seen'])
 
         mark_starred(crispin_client, default_account.id, message.id,
-                    {'starred': True})
+                     {'starred': True})
         mock_imapclient.add_flags.assert_called_with([22], ['\\Flagged'])
 
         mark_starred(crispin_client, default_account.id, message.id,
-                    {'starred': False})
+                     {'starred': False})
         mock_imapclient.remove_flags.assert_called_with([22], ['\\Flagged'])
 
 

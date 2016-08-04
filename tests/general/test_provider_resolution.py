@@ -10,6 +10,7 @@ from inbox.basicauth import NotSupportedError
 
 
 class MockAnswer(object):
+
     def __init__(self, exchange):
         self.exchange = exchange
 
@@ -18,6 +19,7 @@ class MockAnswer(object):
 
 
 class MockDNSResolver(object):
+
     def __init__(self, registry_filename):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                             'data', registry_filename).encode('utf-8')

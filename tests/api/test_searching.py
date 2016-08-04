@@ -213,6 +213,7 @@ def different_imap_messages(db, generic_account, different_sorted_imap_threads,
 
 
 class MockImapConnection(object):
+
     def __init__(self):
         self.search_args = None
 
@@ -438,6 +439,7 @@ def test_streaming_search_results(db, imap_api_client, generic_account,
     # folders.
 
     class MultiFolderMockImapConnection(MockImapConnection):
+
         def __init__(self):
             self._responses = list(reversed([
                 [2000, 2001, 2002],

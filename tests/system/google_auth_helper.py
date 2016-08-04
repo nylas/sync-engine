@@ -57,6 +57,7 @@ class GoogleConnectParser(HTMLParser):
 
 
 class GoogleTokenParser(HTMLParser):
+
     def handle_starttag(self, tag, attrs):
         if tag == 'input':
             attr_dict = {}

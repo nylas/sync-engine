@@ -80,6 +80,7 @@ def webhooks_client(db):
 
 
 class TestWebhooksClient(object):
+
     def __init__(self, test_client):
         self.client = test_client
 
