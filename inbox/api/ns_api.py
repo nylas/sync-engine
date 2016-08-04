@@ -106,6 +106,10 @@ def start():
 
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
+
+    if 'X-Request-Id' in request.headers:
+        g.log.bind(request_id=request.headers['X-Request-Id'])
+
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
@@ -152,7 +156,7 @@ def handle_not_implemented_error(error):
 
 @app.errorhandler(APIException)
 def handle_input_error(error):
-    log.info('Returning API error to client', error=error)
+    g.log.info('Returning API error to client', error=error)
     response = flask_jsonify(message=error.message,
                              type='invalid_request_error')
     response.status_code = error.status_code
