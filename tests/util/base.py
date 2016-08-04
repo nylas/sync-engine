@@ -1,3 +1,4 @@
+import contextlib
 import json
 import mock
 import os
@@ -8,6 +9,7 @@ from pytest import fixture, yield_fixture
 from flanker import mime
 
 from inbox.util.testutils import setup_test_db
+from tests.imap.data import MockIMAPClient
 
 
 def absolute_path(path):
@@ -509,3 +511,30 @@ def mock_gevent_sleep(monkeypatch):
     monkeypatch.setattr('gevent.sleep', mock.Mock())
     yield
     monkeypatch.undo()
+
+
+@fixture
+def mock_auth_imapclient(monkeypatch):
+    conn = MockIMAPClient()
+    monkeypatch.setattr(
+        'inbox.auth.generic.create_imap_connection',
+        lambda *args: conn
+    )
+    return conn
+
+
+class MockSMTPClient(object):
+    def __init__(self):
+        pass
+
+
+@fixture
+def mock_smtp_get_connection(monkeypatch):
+    client = MockSMTPClient()
+    @contextlib.contextmanager
+    def get_connection(account):
+        yield client
+    monkeypatch.setattr(
+        'inbox.sendmail.smtp.postel.SMTPClient._get_connection',
+        get_connection
+    )

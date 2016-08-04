@@ -10,6 +10,7 @@ from hypothesis import strategies as s
 from hypothesis.extra.datetime import datetimes
 import flanker
 from flanker import mime
+from inbox.basicauth import ValidationError
 
 
 def _build_address_header(addresslist):
@@ -102,6 +103,23 @@ class MockIMAPClient(object):
         self._data = {}
         self.selected_folder = None
         self.uidvalidity = 1
+        self.logins = {}
+
+    def _add_login(self, email, password):
+        self.logins[email] = password
+
+    def login(self, email, password):
+        if email not in self.logins or self.logins[email] != password:
+            raise ValidationError
+
+    def logout(self):
+        pass
+
+    def list_folders(self, directory=u'', pattern=u'*'):
+        return []
+
+    def has_capability(self, capability):
+        return False
 
     def idle_check(self, timeout=None):
         return []
