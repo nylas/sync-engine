@@ -8,12 +8,14 @@ from inbox.auth.generic import GenericAuthHandler
 from inbox.auth.gmail import GmailAuthHandler
 from inbox.basicauth import NotSupportedError
 
+
 class MockAnswer(object):
     def __init__(self, exchange):
         self.exchange = exchange
 
     def __str__(self):
         return self.exchange
+
 
 class MockDNSResolver(object):
     def __init__(self, registry_filename):
@@ -35,7 +37,6 @@ class MockDNSResolver(object):
 
 
 def test_provider_resolution():
-    pfa = provider_from_address
     dns_resolver = MockDNSResolver('dns.json')
     test_cases = [
         ('foo@example.com', 'unknown'),

@@ -22,7 +22,7 @@ user always gets the full thread when they look at mail.
 from __future__ import division
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from gevent import kill, spawn, sleep
+import gevent
 from sqlalchemy.orm import joinedload, load_only
 
 from inbox.util.itert import chunk
@@ -237,7 +237,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                         db_session, remote_uid_count=len(remote_uids),
                         download_uid_count=len(unknown_uids))
 
-            change_poller = spawn(self.poll_for_changes)
+            change_poller = gevent.spawn(self.poll_for_changes)
             bind_context(change_poller, 'changepoller', self.account_id,
                          self.folder_id)
 
@@ -272,7 +272,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
         finally:
             if change_poller is not None:
                 # schedule change_poller to die
-                kill(change_poller)
+                gevent.kill(change_poller)
 
     def resync_uids_impl(self):
         with session_scope(self.namespace_id) as db_session:
@@ -478,7 +478,7 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                 # messages for this batch are synced.
                 # Note this is an approx. limit since we use the #(uids),
                 # not the #(messages).
-                sleep(THROTTLE_WAIT)
+                gevent.sleep(THROTTLE_WAIT)
 
     @property
     def throttled(self):

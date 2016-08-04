@@ -103,6 +103,12 @@ class MockIMAPClient(object):
         self.selected_folder = None
         self.uidvalidity = 1
 
+    def idle_check(self, timeout=None):
+        return []
+
+    def idle_done(self):
+        return ('Idle terminated', [])
+
     def add_folder_data(self, folder_name, uids):
         """Adds fake UID data for the given folder."""
         self._data[folder_name] = uids
@@ -189,7 +195,7 @@ class MockIMAPClient(object):
             'UIDVALIDITY': self.uidvalidity
         }
         if data and 'HIGHESTMODSEQ' in data:
-            resp['HIGHESTMODSEQ'] = max(v['MODSEQ'][0] for v in
+            resp['HIGHESTMODSEQ'] = max(v['MODSEQ'] for v in
                                         folder_data.values())
         return resp
 

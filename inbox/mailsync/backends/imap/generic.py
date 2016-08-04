@@ -63,7 +63,8 @@ sessions reduce scalability.
 from __future__ import division
 
 from datetime import datetime, timedelta
-from gevent import Greenlet, kill, spawn, sleep
+from gevent import Greenlet
+import gevent
 import imaplib
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
@@ -361,7 +362,7 @@ class FolderSyncEngine(Greenlet):
                     # This is the initial size of our download_queue
                     download_uid_count=len(new_uids))
 
-            change_poller = spawn(self.poll_for_changes)
+            change_poller = gevent.spawn(self.poll_for_changes)
             bind_context(change_poller, 'changepoller', self.account_id,
                          self.folder_id)
             uids = sorted(new_uids, reverse=True)
@@ -378,11 +379,11 @@ class FolderSyncEngine(Greenlet):
                     # messages per folder are synced.
                     # Note this is an approx. limit since we use the #(uids),
                     # not the #(messages).
-                    sleep(THROTTLE_WAIT)
+                    gevent.sleep(THROTTLE_WAIT)
         finally:
             if change_poller is not None:
                 # schedule change_poller to die
-                kill(change_poller)
+                gevent.kill(change_poller)
 
     def should_idle(self, crispin_client):
         if not hasattr(self, '_should_idle'):
@@ -421,7 +422,7 @@ class FolderSyncEngine(Greenlet):
                 idling = False
         # Close IMAP connection before sleeping
         if not idling:
-            sleep(self.poll_frequency)
+            gevent.sleep(self.poll_frequency)
 
     def resync_uids_impl(self):
         # First, let's check if the UIVDALIDITY change was spurious, if

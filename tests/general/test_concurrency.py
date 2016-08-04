@@ -30,6 +30,7 @@ class FailingFunction(object):
             raise self.exc_type
         return
 
+
 @pytest.mark.usefixtures('mock_gevent_sleep')
 def test_retry_with_logging():
     logger = MockLogger()
