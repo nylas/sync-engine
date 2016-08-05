@@ -32,6 +32,9 @@ from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
 
 
 def _trim_filename(s, namespace_id, max_len=255):
+    if s is None:
+        return s
+
     # The filename may be up to 255 4-byte unicode characters. If the
     # filename is longer than that, truncate it appropriately.
 
