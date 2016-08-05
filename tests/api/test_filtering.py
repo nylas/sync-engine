@@ -293,7 +293,7 @@ def test_distinct_results(api_client, db, default_namespace):
     assert len(filtered_results) == 1
 
 
-def test_filtering_accounts(db, test_client):
+def test_filtering_accounts(db, test_client, default_namespace):
     all_accounts = json.loads(test_client.get('/accounts/?limit=100').data)
     email = all_accounts[0]['email_address']
 
@@ -315,7 +315,7 @@ def test_filtering_accounts(db, test_client):
     assert len(accounts) == 0
 
 
-def test_namespace_limiting(db, api_client, default_namespace):
+def test_namespace_limiting(db, api_client, default_namespaces):
     dt = datetime.datetime.utcnow()
     subject = dt.isoformat()
     namespaces = db.session.query(Namespace).all()
