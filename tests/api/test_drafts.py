@@ -4,6 +4,7 @@ sending."""
 import json
 import os
 from datetime import datetime
+from freezegun import freeze_time
 import gevent
 
 import pytest
@@ -261,41 +262,41 @@ def test_get_all_drafts(api_client, example_draft):
 
 
 def test_update_draft(api_client):
-    original_draft = {
-        'subject': 'original draft',
-        'body': 'parent draft'
-    }
-    r = api_client.post_data('/drafts', original_draft)
-    draft_public_id = json.loads(r.data)['id']
-    version = json.loads(r.data)['version']
-    assert version == 0
+    with freeze_time(datetime.now()) as freezer:
+        original_draft = {
+            'subject': 'original draft',
+            'body': 'parent draft'
+        }
+        r = api_client.post_data('/drafts', original_draft)
+        draft_public_id = json.loads(r.data)['id']
+        version = json.loads(r.data)['version']
+        assert version == 0
 
-    # Sleep so that timestamp on updated draft is different.
-    gevent.sleep(1)
+        freezer.tick()
 
-    updated_draft = {
-        'subject': 'updated draft',
-        'body': 'updated draft',
-        'version': version
-    }
+        updated_draft = {
+            'subject': 'updated draft',
+            'body': 'updated draft',
+            'version': version
+        }
 
-    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
-                            updated_draft)
-    updated_public_id = json.loads(r.data)['id']
-    updated_version = json.loads(r.data)['version']
+        r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                                updated_draft)
+        updated_public_id = json.loads(r.data)['id']
+        updated_version = json.loads(r.data)['version']
 
-    assert updated_public_id == draft_public_id
-    assert updated_version > 0
+        assert updated_public_id == draft_public_id
+        assert updated_version > 0
 
-    drafts = api_client.get_data('/drafts')
-    assert len(drafts) == 1
-    assert drafts[0]['id'] == updated_public_id
+        drafts = api_client.get_data('/drafts')
+        assert len(drafts) == 1
+        assert drafts[0]['id'] == updated_public_id
 
-    # Check that the thread is updated too.
-    thread = api_client.get_data('/threads/{}'.format(drafts[0]['thread_id']))
-    assert thread['subject'] == 'updated draft'
-    assert thread['first_message_timestamp'] == drafts[0]['date']
-    assert thread['last_message_timestamp'] == drafts[0]['date']
+        # Check that the thread is updated too.
+        thread = api_client.get_data('/threads/{}'.format(drafts[0]['thread_id']))
+        assert thread['subject'] == 'updated draft'
+        assert thread['first_message_timestamp'] == drafts[0]['date']
+        assert thread['last_message_timestamp'] == drafts[0]['date']
 
 
 def test_delete_draft(api_client, thread, message):
