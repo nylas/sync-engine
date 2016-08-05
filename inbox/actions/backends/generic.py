@@ -66,9 +66,9 @@ def _set_flag(crispin_client, account_id, message_id, flag_name,
     for folder_name, uids in uids_for_message.items():
         crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
         if is_add:
-            crispin_client.conn.add_flags(uids, [flag_name])
+            crispin_client.conn.add_flags(uids, [flag_name], silent=True)
         else:
-            crispin_client.conn.remove_flags(uids, [flag_name])
+            crispin_client.conn.remove_flags(uids, [flag_name], silent=True)
 
 
 def set_remote_starred(crispin_client, account, message_id, starred):

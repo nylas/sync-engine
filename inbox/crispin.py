@@ -709,21 +709,21 @@ class CrispinClient(object):
 
     def delete_uids(self, uids):
         uids = [str(u) for u in uids]
-        self.conn.delete_messages(uids)
+        self.conn.delete_messages(uids, silent=True)
         self.conn.expunge()
 
     def set_starred(self, uids, starred):
         if starred:
-            self.conn.add_flags(uids, ['\\Flagged'])
+            self.conn.add_flags(uids, ['\\Flagged'], silent=True)
         else:
-            self.conn.remove_flags(uids, ['\\Flagged'])
+            self.conn.remove_flags(uids, ['\\Flagged'], silent=True)
 
     def set_unread(self, uids, unread):
         uids = [str(u) for u in uids]
         if unread:
-            self.conn.remove_flags(uids, ['\\Seen'])
+            self.conn.remove_flags(uids, ['\\Seen'], silent=True)
         else:
-            self.conn.add_flags(uids, ['\\Seen'])
+            self.conn.add_flags(uids, ['\\Seen'], silent=True)
 
     def save_draft(self, message, date=None):
         assert self.selected_folder_name in self.folder_names()['drafts'], \
@@ -836,7 +836,7 @@ class CrispinClient(object):
                       message_id_header=message_id_header,
                       uids=matching_uids)
             return False
-        self.conn.delete_messages(matching_uids)
+        self.conn.delete_messages(matching_uids, silent=True)
         self.conn.expunge()
         return True
 

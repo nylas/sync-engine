@@ -217,7 +217,7 @@ class MockIMAPClient(object):
                                         folder_data.values())
         return resp
 
-    def delete_messages(self, uids):
+    def delete_messages(self, uids, silent=False):
         for u in uids:
             del self._data[self.selected_folder][u]
 
