@@ -16,3 +16,9 @@ def test_filename_truncation():
     assert _trim_filename(cname, 'a', max_len=7) == u'\U0001f1fa\U0001f1f8\u2678.txt'
     assert _trim_filename(cname, 'a', max_len=6) == u'\U0001f1fa\U0001f1f8.txt'
     assert _trim_filename(cname, 'a', max_len=5) == u'\U0001f1fa.txt'
+
+    uname = 'ABCDEF.txttxttxtxtxttxttxtx'
+    assert _trim_filename(uname, 'a', max_len=8) == 'A.txttxt'
+
+    uname = '.txttxttxtxtxttxttxtx'
+    assert _trim_filename(uname, 'a', max_len=8) == '.txttxtt'

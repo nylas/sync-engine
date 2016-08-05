@@ -44,7 +44,10 @@ def _trim_filename(s, namespace_id, max_len=255):
     if len(s) > max_len:
         # If we need to truncate the string, keep the extension
         filename, fileext = os.path.splitext(s)
-        return filename[:(max_len - len(fileext))] + fileext
+        if len(fileext) < max_len - 1:
+            return filename[:(max_len - len(fileext))] + fileext
+        else:
+            return filename[0] + fileext[:(max_len - 1)]
 
     return s
 
