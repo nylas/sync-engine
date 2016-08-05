@@ -101,25 +101,25 @@ def events_from_ics(namespace, calendar, ics_str):
 
             # Get the last modification date.
             # Exchange uses DtStamp, iCloud and Gmail LAST-MODIFIED.
-            last_modified_tstamp = component.get('dtstamp')
+            component_dtstamp = component.get('dtstamp')
+            component_last_modified = component.get('last-modified')
             last_modified = None
-            if last_modified_tstamp is not None:
+
+            if component_dtstamp is not None:
                 # This is one surprising instance of Exchange doing
                 # the right thing by giving us an UTC timestamp. Also note that
                 # Google calendar also include the DtStamp field, probably to
                 # be a good citizen.
-                if last_modified_tstamp.dt.tzinfo is not None:
-                    last_modified = last_modified_tstamp.dt
+                if component_dtstamp.dt.tzinfo is not None:
+                    last_modified = component_dtstamp.dt
                 else:
                     raise NotImplementedError("We don't support arcane Windows"
                                               " timezones in timestamps yet")
-            else:
+            elif component_last_modified is not None:
                 # Try to look for a LAST-MODIFIED element instead.
                 # Note: LAST-MODIFIED is always in UTC.
                 # http://www.kanzaki.com/docs/ical/lastModified.html
-                last_modified = component.get('last-modified').dt
-                assert last_modified is not None, \
-                    "Event should have a DtStamp or LAST-MODIFIED timestamp"
+                last_modified = component_last_modified.dt
 
             title = None
             summaries = component.get('summary', [])
