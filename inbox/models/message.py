@@ -1,3 +1,4 @@
+import os
 import binascii
 import datetime
 import itertools
@@ -30,12 +31,24 @@ from inbox.models.category import Category
 from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
 
 
-def _trim_filename(s, namespace_id, max_len=64):
-    if s and len(s) > max_len:
-        log.warning('filename is too long, truncating',
-                    max_len=max_len, filename=s,
-                    namespace_id=namespace_id)
-        return s[:max_len - 8] + s[-8:]  # Keep extension
+def _trim_filename(s, namespace_id, max_len=255):
+    # The filename may be up to 255 4-byte unicode characters. If the
+    # filename is longer than that, truncate it appropriately.
+
+    # If `s` is not stored as a unicode string, but contains unicode
+    # characters, len will return the wrong value (bytes not chars).
+    # Convert it to unicode first.
+    if not isinstance(s, unicode):
+        s = s.decode('utf-8', 'ignore')
+
+    if len(s) > max_len:
+        # If we need to truncate the string, keep the extension
+        filename, fileext = os.path.splitext(s)
+        if len(fileext) < max_len - 1:
+            return filename[:(max_len - len(fileext))] + fileext
+        else:
+            return filename[0] + fileext[:(max_len - 1)]
+
     return s
 
 
