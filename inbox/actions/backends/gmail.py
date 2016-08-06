@@ -34,6 +34,8 @@ def remote_change_labels(crispin_client, account_id, message_id,
 def remote_create_label(crispin_client, account_id, category_id):
     with session_scope(account_id) as db_session:
         category = db_session.query(Category).get(category_id)
+        if category is None:
+            return
         display_name = category.display_name
     crispin_client.conn.create_folder(display_name)
 
@@ -41,6 +43,8 @@ def remote_create_label(crispin_client, account_id, category_id):
 def remote_update_label(crispin_client, account_id, category_id, old_name):
     with session_scope(account_id) as db_session:
         category = db_session.query(Category).get(category_id)
+        if category is None:
+            return
         display_name = category.display_name
     crispin_client.conn.rename_folder(old_name, display_name)
 
@@ -48,6 +52,8 @@ def remote_update_label(crispin_client, account_id, category_id, old_name):
 def remote_delete_label(crispin_client, account_id, category_id):
     with session_scope(account_id) as db_session:
         category = db_session.query(Category).get(category_id)
+        if category is None:
+            return
         display_name = category.display_name
 
     try:

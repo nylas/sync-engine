@@ -57,6 +57,7 @@ from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.events.util import removed_participants
 from inbox.util.blockstore import get_from_blockstore
+from inbox.util.misc import imap_folder_path
 from inbox.actions.backends.generic import remote_delete_sent
 
 DEFAULT_LIMIT = 100
@@ -536,6 +537,14 @@ def folders_labels_create_api():
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
 
+    if g.namespace.account.provider not in ['gmail', 'eas']:
+        # Translate the name of the folder to an actual IMAP name
+        # (e.g: "Accounting/Taxes" becomes "Accounting.Taxes")
+        display_name = imap_folder_path(
+            display_name,
+            separator=g.namespace.account.folder_separator,
+            prefix=g.namespace.account.folder_prefix)
+
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
                                        type_=category_type)
@@ -584,6 +593,14 @@ def folder_label_update_api(public_id):
     display_name = data.get('display_name')
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
+
+    if g.namespace.account.provider not in ['gmail', 'eas']:
+        # Translate the name of the folder to an actual IMAP name
+        # (e.g: "Accounting/Taxes" becomes "Accounting.Taxes")
+        display_name = imap_folder_path(
+            display_name,
+            separator=g.namespace.account.folder_separator,
+            prefix=g.namespace.account.folder_prefix)
 
     current_name = category.display_name
     category.display_name = display_name
