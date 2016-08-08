@@ -148,3 +148,21 @@ def test_google_to_event_time():
     assert event_time.start == arrow.get(2012, 10, 15)
     assert event_time.end == arrow.get(2012, 10, 15)
     assert event_time.all_day is True
+
+
+def test_google_to_event_time_reverse():
+    end = {'dateTime': '2012-10-15T17:00:00-07:00',
+           'timeZone': 'America/Los_Angeles'}
+    start = {'dateTime': '2012-10-15T17:25:00-07:00',
+             'timeZone': 'America/Los_Angeles'}
+    event_time = google_to_event_time(start, end)
+    assert event_time.start == arrow.get(2012, 10, 16, 00, 00, 00)
+    assert event_time.end == arrow.get(2012, 10, 16, 00, 25, 00)
+    assert event_time.all_day is False
+
+    start = {'date': '2012-10-15'}
+    end = {'date': '2012-10-16'}
+    event_time = google_to_event_time(start, end)
+    assert event_time.start == arrow.get(2012, 10, 15)
+    assert event_time.end == arrow.get(2012, 10, 15)
+    assert event_time.all_day is True
