@@ -15,7 +15,7 @@ class CreateError(Exception):
 def _verify_create(ns_id, api_client, e_data):
     e_resp = api_client.post_data('/events', e_data)
     if e_resp.status_code != 200:
-        raise CreateError()
+        raise CreateError("Expected status 200, got %d" % e_resp.status_code)
 
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
@@ -77,18 +77,6 @@ def test_api_timespan(db, api_client, calendar, default_namespace):
     assert e_resp_data['when']['object'] == 'timespan'
 
 
-def test_api_timespan_reverse(db, api_client, calendar, default_namespace):
-    e_data = {
-        'title': 'Friday Office Party',
-        'calendar_id': calendar.public_id,
-        'when': {'start_time': 1407548200, 'end_time': 1407548195},
-        'location': 'Nylas HQ',
-    }
-    e_resp_data = _verify_create(default_namespace.public_id, api_client,
-                                 e_data)
-    assert e_resp_data['when']['object'] == 'timespan'
-
-
 def test_api_date(db, api_client, calendar, default_namespace):
     e_data = {
         'title': 'Friday Office Party',
@@ -114,18 +102,6 @@ def test_api_datespan(db, api_client, calendar, default_namespace):
                                  e_data)
     assert e_resp_data['when']['object'] == 'datespan'
 
-
-def test_api_datespan_reverse(db, api_client, calendar, default_namespace):
-    e_data = {
-        'title': 'Friday Office Party',
-        'calendar_id': calendar.public_id,
-        'when': {'start_date': '2014-08-29', 'end_date': '2014-08-28'},
-        'location': 'Nylas HQ',
-    }
-
-    e_resp_data = _verify_create(default_namespace.public_id, api_client,
-                                 e_data)
-    assert e_resp_data['when']['object'] == 'datespan'
 
 # Invalid
 
@@ -187,6 +163,10 @@ def test_api_invalid_event_when_timespan_bad_params(db, api_client, calendar,
     with pytest.raises(CreateError):
         _verify_create(default_namespace.public_id, api_client, e_data)
 
+    e_data['when'] = {'start_time': 2, 'end_time': 1}
+    with pytest.raises(CreateError):
+        _verify_create(default_namespace.public_id, api_client, e_data)
+
     e_data['when'] = {'start_time': 0, 'end_time': 1, 'time': 2}
     with pytest.raises(CreateError):
         _verify_create(default_namespace.public_id, api_client, e_data)
@@ -220,6 +200,12 @@ def test_api_invalid_event_when_datespan_bad_params(db, api_client, calendar,
         _verify_create(default_namespace.public_id, api_client, e_data)
 
     e_data['when'] = {'start_date': '2014-08-27',
+                      'end_date': '2014-08-28',
+                      'date': '2014-08-27'}
+    with pytest.raises(CreateError):
+        _verify_create(default_namespace.public_id, api_client, e_data)
+
+    e_data['when'] = {'start_date': '2014-08-29',
                       'end_date': '2014-08-28',
                       'date': '2014-08-27'}
     with pytest.raises(CreateError):
