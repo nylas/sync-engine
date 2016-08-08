@@ -6,6 +6,7 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy.ext.hybrid import hybrid_property
 
+from inbox.sqlalchemy_ext.util import StringWithTransform
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import (HasRevisions, HasPublicID,
                                  CaseInsensitiveComparator, DeletedAtMixin,
@@ -16,6 +17,36 @@ from inbox.util.misc import fs_folder_path
 log = get_logger()
 
 EPOCH = datetime.utcfromtimestamp(0)
+
+
+def sanitize_name(name):
+    # g_label may not have unicode type (in particular for a numeric
+    # label, e.g. '42'), so coerce to unicode.
+    name = unicode(name)
+    # Remove trailing whitespace, truncate (due to MySQL limitations).
+    name = name.rstrip()
+    if len(name) > MAX_INDEXABLE_LENGTH:
+        name = name[:MAX_INDEXABLE_LENGTH]
+    return name
+
+
+class CategoryNameString(StringWithTransform):
+    """
+    CategoryNameString is a Column type that extends our
+    sqlalchemy_ext.util.StringWithTransform to initialize it with the correct
+    sanitization procedure and the correct string length and collation we use
+    for category names.
+
+    We store rstripped and truncated category names, so this class will
+    ensure that all strings of this type are correctly truncated and sanitized,
+    and the input of any `==` queries executed against a Column of this
+    type match the values that we are actually storing in the database.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(CategoryNameString, self)\
+            .__init__(sanitize_name, MAX_INDEXABLE_LENGTH,
+                      collation='utf8mb4_bin')
 
 
 class Category(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
@@ -39,21 +70,17 @@ class Category(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
 
     # STOPSHIP(emfree): need to index properly for API filtering performance.
     name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False, default='')
-    display_name = Column(String(MAX_INDEXABLE_LENGTH,
-                                 collation='utf8mb4_bin'), nullable=False)
+    display_name = Column(CategoryNameString(), nullable=False)
 
     type_ = Column(Enum('folder', 'label'), nullable=False, default='folder')
 
     @validates('display_name')
-    def sanitize_display_name(self, key, display_name):
-        if self.type_ == 'label':
-            display_name = unicode(display_name)
-        display_name = display_name.rstrip()
-        if len(display_name) > MAX_INDEXABLE_LENGTH:
-            log.warning('Truncating category name',
-                        type_=self.type_, original=display_name)
-            display_name = display_name[:MAX_INDEXABLE_LENGTH]
-        return display_name
+    def validate_display_name(self, key, display_name):
+        sanitized_name = sanitize_name(display_name)
+        if sanitized_name != display_name:
+            log.warning("Truncating category display_name", type_=self.type_,
+                        original=display_name)
+        return sanitized_name
 
     @classmethod
     def find_or_create(cls, session, namespace_id, name, display_name, type_):

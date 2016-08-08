@@ -228,6 +228,10 @@ def add_fake_folder(db_session, default_account, display_name='All Mail',
     from inbox.models.folder import Folder
     return Folder.find_or_create(db_session, default_account, display_name, name)
 
+def add_fake_label(db_session, default_account, display_name='My Label',
+                    name=None):
+    from inbox.models.label import Label
+    return Label.find_or_create(db_session, default_account, display_name, name)
 
 def add_generic_imap_account(db_session, email_address='test@nylas.com'):
     import platform

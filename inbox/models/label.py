@@ -3,9 +3,9 @@ from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.base import MailSyncBase
-from inbox.models.category import Category
+from inbox.models.category import Category, CategoryNameString, sanitize_name
 from inbox.models.mixins import UpdatedAtMixin, DeletedAtMixin
-from inbox.models.constants import MAX_LABEL_NAME_LENGTH
+from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from nylas.logging import get_logger
 log = get_logger()
 
@@ -27,9 +27,8 @@ class Label(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
             passive_deletes=True),
         load_on_pending=True)
 
-    name = Column(String(MAX_LABEL_NAME_LENGTH, collation='utf8mb4_bin'),
-                  nullable=False)
-    canonical_name = Column(String(MAX_LABEL_NAME_LENGTH), nullable=False,
+    name = Column(CategoryNameString(), nullable=False)
+    canonical_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
                             default='')
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
@@ -39,14 +38,12 @@ class Label(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
                         cascade='all, delete-orphan'))
 
     @validates('name')
-    def sanitize_name(self, key, name):
-        name = unicode(name)
-        name = name.rstrip()
-        if len(name) > MAX_LABEL_NAME_LENGTH:
-            log.warning("Truncating label name for account {}; original name "
-                        "was '{}'".format(self.account_id, name))
-            name = name[:MAX_LABEL_NAME_LENGTH]
-        return name
+    def validate_name(self, key, name):
+        sanitized_name = sanitize_name(name)
+        if sanitized_name != name:
+            log.warning("Truncating label name for account",
+                        account_id=self.account_id, name=name)
+        return sanitized_name
 
     @classmethod
     def find_or_create(cls, session, account, name, role=None):
@@ -56,15 +53,6 @@ class Label(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
         if role:
             q = q.filter(cls.canonical_name == role)
         else:
-            # g_label may not have unicode type (in particular for a numeric
-            # label, e.g. '42'), so coerce to unicode.
-            name = unicode(name)
-            # Remove trailing whitespace, truncate (due to MySQL limitations).
-            name = name.rstrip()
-            if len(name) > MAX_LABEL_NAME_LENGTH:
-                log.warning("Truncating label name for account {}; "
-                            "original name was '{}'" .format(account.id, name))
-                name = name[:MAX_LABEL_NAME_LENGTH]
             q = q.filter(cls.name == name)
 
         obj = q.first()

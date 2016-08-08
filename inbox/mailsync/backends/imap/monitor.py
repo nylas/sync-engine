@@ -4,8 +4,8 @@ from gevent.coros import BoundedSemaphore
 from inbox.basicauth import ValidationError
 from nylas.logging import get_logger
 from inbox.crispin import retry_crispin, connection_pool
-from inbox.models import Account, Folder, Category
-from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
+from inbox.models import Account, Folder
+from inbox.models.category import Category, sanitize_name
 from inbox.models.session import session_scope
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
@@ -77,7 +77,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         """
         account = db_session.query(Account).get(self.account_id)
-        remote_folder_names = {f.display_name.rstrip()[:MAX_FOLDER_NAME_LENGTH]
+        remote_folder_names = {sanitize_name(f.display_name)
                                for f in raw_folders}
 
         assert 'inbox' in {f.role for f in raw_folders},\
