@@ -76,10 +76,17 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
                      .format(name, account.id))
             raise
 
-        if not obj.canonical_name:
-            obj.canonical_name = role
-
         return obj
+
+
+    @classmethod
+    def update_role(cls, obj, role=''):
+        role = role or ''  # Need this in case role is explicitly None
+        if obj.canonical_name != role:
+            obj.canonical_name = role
+        if obj.category.name != role:
+            obj.category.name = role
+
 
     @classmethod
     def get(cls, id_, session):
