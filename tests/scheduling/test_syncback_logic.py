@@ -99,7 +99,7 @@ def test_actions_are_claimed(purge_accounts_and_actions, patched_task):
     service._process_log()
 
     while not service.task_queue.empty():
-        gevent.sleep(0.1)
+        gevent.sleep(0)
 
     with session_scope_by_shard_id(0) as db_session:
         q = db_session.query(ActionLog)

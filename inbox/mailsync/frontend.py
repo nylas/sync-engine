@@ -71,6 +71,7 @@ class HTTPFrontend(object):
 
 
 class _QuietHandler(WSGIRequestHandler):
+
     def log_request(self, *args, **kwargs):
         """Suppress request logging so as not to pollute application logs."""
         pass

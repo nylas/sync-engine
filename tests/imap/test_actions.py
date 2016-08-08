@@ -63,7 +63,8 @@ def test_draft_updates(db, default_account, mock_imapclient):
 
         delete_draft(conn, default_account.id, draft.id,
                  {'message_id_header': draft.message_id_header,
-                  'inbox_uid': draft.inbox_uid, 'version': 5})
+                  'nylas_uid': draft.nylas_uid, 'version': 5})
+
         conn.select_folder('Drafts', lambda *args: True)
         all_uids = conn.all_uids()
         assert len(all_uids) == 0
@@ -77,19 +78,19 @@ def test_change_flags(db, default_account, message, folder, mock_imapclient):
     with writable_connection_pool(default_account.id).get() as crispin_client:
         mark_unread(crispin_client, default_account.id, message.id,
                     {'unread': False})
-        mock_imapclient.add_flags.assert_called_with([22], ['\\Seen'])
+        mock_imapclient.add_flags.assert_called_with([22], ['\\Seen'], silent=True)
 
         mark_unread(crispin_client, default_account.id, message.id,
                     {'unread': True})
-        mock_imapclient.remove_flags.assert_called_with([22], ['\\Seen'])
+        mock_imapclient.remove_flags.assert_called_with([22], ['\\Seen'], silent=True)
 
         mark_starred(crispin_client, default_account.id, message.id,
-                    {'starred': True})
-        mock_imapclient.add_flags.assert_called_with([22], ['\\Flagged'])
+                     {'starred': True})
+        mock_imapclient.add_flags.assert_called_with([22], ['\\Flagged'], silent=True)
 
         mark_starred(crispin_client, default_account.id, message.id,
-                    {'starred': False})
-        mock_imapclient.remove_flags.assert_called_with([22], ['\\Flagged'])
+                     {'starred': False})
+        mock_imapclient.remove_flags.assert_called_with([22], ['\\Flagged'], silent=True)
 
 
 def test_change_labels(db, default_account, message, folder, mock_imapclient):
@@ -103,8 +104,9 @@ def test_change_labels(db, default_account, message, folder, mock_imapclient):
                       {'removed_labels': ['\\Inbox'],
                        'added_labels': [u'motörhead', u'μετάνοια']})
         mock_imapclient.add_gmail_labels.assert_called_with(
-            [22], ['mot&APY-rhead', '&A7wDtQPEA6wDvQO,A7kDsQ-'])
-        mock_imapclient.remove_gmail_labels.assert_called_with([22], ['\\Inbox'])
+            [22], ['mot&APY-rhead', '&A7wDtQPEA6wDvQO,A7kDsQ-'], silent=True)
+        mock_imapclient.remove_gmail_labels.assert_called_with([22], ['\\Inbox'],
+                                                               silent=True)
 
 
 @pytest.mark.parametrize('obj_type', ['folder', 'label'])

@@ -21,6 +21,7 @@ class AccountStub(object):
 
 
 class ConnectionStub(object):
+
     def logout(self):
         pass
 

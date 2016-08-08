@@ -27,7 +27,6 @@ setup(
 
     scripts=['bin/inbox-start',
              'bin/inbox-console',
-             'bin/summary-stats',
              'bin/inbox-auth',
              'bin/delete-account-data',
              'bin/create-db',
@@ -52,7 +51,6 @@ setup(
              'bin/detect-missing-sync-host',
              'bin/purge-transaction-log',
              'bin/mysql-prompt',
-             'bin/toggle-s3-sync',
              'bin/unschedule-account-syncs',
              'bin/syncback-stats'
              ],

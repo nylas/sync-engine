@@ -21,7 +21,7 @@ def upgrade():
     from inbox.ignition import main_engine
     engine = main_engine(pool_size=1, max_overflow=0)
 
-    ### foldersync => imapfoldersyncstatus
+    # foldersync => imapfoldersyncstatus
     # note that renaming a table does in fact migrate constraints + indexes too
     op.rename_table('foldersync', 'imapfoldersyncstatus')
 
@@ -32,7 +32,7 @@ def upgrade():
     op.add_column('imapfoldersyncstatus',
                   sa.Column('folder_id', sa.Integer(), nullable=False))
 
-    ### uidvalidity => imapfolderinfo
+    # uidvalidity => imapfolderinfo
     op.rename_table('uidvalidity', 'imapfolderinfo')
     op.alter_column('imapfolderinfo', 'uid_validity',
                     existing_type=sa.Integer(), nullable=False,
@@ -52,7 +52,7 @@ def upgrade():
     op.add_column('imapfolderinfo',
                   sa.Column('folder_id', sa.Integer(), nullable=False))
 
-    ### imapuid
+    # imapuid
     op.drop_constraint('imapuid_ibfk_1', 'imapuid', type_='foreignkey')
     op.alter_column('imapuid', 'imapaccount_id',
                     existing_type=sa.Integer(), nullable=False,
@@ -60,7 +60,7 @@ def upgrade():
     op.create_foreign_key('imapuid_ibfk_1',
                           'imapuid', 'imapaccount', ['account_id'], ['id'])
 
-    ### migrate data and add new constraints
+    # migrate data and add new constraints
     Base = sa.ext.declarative.declarative_base()
     Base.metadata.reflect(engine)
 

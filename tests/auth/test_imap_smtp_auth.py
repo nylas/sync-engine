@@ -46,15 +46,23 @@ creds = [
 
 
 @pytest.mark.parametrize('creds', creds)
-@pytest.mark.networkrequired
-def test_auth(creds):
+@pytest.mark.usefixtures('mock_smtp_get_connection')
+def test_auth(creds, mock_auth_imapclient):
+    imap_username = creds['settings'].get('imap_username')
+    if imap_username is None:
+        imap_username = creds['settings']['email']
+    imap_password = creds['settings'].get('imap_password')
+    if imap_password is None:
+        imap_password = creds['settings']['password']
+    mock_auth_imapclient._add_login(imap_username, imap_password)
+
     handler = GenericAuthHandler(creds['provider'])
     email = creds['settings']['email']
     account = handler.create_account(email, creds['settings'])
 
     # Test that the account was successfully created by the handler.
+    assert account.imap_password == imap_password
     if 'smtp_password' in creds['settings']:
-        assert account.imap_password == creds['settings']['imap_password']
         assert account.smtp_password == creds['settings']['smtp_password']
     else:
         assert account.imap_password == creds['settings']['password']

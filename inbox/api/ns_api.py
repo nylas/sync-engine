@@ -57,6 +57,7 @@ from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.events.util import removed_participants
 from inbox.util.blockstore import get_from_blockstore
+from inbox.util.misc import imap_folder_path
 from inbox.actions.backends.generic import remote_delete_sent
 
 DEFAULT_LIMIT = 100
@@ -106,6 +107,10 @@ def start():
 
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
+
+    if 'X-Request-Id' in request.headers:
+        g.log.bind(request_id=request.headers['X-Request-Id'])
+
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
@@ -152,7 +157,7 @@ def handle_not_implemented_error(error):
 
 @app.errorhandler(APIException)
 def handle_input_error(error):
-    log.info('Returning API error to client', error=error)
+    g.log.info('Returning API error to client', error=error)
     response = flask_jsonify(message=error.message,
                              type='invalid_request_error')
     response.status_code = error.status_code
@@ -532,6 +537,14 @@ def folders_labels_create_api():
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
 
+    if g.namespace.account.provider not in ['gmail', 'eas']:
+        # Translate the name of the folder to an actual IMAP name
+        # (e.g: "Accounting/Taxes" becomes "Accounting.Taxes")
+        display_name = imap_folder_path(
+            display_name,
+            separator=g.namespace.account.folder_separator,
+            prefix=g.namespace.account.folder_prefix)
+
     category = Category.find_or_create(g.db_session, g.namespace.id,
                                        name=None, display_name=display_name,
                                        type_=category_type)
@@ -580,6 +593,14 @@ def folder_label_update_api(public_id):
     display_name = data.get('display_name')
     valid_display_name(g.namespace.id, category_type, display_name,
                        g.db_session)
+
+    if g.namespace.account.provider not in ['gmail', 'eas']:
+        # Translate the name of the folder to an actual IMAP name
+        # (e.g: "Accounting/Taxes" becomes "Accounting.Taxes")
+        display_name = imap_folder_path(
+            display_name,
+            separator=g.namespace.account.folder_separator,
+            prefix=g.namespace.account.folder_prefix)
 
     current_name = category.display_name
     category.display_name = display_name
@@ -1337,7 +1358,7 @@ def draft_send_api():
         draft = get_draft(draft_public_id, data.get('version'),
                           g.namespace.id, g.db_session)
         schedule_action('delete_draft', draft, draft.namespace.id,
-                        g.db_session, inbox_uid=draft.inbox_uid,
+                        g.db_session, nylas_uid=draft.nylas_uid,
                         message_id_header=draft.message_id_header)
     else:
         draft = create_message_from_json(data, g.namespace,

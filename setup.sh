@@ -192,7 +192,7 @@ color '35;1' 'Removing .pyc files...'   # they might be stale
 find . -name \*.pyc -delete
 
 color '35;1' 'Installing dependencies from pip...'
-SODIUM_INSTALL=system pip install -r requirements.txt -q
+SODIUM_INSTALL=system pip install -r requirements.txt
 pip install -e .
 
 color '35;1' 'Finished installing dependencies.'

@@ -13,9 +13,12 @@ except ImportError:
              "Maybe the Vagrant box provisioning didn't succeed?\n"
              "Try running sudo ./setup.sh")
 
-from setproctitle import setproctitle; setproctitle('inbox-api')
-from gevent import monkey; monkey.patch_all()
-import gevent_openssl; gevent_openssl.monkey_patch()
+from setproctitle import setproctitle
+setproctitle('inbox-api')
+from gevent import monkey
+monkey.patch_all()
+import gevent_openssl
+gevent_openssl.monkey_patch()
 
 from gevent.pywsgi import WSGIServer
 

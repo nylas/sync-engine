@@ -10,13 +10,6 @@ from inbox.models import Calendar, Event
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 
 
-@pytest.yield_fixture
-def patched_gevent_sleep(monkeypatch):
-    monkeypatch.setattr('gevent.sleep', mock.Mock())
-    yield
-    monkeypatch.undo()
-
-
 def cmp_cal_attrs(calendar1, calendar2):
     return all(getattr(calendar1, attr) == getattr(calendar2, attr) for attr in
                ('name', 'uid', 'description', 'read_only'))
@@ -374,7 +367,8 @@ def test_handle_http_401():
     assert len(provider._get_access_token.mock_calls) == 2
 
 
-def test_handle_quota_exceeded(patched_gevent_sleep):
+@pytest.mark.usefixtures('mock_gevent_sleep')
+def test_handle_quota_exceeded():
     first_response = requests.Response()
     first_response.status_code = 403
     first_response._content = json.dumps({
@@ -404,7 +398,8 @@ def test_handle_quota_exceeded(patched_gevent_sleep):
     assert items == ['A', 'B', 'C']
 
 
-def test_handle_internal_server_error(patched_gevent_sleep):
+@pytest.mark.usefixtures('mock_gevent_sleep')
+def test_handle_internal_server_error():
     first_response = requests.Response()
     first_response.status_code = 503
 

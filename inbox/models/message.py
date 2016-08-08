@@ -1,3 +1,4 @@
+import os
 import binascii
 import datetime
 import itertools
@@ -30,12 +31,27 @@ from inbox.models.category import Category
 from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
 
 
-def _trim_filename(s, namespace_id, max_len=64):
-    if s and len(s) > max_len:
-        log.warning('filename is too long, truncating',
-                    max_len=max_len, filename=s,
-                    namespace_id=namespace_id)
-        return s[:max_len - 8] + s[-8:]  # Keep extension
+def _trim_filename(s, namespace_id, max_len=255):
+    if s is None:
+        return s
+
+    # The filename may be up to 255 4-byte unicode characters. If the
+    # filename is longer than that, truncate it appropriately.
+
+    # If `s` is not stored as a unicode string, but contains unicode
+    # characters, len will return the wrong value (bytes not chars).
+    # Convert it to unicode first.
+    if not isinstance(s, unicode):
+        s = s.decode('utf-8', 'ignore')
+
+    if len(s) > max_len:
+        # If we need to truncate the string, keep the extension
+        filename, fileext = os.path.splitext(s)
+        if len(fileext) < max_len - 1:
+            return filename[:(max_len - len(fileext))] + fileext
+        else:
+            return filename[0] + fileext[:(max_len - 1)]
+
     return s
 
 
@@ -96,7 +112,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
             raise ValueError('Cannot mark a sent message as sending')
         self.version = MAX_MYSQL_INTEGER
         self.is_draft = False
-        self.regenerate_inbox_uid()
+        self.regenerate_nylas_uid()
 
     @property
     def categories_changes(self):
@@ -138,18 +154,18 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
-    inbox_uid = Column(String(64), nullable=True, index=True)
+    nylas_uid = Column(String(64), nullable=True, index=True, name='inbox_uid')
 
-    def regenerate_inbox_uid(self):
+    def regenerate_nylas_uid(self):
         """
-        The value of inbox_uid is simply the draft public_id and version,
-        concatenated. Because the inbox_uid identifies the draft on the remote
+        The value of nylas_uid is simply the draft public_id and version,
+        concatenated. Because the nylas_uid identifies the draft on the remote
         provider, we regenerate it on each draft revision so that we can delete
         the old draft and add the new one on the remote."""
 
         from inbox.sendmail.message import generate_message_id_header
-        self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
-        self.message_id_header = generate_message_id_header(self.inbox_uid)
+        self.nylas_uid = '{}-{}'.format(self.public_id, self.version)
+        self.message_id_header = generate_message_id_header(self.nylas_uid)
 
     categories = association_proxy(
         'messagecategories', 'category',
@@ -315,7 +331,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
         self.received_date = self.received_date.replace(microsecond=0)
 
         # Custom Nylas header
-        self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+        self.nylas_uid = parsed.headers.get('X-INBOX-ID')
 
         # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
         self.references = parse_references(

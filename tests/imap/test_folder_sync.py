@@ -84,6 +84,7 @@ def test_new_uids_synced_when_polling(db, generic_account, inbox_folder,
                                           generic_account.email_address,
                                           'custom',
                                           BoundedSemaphore(1))
+    # Don't sleep at the end of poll_impl before returning.
     folder_sync_engine.poll_frequency = 0
     folder_sync_engine.poll_impl()
 
@@ -115,6 +116,8 @@ def test_condstore_flags_refresh(db, default_account, all_mail_folder,
         v['MODSEQ'] = (k,)
 
     folder_sync_engine.highestmodseq = 0
+    # Don't sleep at the end of poll_impl before returning.
+    folder_sync_engine.poll_frequency = 0
     folder_sync_engine.poll_impl()
     imapuids = db.session.query(ImapUid). \
         filter_by(folder_id=all_mail_folder.id).all()
@@ -142,6 +145,8 @@ def test_generic_flags_refresh_expunges_transient_uids(
                                           'custom',
                                           BoundedSemaphore(1))
     folder_sync_engine.initial_sync()
+    # Don't sleep at the end of poll_impl before returning.
+    folder_sync_engine.poll_frequency = 0
     folder_sync_engine.poll_impl()
     msg = db.session.query(Message).filter_by(
         namespace_id=generic_account.namespace.id).first()
@@ -220,6 +225,11 @@ def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
     assert len(uidinvalid_count) == MAX_UIDINVALID_RESYNCS + 1
 
 
+def raise_imap_error(self):
+    from imaplib import IMAP4
+    raise IMAP4.error('Unexpected IDLE response')
+
+
 def test_gmail_initial_sync(db, default_account, all_mail_folder,
                             mock_imapclient):
     uid_dict = uids.example()
@@ -227,6 +237,7 @@ def test_gmail_initial_sync(db, default_account, all_mail_folder,
     mock_imapclient.list_folders = lambda: [(('\\All', '\\HasNoChildren',),
                                              '/', u'[Gmail]/All Mail')]
     mock_imapclient.idle = lambda: None
+    mock_imapclient.idle_check = raise_imap_error
 
     folder_sync_engine = GmailFolderSyncEngine(default_account.id,
                                                default_account.namespace.id,
@@ -253,6 +264,7 @@ def test_gmail_message_deduplication(db, default_account, all_mail_folder,
     mock_imapclient.idle = lambda: None
     mock_imapclient.add_folder_data(all_mail_folder.name, {uid: uid_values})
     mock_imapclient.add_folder_data(trash_folder.name, {uid: uid_values})
+    mock_imapclient.idle_check = raise_imap_error
 
     all_folder_sync_engine = GmailFolderSyncEngine(
         default_account.id, default_account.namespace.id, all_mail_folder.name,

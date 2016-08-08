@@ -242,8 +242,7 @@ def test_renamed_label_refresh(db, default_account, thread, message,
     semaphore.acquire()
     rename_handler.start()
 
-    # Wait 10 secs and check that the data hasn't changed.
-    gevent.sleep(10)
+    gevent.sleep(0)  # yield to the handler
 
     labels = list(imapuid.labels)
     assert len(labels) == 1

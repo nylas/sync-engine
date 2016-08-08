@@ -58,6 +58,9 @@ def parse_google_time(d):
 def google_to_event_time(start_raw, end_raw):
     start = parse_google_time(start_raw)
     end = parse_google_time(end_raw)
+    if start > end:
+        start, end = (end, start)
+
     if 'date' in start_raw:
         # Google all-day events normally end a 'day' later than they should,
         # but not always if they were created by a third-party client.

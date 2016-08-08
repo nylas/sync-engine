@@ -4,7 +4,8 @@ Deletes entries in the transaction older than `days_ago` days( as measured by
 the created_at column)
 
 """
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 
 import click
 import gevent

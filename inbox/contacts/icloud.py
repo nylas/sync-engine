@@ -13,7 +13,7 @@ from inbox.models import Contact
 from inbox.models.backends.generic import GenericAccount
 
 
-ICLOUD_CONTACTS_URL = 'https://contacts.icloud.com/'
+ICLOUD_CONTACTS_URL = 'https://contacts.icloud.com'
 
 
 class ICloudContactsProvider(object):

@@ -257,20 +257,25 @@ def test_distinct_results(api_client, db, default_namespace):
     first_thread = add_fake_thread(db.session, default_namespace.id)
     add_fake_message(db.session, default_namespace.id, first_thread,
                      from_addr=[('', 'hello@example.com')],
-                     received_date=datetime.datetime.utcnow())
+                     received_date=datetime.datetime.utcnow(),
+                     add_sent_category=True)
     add_fake_message(db.session, default_namespace.id, first_thread,
                      from_addr=[('', 'hello@example.com')],
-                     received_date=datetime.datetime.utcnow())
+                     received_date=datetime.datetime.utcnow(),
+                     add_sent_category=True)
 
     # Now create another thread with the same participants
     older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     second_thread = add_fake_thread(db.session, default_namespace.id)
     add_fake_message(db.session, default_namespace.id, second_thread,
                      from_addr=[('', 'hello@example.com')],
-                     received_date=older_date)
+                     received_date=older_date,
+                     add_sent_category=True)
     add_fake_message(db.session, default_namespace.id, second_thread,
                      from_addr=[('', 'hello@example.com')],
-                     received_date=older_date)
+                     received_date=older_date,
+                     add_sent_category=True)
+
     second_thread.recentdate = older_date
     db.session.commit()
 
@@ -292,8 +297,17 @@ def test_distinct_results(api_client, db, default_namespace):
                                            '&limit=2&offset=1')
     assert len(filtered_results) == 1
 
+    # Ensure that it works when using the _in filter
+    filtered_results = api_client.get_data('/threads?in=sent'
+                                           '&limit=2&offset=0')
+    assert len(filtered_results) == 2
 
-def test_filtering_accounts(db, test_client):
+    filtered_results = api_client.get_data('/threads?in=sent'
+                                           '&limit=1&offset=0')
+    assert len(filtered_results) == 1
+
+
+def test_filtering_accounts(db, test_client, default_namespace):
     all_accounts = json.loads(test_client.get('/accounts/?limit=100').data)
     email = all_accounts[0]['email_address']
 
@@ -315,7 +329,7 @@ def test_filtering_accounts(db, test_client):
     assert len(accounts) == 0
 
 
-def test_namespace_limiting(db, api_client, default_namespace):
+def test_namespace_limiting(db, api_client, default_namespaces):
     dt = datetime.datetime.utcnow()
     subject = dt.isoformat()
     namespaces = db.session.query(Namespace).all()

@@ -141,14 +141,14 @@ def update_draft(crispin_client, account_id, message_id, args):
 def delete_draft(crispin_client, account_id, draft_id, args):
     """
     Delete a draft from the remote backend. `args` should contain an
-    `inbox_uid` or a `message_id_header` key. This is used to find the draft on
+    `nylas_uid` or a `message_id_header` key. This is used to find the draft on
     "the backend.
 
     """
-    inbox_uid = args.get('inbox_uid')
+    nylas_uid = args.get('nylas_uid')
     message_id_header = args.get('message_id_header')
-    assert inbox_uid or message_id_header, 'Need at least one header value'
-    remote_delete_draft(crispin_client, account_id, inbox_uid,
+    assert nylas_uid or message_id_header, 'Need at least one header value'
+    remote_delete_draft(crispin_client, account_id, nylas_uid,
                         message_id_header)
 
 

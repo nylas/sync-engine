@@ -1,0 +1,403 @@
+[{
+    "domain": "example.com",
+    "mx_domains": [],
+    "ns_records": [
+        "b.iana-servers.net.",
+        "a.iana-servers.net."
+    ]
+},
+{
+    "domain": "noresolve.com",
+    "mx_domains": [],
+    "ns_records": [
+        "buy.internettraffic.com.",
+        "sell.internettraffic.com."
+    ]
+},
+{
+    "domain": "gmail.com",
+    "mx_domains": [
+        "alt1.gmail-smtp-in.l.google.com.",
+        "alt2.gmail-smtp-in.l.google.com.",
+        "gmail-smtp-in.l.google.com.",
+        "alt4.gmail-smtp-in.l.google.com.",
+        "alt3.gmail-smtp-in.l.google.com."
+    ],
+    "ns_records": [
+        "ns3.google.com.",
+        "ns4.google.com.",
+        "ns2.google.com.",
+        "ns1.google.com."
+    ]
+},
+{
+    "domain": "postini.com",
+    "mx_domains": [
+        "postini.com.s8a2.psmtp.com.",
+        "postini.com.s8b2.psmtp.com.",
+        "postini.com.s8b1.psmtp.com.",
+        "postini.com.s8a1.psmtp.com."
+    ],
+    "ns_records": [
+        "ns4.google.com.",
+        "ns1.google.com.",
+        "ns3.google.com.",
+        "ns2.google.com."
+    ]
+},
+{
+    "domain": "yahoo.com",
+    "mx_domains": [
+        "mta7.am0.yahoodns.net.",
+        "mta6.am0.yahoodns.net.",
+        "mta5.am0.yahoodns.net."
+    ],
+    "ns_records": [
+        "ns5.yahoo.com.",
+        "ns2.yahoo.com.",
+        "ns3.yahoo.com.",
+        "ns6.yahoo.com.",
+        "ns1.yahoo.com.",
+        "ns4.yahoo.com."
+    ]
+},
+{
+    "domain": "yahoo.se",
+    "mx_domains": [
+        "mx-eu.mail.am0.yahoodns.net."
+    ],
+    "ns_records": [
+        "ns5.yahoo.com.",
+        "ns2.yahoo.com.",
+        "ns1.yahoo.com.",
+        "ns4.yahoo.com.",
+        "ns3.yahoo.com."
+    ]
+},
+{
+    "domain": "hotmail.com",
+    "mx_domains": [
+        "mx2.hotmail.com.",
+        "mx3.hotmail.com.",
+        "mx4.hotmail.com.",
+        "mx1.hotmail.com."
+    ],
+    "ns_records": [
+        "ns2.msft.net.",
+        "ns3.msft.net.",
+        "ns4.msft.net.",
+        "ns1.msft.net."
+    ]
+},
+{
+    "domain": "outlook.com",
+    "mx_domains": [
+        "mx1.hotmail.com.",
+        "mx2.hotmail.com.",
+        "mx3.hotmail.com.",
+        "mx4.hotmail.com."
+    ],
+    "ns_records": [
+        "ns2.msft.net.",
+        "ns2a.o365filtering.com.",
+        "ns4a.o365filtering.com.",
+        "ns1a.o365filtering.com.",
+        "ns3.msft.net.",
+        "ns1.msft.net.",
+        "ns4.msft.net."
+    ]
+},
+{
+    "domain": "aol.com",
+    "mx_domains": [
+        "mailin-01.mx.aol.com.",
+        "mailin-04.mx.aol.com.",
+        "mailin-03.mx.aol.com.",
+        "mailin-02.mx.aol.com."
+    ],
+    "ns_records": [
+        "dns-01.ns.aol.com.",
+        "dns-07.ns.aol.com.",
+        "dns-02.ns.aol.com.",
+        "dns-06.ns.aol.com."
+    ]
+},
+{
+    "domain": "love.com",
+    "mx_domains": [
+        "mailin-03.mx.aol.com.",
+        "mailin-04.mx.aol.com.",
+        "mailin-01.mx.aol.com.",
+        "mailin-02.mx.aol.com."
+    ],
+    "ns_records": [
+        "dns-07.ns.aol.com.",
+        "dns-01.ns.aol.com.",
+        "dns-02.ns.aol.com.",
+        "dns-06.ns.aol.com."
+    ]
+},
+{
+    "domain": "games.com",
+    "mx_domains": [
+        "mailin-02.mx.aol.com.",
+        "mailin-03.mx.aol.com.",
+        "mailin-01.mx.aol.com.",
+        "mailin-04.mx.aol.com."
+    ],
+    "ns_records": [
+        "dns-06.ns.aol.com.",
+        "dns-02.ns.aol.com.",
+        "dns-07.ns.aol.com.",
+        "dns-01.ns.aol.com."
+    ]
+},
+{
+    "domain": "exchange.mit.edu",
+    "mx_domains": [
+        "mailsec-scanner-1.mit.edu.",
+        "mailsec-scanner-2.mit.edu.",
+        "mailsec-scanner-8.mit.edu.",
+        "mailsec-scanner-7.mit.edu.",
+        "mailsec-scanner-4.mit.edu.",
+        "mailsec-scanner-6.mit.edu.",
+        "mailsec-scanner-3.mit.edu.",
+        "mailsec-scanner-5.mit.edu."
+    ],
+    "ns_records": [
+        "use5.akam.net.",
+        "asia2.akam.net.",
+        "use2.akam.net.",
+        "eur5.akam.net.",
+        "usw2.akam.net.",
+        "ns1-173.akam.net.",
+        "ns1-37.akam.net.",
+        "asia1.akam.net."
+    ]
+},
+{
+    "domain": "fastmail.fm",
+    "mx_domains": [
+        "in2-smtp.messagingengine.com.",
+        "in1-smtp.messagingengine.com."
+    ],
+    "ns_records": [
+        "ns1.messagingengine.com.",
+        "ns2.messagingengine.com."
+    ]
+},
+{
+    "domain": "fastmail.net",
+    "mx_domains": [
+        "in1-smtp.messagingengine.com.",
+        "in2-smtp.messagingengine.com."
+    ],
+    "ns_records": [
+        "ns2.messagingengine.com.",
+        "ns1.messagingengine.com."
+    ]
+},
+{
+    "domain": "fastmail.com",
+    "mx_domains": [
+        "in2-smtp.messagingengine.com.",
+        "in1-smtp.messagingengine.com."
+    ],
+    "ns_records": [
+        "ns1.messagingengine.com.",
+        "ns2.messagingengine.com."
+    ]
+},
+{
+    "domain": "hover.com",
+    "mx_domains": [
+        "mx.hover.com.cust.hostedemail.com."
+    ],
+    "ns_records": [
+        "ns2.hover.com.",
+        "ns1.hover.com."
+    ]
+},
+{
+    "domain": "yahoo.com",
+    "mx_domains": [
+        "mta6.am0.yahoodns.net.",
+        "mta5.am0.yahoodns.net.",
+        "mta7.am0.yahoodns.net."
+    ],
+    "ns_records": [
+        "ns5.yahoo.com.",
+        "ns3.yahoo.com.",
+        "ns1.yahoo.com.",
+        "ns6.yahoo.com.",
+        "ns2.yahoo.com.",
+        "ns4.yahoo.com."
+    ]
+},
+{
+    "domain": "yandex.com",
+    "mx_domains": [
+        "mx.yandex.ru."
+    ],
+    "ns_records": [
+        "ns1.yandex.net.",
+        "ns2.yandex.net."
+    ]
+},
+{
+    "domain": "mrmail.com",
+    "mx_domains": [
+        "mx2.mrmail.com.",
+        "mx1.mrmail.com."
+    ],
+    "ns_records": [
+        "ns1.mrmail.com.",
+        "ns2.mrmail.com."
+    ]
+},
+{
+    "domain": "icloud.com",
+    "mx_domains": [
+        "mx6.mail.icloud.com.",
+        "mx5.mail.icloud.com.",
+        "mx4.mail.icloud.com.",
+        "mx3.mail.icloud.com.",
+        "mx2.mail.icloud.com.",
+        "mx1.mail.icloud.com."
+    ],
+    "ns_records": [
+        "adns2.apple.com.",
+        "adns1.apple.com.",
+        "nserver4.apple.com.",
+        "nserver.apple.com.",
+        "nserver3.apple.com.",
+        "nserver2.apple.com.",
+        "nserver6.apple.com.",
+        "nserver5.apple.com."
+    ]
+},
+{
+    "domain": "mac.com",
+    "mx_domains": [
+        "mx4.mail.icloud.com.",
+        "mx3.mail.icloud.com.",
+        "mx2.mail.icloud.com.",
+        "mx1.mail.icloud.com.",
+        "mx6.mail.icloud.com.",
+        "mx5.mail.icloud.com."
+    ],
+    "ns_records": [
+        "nserver2.apple.com.",
+        "nserver3.apple.com.",
+        "nserver.apple.com.",
+        "nserver4.apple.com.",
+        "adns2.apple.com.",
+        "adns1.apple.com.",
+        "nserver5.apple.com.",
+        "nserver6.apple.com."
+    ]
+},
+{
+    "domain": "gmx.com",
+    "mx_domains": [
+        "mx01.gmx.net.",
+        "mx00.gmx.net."
+    ],
+    "ns_records": [
+        "ns-gmx.ui-dns.org.",
+        "ns-gmx.ui-dns.de.",
+        "ns-gmx.ui-dns.biz.",
+        "ns-gmx.ui-dns.com."
+    ]
+},
+{
+    "domain": "gandi.net",
+    "mx_domains": [
+        "mail4.gandi.net.",
+        "mail8.gandi.net."
+    ],
+    "ns_records": [
+        "dns1.gandi.net.",
+        "dns3.gandi.net.",
+        "dns2.gandi.net.",
+        "dns0.gandi.net.",
+        "dns4.gandi.net."
+    ]
+},
+{
+    "domain": "debuggers.co",
+    "mx_domains": [],
+    "ns_records": []
+},
+{
+    "domain": "forumone.com",
+    "mx_domains": [
+        "alt2.aspmx.l.google.com.",
+        "alt1.aspmx.l.google.com.",
+        "alt3.aspmx.l.google.com.",
+        "alt4.aspmx.l.google.com.",
+        "aspmx.l.google.com."
+    ],
+    "ns_records": [
+        "ns2.forumone.com.",
+        "ns.forumone.com."
+    ]
+},
+{
+    "domain": "getbannerman.com",
+    "mx_domains": [
+        "aspmx.l.google.com.",
+        "alt1.aspmx.l.google.com.",
+        "alt2.aspmx.l.google.com.",
+        "aspmx2.googlemail.com.",
+        "aspmx3.googlemail.com."
+    ],
+    "ns_records": [
+        "ns-131.awsdns-16.com.",
+        "ns-1436.awsdns-51.org.",
+        "ns-1604.awsdns-08.co.uk.",
+        "ns-833.awsdns-40.net."
+    ]
+},
+{
+    "domain": "inboxapp.onmicrosoft.com",
+    "mx_domains": [],
+    "ns_records": [
+        "ns2.bdm.microsoftonline.com.",
+        "ns3.bdm.microsoftonline.com.",
+        "ns4.bdm.microsoftonline.com.",
+        "ns1.bdm.microsoftonline.com."
+    ]
+},
+{
+    "domain": "espertech.onmicrosoft.com",
+    "mx_domains": [
+        "espertech.mail.protection.outlook.com."
+    ],
+    "ns_records": [
+        "ns1.bdm.microsoftonline.com.",
+        "ns2.bdm.microsoftonline.com.",
+        "ns3.bdm.microsoftonline.com.",
+        "ns4.bdm.microsoftonline.com."
+    ]
+},
+{
+    "domain": "doesnotexist.nilas.com",
+    "mx_domains": [],
+    "ns_records": []
+},
+{
+    "domain": "autobizbrokers.com",
+    "mx_domains": [
+        "aspmx.l.google.com.",
+        "alt4.aspmx.l.google.com.",
+        "alt1.aspmx.l.google.com.",
+        "alt3.aspmx.l.google.com.",
+        "mail.autobizbrokers.com.",
+        "alt2.aspmx.l.google.com."
+    ],
+    "ns_records": [
+        "ns2.bluehost.com.",
+        "ns1.bluehost.com."
+    ]
+}]

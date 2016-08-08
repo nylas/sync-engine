@@ -11,6 +11,7 @@ from inbox.providers import providers
 
 
 class DummyContextManager(object):
+
     def __enter__(self):
         return None
 

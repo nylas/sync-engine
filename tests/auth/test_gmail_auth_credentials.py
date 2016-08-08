@@ -109,6 +109,7 @@ def account_with_single_auth_creds(db):
 @pytest.fixture
 def patch_access_token_getter(monkeypatch):
     class TokenGenerator:
+
         def __init__(self):
             self.revoked_refresh_tokens = []
             self.connection_error_tokens = []
