@@ -252,27 +252,27 @@ class SyncbackService(gevent.Greenlet):
             worker.start()
 
     def _run_impl(self):
-        self.log.info('Starting syncback service',
-                      process_num=self.process_number,
-                      total_processes=self.total_processes,
-                      keys=self.keys)
-        while self.keep_running:
-            self._restart_workers()
-            self._process_log()
-            # Wait for a worker to finish or for the fixed poll_interval,
-            # whichever happens first.
-            timeout = self.poll_interval
-            if self.num_idle_workers == 0:
-                timeout = None
-            self.worker_did_finish.clear()
-            self.worker_did_finish.wait(timeout=timeout)
+        self._restart_workers()
+        self._process_log()
+        # Wait for a worker to finish or for the fixed poll_interval,
+        # whichever happens first.
+        timeout = self.poll_interval
+        if self.num_idle_workers == 0:
+            timeout = None
+        self.worker_did_finish.clear()
+        self.worker_did_finish.wait(timeout=timeout)
 
     def stop(self):
         self.keep_running = False
         self.workers.kill()
 
     def _run(self):
-        retry_with_logging(self._run_impl, self.log)
+        self.log.info('Starting syncback service',
+                      process_num=self.process_number,
+                      total_processes=self.total_processes,
+                      keys=self.keys)
+        while self.keep_running:
+            retry_with_logging(self._run_impl, self.log)
 
     def notify_worker_active(self):
         self.num_idle_workers -= 1

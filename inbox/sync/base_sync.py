@@ -47,22 +47,11 @@ class BaseSyncMonitor(Greenlet):
     def _run(self):
         # Bind greenlet-local logging context.
         self.log = self.log.new(account_id=self.account_id)
-        return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name, logger=self.log)
-
-    def _run_impl(self):
         try:
             while True:
-                try:
-                    self.sync()
-                    self.heartbeat_status.publish(state='poll')
-
-                # If we get a connection or API permissions error, then sleep
-                # 2x poll frequency.
-                except ConnectionError:
-                    self.log.error('Error while polling', exc_info=True)
-                    sleep(self.poll_frequency)
-                sleep(self.poll_frequency)
+                retry_with_logging(self._run_impl, account_id=self.account_id,
+                                   fail_classes=[ValidationError],
+                                   provider=self.provider_name, logger=self.log)
         except ValidationError:
             # Bad account credentials; exit.
             self.log.error('Credential validation error; exiting',
@@ -70,6 +59,18 @@ class BaseSyncMonitor(Greenlet):
             with session_scope(self.namespace_id) as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid(scope=self.scope)
+
+    def _run_impl(self):
+        try:
+            self.sync()
+            self.heartbeat_status.publish(state='poll')
+
+        # If we get a connection or API permissions error, then sleep
+        # 2x poll frequency.
+        except ConnectionError:
+            self.log.error('Error while polling', exc_info=True)
+            sleep(self.poll_frequency)
+        sleep(self.poll_frequency)
 
     def sync(self):
         """ Subclasses should override this to do work """

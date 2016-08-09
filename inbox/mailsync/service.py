@@ -86,16 +86,16 @@ class SyncService(object):
             self.rolling_cpu_counts.append(null_cpu_values)
 
     def run(self):
-        retry_with_logging(self._run_impl, self.log)
+        while True:
+            retry_with_logging(self._run_impl, self.log)
 
     def _run_impl(self):
         """
         Polls for newly registered accounts and checks for start/stop commands.
 
         """
-        while True:
-            self.poll()
-            gevent.sleep(self.poll_interval)
+        self.poll()
+        gevent.sleep(self.poll_interval)
 
     def _compute_cpu_average(self):
         """

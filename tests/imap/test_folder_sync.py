@@ -220,7 +220,7 @@ def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
     db.session.expunge(inbox_folder.imapsyncstatus)
 
     with pytest.raises(MailsyncDone):
-        folder_sync_engine._run_impl()
+        folder_sync_engine._run()
 
     assert len(uidinvalid_count) == MAX_UIDINVALID_RESYNCS + 1
 

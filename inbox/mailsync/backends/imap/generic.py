@@ -179,12 +179,9 @@ class FolderSyncEngine(Greenlet):
                            provider=self.provider_name)
         # eagerly signal the sync status
         self.heartbeat_status.publish()
-        return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name, logger=log)
 
-    def _run_impl(self):
         try:
-            saved_folder_status = self._load_state()
+            self.update_folder_sync_status(lambda s: s.start_sync())
         except IntegrityError:
             # The state insert failed because the folder ID ForeignKey
             # was no longer valid, ie. the folder for this engine was deleted
@@ -198,86 +195,85 @@ class FolderSyncEngine(Greenlet):
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
         while True:
-            old_state = self.state
-            try:
-                self.state = self.state_handlers[old_state]()
-                self.heartbeat_status.publish(state=self.state)
-            except UidInvalid:
-                self.state = self.state + ' uidinvalid'
-                self.uidinvalid_count += 1
-                self.heartbeat_status.publish(state=self.state)
+            retry_with_logging(self._run_impl, account_id=self.account_id,
+                               provider=self.provider_name, logger=log)
 
-                # Check that we're not stuck in an endless uidinvalidity resync loop.
-                if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
-                    log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
-                              ' row. Stopping sync.')
+    def _run_impl(self):
+        old_state = self.state
+        try:
+            self.state = self.state_handlers[old_state]()
+            self.heartbeat_status.publish(state=self.state)
+        except UidInvalid:
+            self.state = self.state + ' uidinvalid'
+            self.uidinvalid_count += 1
+            self.heartbeat_status.publish(state=self.state)
 
-                    with session_scope(self.namespace_id) as db_session:
-                        account = db_session.query(Account).get(self.account_id)
-                        account.disable_sync('Detected endless uidvalidity '
-                                             'resync loop')
-                        account.sync_state = 'stopped'
-                        db_session.commit()
+            # Check that we're not stuck in an endless uidinvalidity resync loop.
+            if self.uidinvalid_count > MAX_UIDINVALID_RESYNCS:
+                log.error('Resynced more than MAX_UIDINVALID_RESYNCS in a'
+                          ' row. Stopping sync.')
 
-                    raise MailsyncDone()
-
-            except FolderMissingError:
-                # Folder was deleted by monitor while its sync was running.
-                # TODO: Monitor should handle shutting down the folder engine.
-                log.info('Folder disappeared. Stopping sync.',
-                         account_id=self.account_id,
-                         folder_name=self.folder_name,
-                         folder_id=self.folder_id)
-                raise MailsyncDone()
-            except ValidationError as exc:
-                log.error('Error authenticating; stopping sync', exc_info=True,
-                          account_id=self.account_id, folder_id=self.folder_id,
-                          logstash_tag='mark_invalid')
                 with session_scope(self.namespace_id) as db_session:
                     account = db_session.query(Account).get(self.account_id)
-                    account.mark_invalid()
-                    account.update_sync_error(str(exc))
-                raise MailsyncDone()
-
-            # State handlers are idempotent, so it's okay if we're
-            # killed between the end of the handler and the commit.
-            if self.state != old_state:
-                # Don't need to re-query, will auto refresh on re-associate.
-                with session_scope(self.namespace_id) as db_session:
-                    db_session.add(saved_folder_status)
-                    saved_folder_status.state = self.state
+                    account.disable_sync('Detected endless uidvalidity '
+                                         'resync loop')
+                    account.sync_state = 'stopped'
                     db_session.commit()
 
-            if self.state == old_state and self.state in ['initial', 'poll']:
-                # We've been through a normal state transition without raising any
-                # error. It's safe to reset the uidvalidity counter.
-                self.uidinvalid_count = 0
+                raise MailsyncDone()
 
-    def _load_state(self):
+        except FolderMissingError:
+            # Folder was deleted by monitor while its sync was running.
+            # TODO: Monitor should handle shutting down the folder engine.
+            log.info('Folder disappeared. Stopping sync.',
+                     account_id=self.account_id,
+                     folder_name=self.folder_name,
+                     folder_id=self.folder_id)
+            raise MailsyncDone()
+        except ValidationError as exc:
+            log.error('Error authenticating; stopping sync', exc_info=True,
+                      account_id=self.account_id, folder_id=self.folder_id,
+                      logstash_tag='mark_invalid')
+            with session_scope(self.namespace_id) as db_session:
+                account = db_session.query(Account).get(self.account_id)
+                account.mark_invalid()
+                account.update_sync_error(str(exc))
+            raise MailsyncDone()
+
+        # State handlers are idempotent, so it's okay if we're
+        # killed between the end of the handler and the commit.
+        if self.state != old_state:
+            def update(status):
+                status.state = self.state
+            self.update_folder_sync_status(update)
+
+        if self.state == old_state and self.state in ['initial', 'poll']:
+            # We've been through a normal state transition without raising any
+            # error. It's safe to reset the uidvalidity counter.
+            self.uidinvalid_count = 0
+
+    def update_folder_sync_status(self, cb):
+        # Loads the folder sync status and invokes the provided callback to
+        # modify it. Commits any changes and updates `self.state` to ensure
+        # they are never out of sync.
         with session_scope(self.namespace_id) as db_session:
             try:
                 state = ImapFolderSyncStatus.state
                 saved_folder_status = db_session.query(ImapFolderSyncStatus)\
-                    .filter_by(account_id=self.account_id,
-                               folder_id=self.folder_id).options(
-                        load_only(state)).one()
+                    .filter_by(account_id=self.account_id, folder_id=self.folder_id)\
+                    .options(load_only(state)).one()
             except NoResultFound:
                 saved_folder_status = ImapFolderSyncStatus(
                     account_id=self.account_id, folder_id=self.folder_id)
                 db_session.add(saved_folder_status)
 
-            saved_folder_status.start_sync()
+            cb(saved_folder_status)
             db_session.commit()
+
             self.state = saved_folder_status.state
-            return saved_folder_status
 
     def set_stopped(self, db_session):
-        saved_folder_status = db_session.query(ImapFolderSyncStatus)\
-            .filter_by(account_id=self.account_id,
-                       folder_id=self.folder_id).one()
-
-        saved_folder_status.stop_sync()
-        self.state = saved_folder_status.state
+        self.update_folder_sync_status(lambda s: s.stop_sync())
 
     def _report_initial_sync_start(self):
         with session_scope(self.namespace_id) as db_session:

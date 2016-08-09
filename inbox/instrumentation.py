@@ -202,21 +202,21 @@ class GreenletTracer(object):
     def _monitoring_thread(self):
         # Logger needs to be instantiated in new thread.
         self.log = get_logger()
-        retry_with_logging(self._run_impl, self.log)
+        while True:
+            retry_with_logging(self._run_impl, self.log)
 
     def _run_impl(self):
         try:
-            while True:
-                self._calculate_pending_avgs()
-                self._calculate_cpu_avgs()
-                now = time.time()
-                if now - self.last_checked_blocking > self.max_blocking_time:
-                    self._check_blocking()
-                    self.last_checked_blocking = now
-                if now - self.last_logged_stats > self.logging_interval:
-                    self.log_stats()
-                    self.last_logged_stats = now
-                gevent.sleep(self.sampling_interval)
+            self._calculate_pending_avgs()
+            self._calculate_cpu_avgs()
+            now = time.time()
+            if now - self.last_checked_blocking > self.max_blocking_time:
+                self._check_blocking()
+                self.last_checked_blocking = now
+            if now - self.last_logged_stats > self.logging_interval:
+                self.log_stats()
+                self.last_logged_stats = now
+            gevent.sleep(self.sampling_interval)
         # Swallow exceptions raised during interpreter shutdown.
         except Exception:
             if sys is not None:

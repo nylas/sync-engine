@@ -234,7 +234,7 @@ class CrispinConnectionPool(object):
                                readonly=self.readonly)
 
 
-def _exc_callback():
+def _exc_callback(exc):
     log.info('Connection broken with error; retrying with new connection',
              exc_info=True)
     gevent.sleep(5)
