@@ -1686,7 +1686,7 @@ def stream_changes():
 
 
 ##
-# Groups and Contact Rankings
+# Groups and Contact Rankings 
 ##
 
 @app.route('/groups/intrinsic')
