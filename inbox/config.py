@@ -97,6 +97,11 @@ def _update_config_from_env(config):
 
 
 def _update_from_vault(config):
+    # TODO: the url here is not relevant. It was the url of our first vault
+    # server. Change the url to the actual vault server address.
+    # That can be located in an environment variable and accessed with 
+    # os.environ["VAULT_ADDR"]
+    # or we could have a dns name for the vault server i.e vault.nylas.com
     client = hvac.Client(url="http://10.77.201.237:8200",
                          token="ec1d37ba-12ca-bc8e-a440-c284327152c4")
     secrets = client.read('secret/sync-engine')
