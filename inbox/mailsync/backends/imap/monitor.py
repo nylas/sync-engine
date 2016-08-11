@@ -102,9 +102,12 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         # Create new folders
         for raw_folder in raw_folders:
-            folder = Folder.find_or_create(db_session, account, raw_folder.display_name,
+            folder = Folder.find_or_create(db_session, account,
+                                           raw_folder.display_name,
                                            raw_folder.role)
-            Folder.update_role(folder, raw_folder.role)
+            if folder.canonical_name != raw_folder.role:
+                folder.canonical_name = raw_folder.role
+
         # Set the should_run bit for existing folders to True (it's True by
         # default for new ones.)
         for f in local_folders.values():

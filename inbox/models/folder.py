@@ -37,8 +37,18 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     # folders as per
     # https://msdn.microsoft.com/en-us/library/ee624913(v=exchg.80).aspx
     name = Column(CategoryNameString(), nullable=False)
-    canonical_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
-                            default='')
+    _canonical_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
+                             default='', name="canonical_name")
+
+    @property
+    def canonical_name(self):
+        return self._canonical_name
+
+    @canonical_name.setter
+    def canonical_name(self, value):
+        value = value or ''
+        self._canonical_name = value
+        self.category.name = value
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
@@ -77,16 +87,6 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
             raise
 
         return obj
-
-
-    @classmethod
-    def update_role(cls, obj, role=''):
-        role = role or ''  # Need this in case role is explicitly None
-        if obj.canonical_name != role:
-            obj.canonical_name = role
-        if obj.category.name != role:
-            obj.category.name = role
-
 
     @classmethod
     def get(cls, id_, session):
