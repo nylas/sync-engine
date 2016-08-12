@@ -228,10 +228,12 @@ def add_fake_folder(db_session, default_account, display_name='All Mail',
     from inbox.models.folder import Folder
     return Folder.find_or_create(db_session, default_account, display_name, name)
 
+
 def add_fake_label(db_session, default_account, display_name='My Label',
                     name=None):
     from inbox.models.label import Label
     return Label.find_or_create(db_session, default_account, display_name, name)
+
 
 def add_generic_imap_account(db_session, email_address='test@nylas.com'):
     import platform
@@ -257,6 +259,7 @@ def delete_generic_imap_accounts(db_session):
     db_session.query(GenericAccount).delete()
     db_session.query(Namespace).delete()
     db_session.commit()
+
 
 def add_fake_yahoo_account(db_session, email_address='cypresstest@yahoo.com'):
     import platform
@@ -302,7 +305,7 @@ def delete_gmail_accounts(db_session):
     db_session.query(GmailAccount).delete()
     db_session.query(Namespace).delete()
     db_session.commit()
-    
+
 
 def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
@@ -344,7 +347,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
 
 
 def delete_messages(db_session):
-    from inbox.models import Message, Thread
+    from inbox.models import Message
     db_session.rollback()
     db_session.query(Message).update({'reply_to_message_id': None})
     db_session.query(Message).delete()
@@ -411,7 +414,7 @@ def delete_calendars(db_session):
     db_session.rollback()
     db_session.query(Calendar).delete()
     db_session.commit()
-    
+
 
 def add_fake_event(db_session, namespace_id, calendar=None,
                    title='title', description='', location='',
@@ -446,7 +449,7 @@ def delete_events(db_session):
     db_session.rollback()
     db_session.query(Event).delete()
     db_session.commit()
-    
+
 
 def add_fake_contact(db_session, namespace_id, name='Ben Bitdiddle',
                      email_address='inboxapptest@gmail.com', uid='22'):
@@ -629,6 +632,7 @@ class MockSMTPClient(object):
 @fixture
 def mock_smtp_get_connection(monkeypatch):
     client = MockSMTPClient()
+
     @contextlib.contextmanager
     def get_connection(account):
         yield client

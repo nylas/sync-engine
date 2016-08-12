@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa: F811
+
 from datetime import datetime
 from inbox.models.event import Event
 

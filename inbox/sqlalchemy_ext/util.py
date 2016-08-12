@@ -98,6 +98,7 @@ class StringWithTransform(TypeDecorator):
             other = self.type._string_transform(other)
             return self.operate(operators.eq, other)
 
+
 # http://docs.sqlalchemy.org/en/rel_0_9/core/types.html#marshal-json-strings
 class JSON(TypeDecorator):
     impl = Text

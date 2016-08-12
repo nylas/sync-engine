@@ -5,7 +5,6 @@ import json
 import os
 from datetime import datetime
 from freezegun import freeze_time
-import gevent
 
 import pytest
 
