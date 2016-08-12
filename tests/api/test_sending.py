@@ -4,7 +4,10 @@ import smtplib
 import json
 import time
 import pytest
+import traceback
+import contextlib
 from flanker import mime
+import inbox.api.ns_api
 from inbox.basicauth import OAuthError
 from inbox.models import Message, Event
 from tests.util.base import thread, message, imported_event
@@ -760,7 +763,7 @@ def multisend_draft(api_client, example_draft):
 def multisend(multisend_draft):
     return {
         'id': multisend_draft['id'],
-        'send_req': {'body': "it's my body, I'll do what I want",
+        'send_req': {'body': "email body",
                      'send_to': multisend_draft['to'][0]},
         'draft': multisend_draft
     }
@@ -770,7 +773,7 @@ def multisend(multisend_draft):
 def multisend2(multisend_draft):
     return {
         'id': multisend_draft['id'],
-        'send_req': {'body': "respect mah authoratah",
+        'send_req': {'body': "email body 2",
                      'send_to': multisend_draft['to'][1]},
         'draft': multisend_draft
     }
@@ -778,14 +781,58 @@ def multisend2(multisend_draft):
 
 @pytest.fixture
 def patch_crispin_del_sent(monkeypatch):
-    def fake_delete(*args, **kwargs):
+    # This lets us test the interface between remote_delete_sent /
+    # writable_connection_pool and the multi-send delete API endpoint, without
+    # running an actual crispin client.
+    #
+    # Multi-send uses these functions from syncback to synchronously delete
+    # sent messages. They usually don't appear in API code, so this makes sure
+    # their usage is correct.
+
+    def fake_remote_delete_sent(crispin_client, account_id, message_id_header,
+                                delete_multiple=False):
         return True
+
+    class FakeConnWrapper(object):
+        def __init__(self):
+            pass
+
+        @contextlib.contextmanager
+        def get(self):
+            yield MockCrispinClient()
+
+    class MockCrispinClient(object):
+        def folder_names(self):
+            return ['sent']
+
+        def delete_sent_message(message_id_header, delete_multiple=False):
+            pass
+
+
+    def fake_conn_pool(acct_id):
+        return FakeConnWrapper()
+
     monkeypatch.setattr('inbox.api.ns_api.remote_delete_sent',
-                        fake_delete)
+                        fake_remote_delete_sent)
+    monkeypatch.setattr('inbox.api.ns_api.writable_connection_pool',
+                        fake_conn_pool)
+
+
+@pytest.fixture
+def patch_sentry_to_raise(monkeypatch):
+    # This makes it so calls to sentry instead raise an exception in the test
+    # and fail it. This is used to test the multi-send delete endpoint, where
+    # we wrap sent message deletion in a catch-all but still report to sentry.
+    def make_sentry_raise():
+        traceback.print_exc()
+        raise
+    monkeypatch.setattr(inbox.api.ns_api.sentry, 'sentry_alert',
+                        make_sentry_raise)
 
 
 def test_multisend_session(api_client, multisend, multisend2, patch_smtp,
-                           patch_crispin_del_sent):
+                           patch_crispin_del_sent, patch_sentry_to_raise):
+
     r = api_client.post_data('/send-multiple/' + multisend['id'],
                              multisend['send_req'])
     assert r.status_code == 200
