@@ -23,7 +23,7 @@ def sanitize_name(name):
     # g_label may not have unicode type (in particular for a numeric
     # label, e.g. '42'), so coerce to unicode.
     if not isinstance(name, unicode):
-        name = name.decode('utf-8', 'ignore')
+        name = str(name).decode('utf-8', 'ignore')
 
     # Remove trailing whitespace, truncate (due to MySQL limitations).
     name = name.rstrip()
