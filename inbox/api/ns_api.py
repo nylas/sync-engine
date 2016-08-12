@@ -14,7 +14,7 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from nylas.logging import get_logger
+from nylas.logging import get_logger, sentry
 log = get_logger()
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
@@ -59,6 +59,7 @@ from inbox.events.util import removed_participants
 from inbox.util.blockstore import get_from_blockstore
 from inbox.util.misc import imap_folder_path
 from inbox.actions.backends.generic import remote_delete_sent
+from inbox.crispin import writable_connection_pool
 
 DEFAULT_LIMIT = 100
 LONG_POLL_REQUEST_TIMEOUT = 120
@@ -1467,16 +1468,19 @@ def multi_send_finish(draft_id):
     # over from the send calls (in gmail only)
     if not isinstance(account, GenericAccount):
         try:
-            remote_delete_sent(account.id, draft.message_id_header,
-                               delete_multiple=True)
-            g.log.info("Deleted remote sent messages for multi-send",
-                       draft_public_id=draft.public_id)
+            with writable_connection_pool(account.id).get() as crispin_client:
+                remote_delete_sent(crispin_client, account.id,
+                                   draft.message_id_header,
+                                   delete_multiple=True)
+                g.log.info("Deleted remote sent messages for multi-send",
+                           draft_public_id=draft.public_id)
         except Exception:
             # Even if this fails, we need to finish off the multi-send session
-            g.log.error("Error occured while deleting remote sent messages "
-                        "during multi-send",
-                        draft_public_id=draft.public_id,
-                        exc_info=True)
+            sentry.sentry_alert()
+            g.log.critical("Error occured while deleting remote sent messages "
+                           "during multi-send",
+                           draft_public_id=draft.public_id,
+                           exc_info=True)
 
     # Mark the draft as sent in our database
     update_draft_on_send(account, draft, g.db_session)
