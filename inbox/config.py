@@ -1,6 +1,8 @@
 import errno
 import os
 import yaml
+
+# hvac is a module for making requests to a vault server using the http api.
 import hvac
 
 __all__ = ['config']
