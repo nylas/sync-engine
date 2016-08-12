@@ -104,13 +104,17 @@ class MockIMAPClient(object):
         self.selected_folder = None
         self.uidvalidity = 1
         self.logins = {}
+        self.error_message = ""
 
     def _add_login(self, email, password):
         self.logins[email] = password
 
+    def _set_error_message(self, message):
+        self.error_message = message
+
     def login(self, email, password):
         if email not in self.logins or self.logins[email] != password:
-            raise ValidationError
+            raise ValidationError(self.error_message)
 
     def logout(self):
         pass
