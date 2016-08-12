@@ -37,8 +37,18 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     # folders as per
     # https://msdn.microsoft.com/en-us/library/ee624913(v=exchg.80).aspx
     name = Column(CategoryNameString(), nullable=False)
-    canonical_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
-                            default='')
+    _canonical_name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
+                             default='', name="canonical_name")
+
+    @property
+    def canonical_name(self):
+        return self._canonical_name
+
+    @canonical_name.setter
+    def canonical_name(self, value):
+        value = value or ''
+        self._canonical_name = value
+        self.category.name = value
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
@@ -75,9 +85,6 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
             log.info('Duplicate folder rows for name {}, account_id {}'
                      .format(name, account.id))
             raise
-
-        if not obj.canonical_name:
-            obj.canonical_name = role
 
         return obj
 

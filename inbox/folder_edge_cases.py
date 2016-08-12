@@ -16,10 +16,11 @@ localized_folder_names = {
               '\xd0\xa1\xd0\xbc\xd1\x96\xd1\x82\xd1\x82\xd1\x8f',
               'Papierkorb/Trash', 'Gel\xc3\xb6schte Elemente',
               'Deleted Messages', '[Gmail]/Trash', 'INBOX/Trash', 'Trash',
-              'mail/TRASH'},
+              'mail/TRASH', 'INBOX.Trash'},
     'spam': {'Roskaposti', 'INBOX.spam', 'INBOX.Spam', 'Skr\xc3\xa4ppost',
              'Spamverdacht', 'spam', 'Spam', '[Gmail]/Spam', '[Imap]/Spam',
-             '\xe5\x9e\x83\xe5\x9c\xbe\xe9\x82\xae\xe4\xbb\xb6'},
+             '\xe5\x9e\x83\xe5\x9c\xbe\xe9\x82\xae\xe4\xbb\xb6', 'Junk',
+             'Junk Mail', 'Junk E-Mail'},
     'inbox': {u'INBOX'},
     'sent': {'Postausgang', 'INBOX.Gesendet', '[Gmail]/Sent Mail',
              '\xeb\xb3\xb4\xeb\x82\xbc\xed\x8e\xb8\xec\xa7\x80\xed\x95\xa8'
