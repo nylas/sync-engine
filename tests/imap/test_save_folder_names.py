@@ -19,7 +19,7 @@ def test_imap_save_generic_folder_names(db, default_account):
     raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
     monitor.save_folder_names(db.session, raw_folders)
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == folder_names_and_roles
 
@@ -37,7 +37,7 @@ def test_handle_folder_deletions(db, default_account):
 
     monitor.save_folder_names(db.session, [RawFolder('INBOX', 'inbox')])
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == {('INBOX', 'inbox')}
 
@@ -64,7 +64,7 @@ def test_imap_handle_folder_renames(db, default_account):
 
     monitor.save_folder_names(db.session, renamed_raw_folders)
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == folders_renamed
 
@@ -100,7 +100,7 @@ def test_gmail_handle_folder_renames(db, default_account):
 
     monitor.save_folder_names(db.session, renamed_raw_folders)
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == folders_renamed
 
@@ -131,7 +131,7 @@ def test_save_gmail_folder_names(db, default_account):
     monitor.save_folder_names(db.session, raw_folders)
 
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id)
     )
     assert saved_folder_data == {
@@ -171,7 +171,7 @@ def test_handle_trailing_whitespace(db, default_account):
     monitor = ImapSyncMonitor(default_account)
     monitor.save_folder_names(db.session, raw_folders)
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id)
     )
     assert saved_folder_data == {('Miscellania', ''), ('Inbox', 'inbox')}
@@ -209,7 +209,7 @@ def test_imap_remote_delete(db, default_account):
 
     monitor.save_folder_names(db.session, new_raw_folders)
     saved_folder_data = set(
-        db.session.query(Folder.name, Folder._canonical_name).filter(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
             Folder.account_id == default_account.id).all())
     assert saved_folder_data == new_folders
 

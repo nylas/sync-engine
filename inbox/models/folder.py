@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey, DateTime, bindparam
-from sqlalchemy.orm import relationship, backref, validates
+from sqlalchemy.orm import relationship, backref, synonym, validates
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
@@ -50,6 +50,8 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
         self._canonical_name = value
         if self.category:
             self.category.name = value
+
+    canonical_name = synonym('_canonical_name', descriptor=canonical_name)
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
