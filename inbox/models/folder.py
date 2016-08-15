@@ -48,7 +48,8 @@ class Folder(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     def canonical_name(self, value):
         value = value or ''
         self._canonical_name = value
-        self.category.name = value
+        if self.category:
+            self.category.name = value
 
     category_id = Column(ForeignKey(Category.id, ondelete='CASCADE'))
     category = relationship(
