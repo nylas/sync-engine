@@ -15,6 +15,7 @@ node_modules
 /tests/log
 /tests/output
 /tests/coverage
+/tests/.cache
 htmlcov
 /cache
 /config.json
