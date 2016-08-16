@@ -11,8 +11,8 @@ from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
 from inbox.mailsync.gc import DeleteHandler, LabelRenameHandler
 from inbox.models import Folder, Transaction
 from inbox.models.label import Label
+from inbox.util.testutils import mock_imapclient, MockIMAPClient
 from tests.util.base import add_fake_imapuid, add_fake_message
-from tests.imap.data import mock_imapclient, MockIMAPClient
 
 
 @pytest.fixture()
