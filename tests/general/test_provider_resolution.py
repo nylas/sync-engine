@@ -7,35 +7,7 @@ from inbox.auth.base import handler_from_provider
 from inbox.auth.generic import GenericAuthHandler
 from inbox.auth.gmail import GmailAuthHandler
 from inbox.basicauth import NotSupportedError
-
-
-class MockAnswer(object):
-
-    def __init__(self, exchange):
-        self.exchange = exchange
-
-    def __str__(self):
-        return self.exchange
-
-
-class MockDNSResolver(object):
-
-    def __init__(self, registry_filename):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
-                            'data', registry_filename).encode('utf-8')
-        self.registry = {}
-        with open(path, 'r') as registry_file:
-            for entry in json.load(registry_file):
-                domain = entry['domain']
-                del entry['domain']
-                self.registry[domain] = entry
-
-    def query(self, domain, record_type):
-        if record_type == 'MX':
-            return [MockAnswer(entry) for entry in self.registry[domain]['mx_domains']]
-        if record_type == 'NS':
-            return [MockAnswer(entry) for entry in self.registry[domain]['ns_records']]
-        raise RuntimeError("Unsupported record type '%s'" % record_type)
+from inbox.util.testutils import MockDNSResolver
 
 
 def test_provider_resolution():
@@ -73,14 +45,14 @@ def test_provider_resolution():
         ('foo@autobizbrokers.com', 'bluehost'),
     ]
     for email, expected_provider in test_cases:
-        assert provider_from_address(email, dns_resolver) == expected_provider
+        assert provider_from_address(email, lambda: dns_resolver) == expected_provider
 
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('notanemail', dns_resolver)
+        provider_from_address('notanemail', lambda: dns_resolver)
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('not@anemail', dns_resolver)
+        provider_from_address('not@anemail', lambda: dns_resolver)
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('notanemail.com', dns_resolver)
+        provider_from_address('notanemail.com', lambda: dns_resolver)
 
 
 def test_auth_handler_dispatch():

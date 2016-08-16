@@ -24,6 +24,10 @@ class InvalidEmailAddressError(Exception):
     pass
 
 
+def _dns_resolver():
+    return dns_resolver
+
+
 def _fallback_get_mx_domains(domain):
     """
     Sometimes dns.resolver.Resolver fails to return what we want. See
@@ -39,17 +43,18 @@ def _fallback_get_mx_domains(domain):
         return []
 
 
-def get_mx_domains(domain, dns_resolver=dns_resolver):
+def get_mx_domains(domain, dns_resolver=_dns_resolver):
     """ Retrieve and return the MX records for a domain. """
     mx_records = []
     try:
-        mx_records = dns_resolver.query(domain, 'MX')
+        mx_records = dns_resolver().query(domain, 'MX')
     except NoNameservers:
         log.error('NoMXservers', domain=domain)
     except NXDOMAIN:
         log.error('No such domain', domain=domain)
     except Timeout:
         log.error('Time out during resolution', domain=domain)
+        raise
     except NoAnswer:
         log.error('No answer from provider', domain=domain)
         mx_records = _fallback_get_mx_domains(domain)
@@ -84,7 +89,7 @@ def mx_match(mx_domains, match_domains):
     return False
 
 
-def provider_from_address(email_address, dns_resolver=dns_resolver):
+def provider_from_address(email_address, dns_resolver=_dns_resolver):
     if not EMAIL_REGEX.match(email_address):
         raise InvalidEmailAddressError('Invalid email address')
 
@@ -92,7 +97,7 @@ def provider_from_address(email_address, dns_resolver=dns_resolver):
     mx_domains = get_mx_domains(domain, dns_resolver)
     ns_records = []
     try:
-        ns_records = dns_resolver.query(domain, 'NS')
+        ns_records = dns_resolver().query(domain, 'NS')
     except NoNameservers:
         log.error('NoNameservers', domain=domain)
     except NXDOMAIN:
