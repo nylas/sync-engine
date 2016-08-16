@@ -40,9 +40,11 @@ def test_message_generation(event, default_account):
     event.participants = [{'email': 'helena@nylas.com'}]
     msg = generate_invite_message('empty', event, default_account)
 
+    # Make sure the From header is set correctly
+    assert msg.headers['From'] == "notifications@mg.nylas.com"
+
     # Check that we have an email with an HTML part, a plain text part, a
     # text/calendar with METHOD=REQUEST and an attachment.
-
     count = 0
     for mimepart in msg.walk(with_self=msg.content_type.is_singlepart()):
         format_type = mimepart.content_type.format_type

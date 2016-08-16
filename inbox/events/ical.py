@@ -519,7 +519,9 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
                              ical_txt, charset='utf8'))
         msg.append(body)
 
-    msg.headers['From'] = account.email_address
+    # From should match our mailsend provider (mailgun) so it doesn't confuse
+    # spam filters
+    msg.headers['From'] = "notifications@mg.nylas.com"
     msg.headers['Reply-To'] = account.email_address
 
     if invite_type == 'request':
