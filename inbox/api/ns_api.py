@@ -1550,6 +1550,7 @@ def sync_deltas():
             raise InputError('Invalid cursor parameter')
 
     # The client wants us to wait until there are changes
+    g.db_session.expunge(g.namespace)
     g.db_session.close()  # hack to close the flask session
     poll_interval = 1
 
