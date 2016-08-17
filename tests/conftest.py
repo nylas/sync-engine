@@ -9,5 +9,4 @@ gevent_openssl.monkey_patch()
 
 from tests.util.base import *   # noqa
 from inbox.util.testutils import (mock_imapclient,              # noqa
-                                  mock_auth_imapclient,         # noqa
                                   mock_smtp_get_connection)     # noqa

@@ -188,7 +188,7 @@ def test_update_account_when_no_server_provided(db):
 
 
 @pytest.mark.usefixtures('mock_smtp_get_connection')
-def test_double_auth(db, mock_auth_imapclient):
+def test_double_auth(db, mock_imapclient):
     settings = {
         'provider': 'yahoo',
         'settings': {
@@ -199,7 +199,7 @@ def test_double_auth(db, mock_auth_imapclient):
     }
     email = settings['settings']['email']
     password = settings['settings']['password']
-    mock_auth_imapclient._add_login(email, password)
+    mock_imapclient._add_login(email, password)
 
     handler = GenericAuthHandler(settings['provider'])
 
@@ -252,7 +252,7 @@ def test_parent_domain():
 
 
 @pytest.mark.usefixtures('mock_smtp_get_connection')
-def test_successful_reauth_resets_sync_state(db, mock_auth_imapclient):
+def test_successful_reauth_resets_sync_state(db, mock_imapclient):
     settings = {
         'provider': 'yahoo',
         'settings': {
@@ -263,7 +263,7 @@ def test_successful_reauth_resets_sync_state(db, mock_auth_imapclient):
     }
     email = settings['settings']['email']
     password = settings['settings']['password']
-    mock_auth_imapclient._add_login(email, password)
+    mock_imapclient._add_login(email, password)
     handler = GenericAuthHandler(settings['provider'])
 
     account = handler.create_account(email, settings['settings'])

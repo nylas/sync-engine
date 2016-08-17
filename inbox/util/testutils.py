@@ -119,7 +119,7 @@ class MockIMAPClient(object):
         pass
 
     def list_folders(self, directory=u'', pattern=u'*'):
-        return []
+        return [('\\All', '/', '[Gmail]/All Mail')]
 
     def has_capability(self, capability):
         return False
@@ -227,25 +227,27 @@ class MockIMAPClient(object):
     def expunge(self):
         pass
 
+    def oauth2_login(self, email, token):
+        pass
 
-@pytest.fixture
+
+@pytest.yield_fixture
 def mock_imapclient(monkeypatch):
     conn = MockIMAPClient()
     monkeypatch.setattr(
         'inbox.crispin.CrispinConnectionPool._new_raw_connection',
-        lambda *args: conn
+        lambda *args, **kwargs: conn
     )
-    return conn
-
-
-@pytest.fixture
-def mock_auth_imapclient(monkeypatch):
-    conn = MockIMAPClient()
+    monkeypatch.setattr(
+        'inbox.auth.oauth.create_imap_connection',
+        lambda *args, **kwargs: conn
+    )
     monkeypatch.setattr(
         'inbox.auth.generic.create_imap_connection',
-        lambda *args: conn
+        lambda *args, **kwargs: conn
     )
-    return conn
+    yield conn
+    monkeypatch.undo()
 
 
 class MockSMTPClient(object):
@@ -253,7 +255,7 @@ class MockSMTPClient(object):
         pass
 
 
-@pytest.fixture
+@pytest.yield_fixture
 def mock_smtp_get_connection(monkeypatch):
     client = MockSMTPClient()
 
@@ -264,3 +266,5 @@ def mock_smtp_get_connection(monkeypatch):
         'inbox.sendmail.smtp.postel.SMTPClient._get_connection',
         get_connection
     )
+    yield client
+    monkeypatch.undo()
