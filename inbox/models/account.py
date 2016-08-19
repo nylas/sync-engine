@@ -1,4 +1,5 @@
 import os
+import traceback
 from datetime import datetime
 
 from sqlalchemy import (Column, BigInteger, String, DateTime, Boolean,
@@ -175,7 +176,14 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         return (self.initial_sync_end - self.initial_sync_end).total_seconds()
 
     def update_sync_error(self, error=None):
-        self._sync_status['sync_error'] = error
+        if error is None:
+            self._sync_status['sync_error'] = None
+        else:
+            error_obj = {
+                'message': error.message,
+                'traceback': traceback.format_exc(20)}
+
+            self._sync_status['sync_error'] = error_obj
 
     def sync_started(self):
         """

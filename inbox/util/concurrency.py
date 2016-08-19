@@ -6,6 +6,9 @@ from backports import ssl
 from gevent import socket
 from redis import TimeoutError
 
+from inbox.models import Account
+from inbox.models.session import session_scope
+
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 log = get_logger()
@@ -84,6 +87,18 @@ def retry_with_logging(func, logger=None, retry_classes=None,
                 return
         else:
             occurrences[0] = 1
+
+        if account_id:
+            try:
+                with session_scope(account_id) as db_session:
+                    account = db_session.query(Account).get(account_id)
+                    if not account.sync_error:
+                        account.update_sync_error(e)
+                        db_session.commit()
+            except:
+                log.error('Error saving sync_error to account object',
+                          account_id=account_id, exc_info=True)
+
         log_uncaught_errors(logger, account_id=account_id, provider=provider,
                             error_type=type(e).__name__, occurrences=occurrences[0])
 
