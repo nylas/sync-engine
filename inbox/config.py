@@ -5,9 +5,12 @@ import yaml
 # TODO[mike]: This should be removed once we've updated python to 2.7.9
 # This tells urllib3 to use pyopenssl, which has the latest tls protocols and is
 # more secure than the default python ssl module in python 2.7.4
+import requests
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 urllib3.disable_warnings()
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # TODO[mike]: This shold be removed once we've updated our base OS. openssl 1.0.1 doesn't support cross-signed certs
 # https://github.com/certifi/python-certifi/issues/26#issuecomment-138322515
