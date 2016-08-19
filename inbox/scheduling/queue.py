@@ -140,18 +140,18 @@ class QueuePopulator(object):
                                    if shard_id in engine_manager.engines)
 
     def run(self):
-        return retry_with_logging(self._run_impl)
-
-    def _run_impl(self):
         log.info('Queueing accounts', zone=self.zone, shards=self.shards)
         while True:
-            self.enqueue_new_accounts()
-            self.unassign_disabled_accounts()
-            statsd_client.gauge('syncqueue.queue.{}.length'.format(self.zone),
-                                self.queue_client.qsize())
-            statsd_client.incr('syncqueue.service.{}.heartbeat'.
-                               format(self.zone))
-            gevent.sleep(self.poll_interval)
+            retry_with_logging(self._run_impl)
+
+    def _run_impl(self):
+        self.enqueue_new_accounts()
+        self.unassign_disabled_accounts()
+        statsd_client.gauge('syncqueue.queue.{}.length'.format(self.zone),
+                            self.queue_client.qsize())
+        statsd_client.incr('syncqueue.service.{}.heartbeat'.
+                           format(self.zone))
+        gevent.sleep(self.poll_interval)
 
     def enqueue_new_accounts(self):
         """

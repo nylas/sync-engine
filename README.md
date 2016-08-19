@@ -57,7 +57,7 @@ Now you can start writing your own application on top of the Nylas API! For more
 
 ## Production Support
 
-We provide a fully manged and supported version of the Nylas sync engine for production apps. Read more at https://nylas.com
+We provide a fully managed and supported version of the Nylas sync engine for production apps. Read more at https://nylas.com
 
 ## Pull Requests
 

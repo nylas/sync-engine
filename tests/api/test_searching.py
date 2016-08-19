@@ -25,7 +25,7 @@ def test_gmail_thread(db, default_account):
 @fixture
 def imap_folder(db, generic_account):
     f = Folder.find_or_create(db.session, generic_account,
-                              'Boîte de réception', 'inbox')
+                              u'Boîte de réception', 'inbox')
     db.session.add(f)
     db.session.commit()
     return f

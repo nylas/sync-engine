@@ -61,15 +61,15 @@ class DeleteHandler(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
-        return retry_with_logging(self._run_impl, account_id=self.account_id,
-                                  provider=self.provider_name)
+        while True:
+            retry_with_logging(self._run_impl, account_id=self.account_id,
+                               provider=self.provider_name)
 
     def _run_impl(self):
-        while True:
-            current_time = datetime.datetime.utcnow()
-            self.check(current_time)
-            self.gc_deleted_categories()
-            gevent.sleep(self.message_ttl.total_seconds())
+        current_time = datetime.datetime.utcnow()
+        self.check(current_time)
+        self.gc_deleted_categories()
+        gevent.sleep(self.message_ttl.total_seconds())
 
     def check(self, current_time):
         with session_scope(self.namespace_id) as db_session:

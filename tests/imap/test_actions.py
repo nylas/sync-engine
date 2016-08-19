@@ -7,7 +7,7 @@ from inbox.actions.base import (change_labels, save_draft, update_draft,
                                 delete_draft, create_folder, update_folder,
                                 delete_folder, create_label, update_label,
                                 delete_label, mark_unread, mark_starred)
-from tests.imap.data import mock_imapclient  # noqa
+from inbox.util.testutils import mock_imapclient  # noqa
 from tests.util.base import add_fake_imapuid, add_fake_category
 from inbox.crispin import writable_connection_pool
 from inbox.models import Category

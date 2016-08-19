@@ -49,7 +49,7 @@ def test_folder_engine_exits_if_folder_missing(db, yahoo_account,
     db.session.delete(folder)
     db.session.commit()
     with pytest.raises(IntegrityError):
-        sync_engine_stub._load_state()
+        sync_engine_stub.update_folder_sync_status(lambda s: s)
 
     # and we should use this to signal that mailsync is done
     with pytest.raises(MailsyncDone):

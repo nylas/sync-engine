@@ -10,7 +10,8 @@ from inbox.mailsync.backends.imap.generic import (FolderSyncEngine, UidInvalid,
                                                   MAX_UIDINVALID_RESYNCS)
 from inbox.mailsync.backends.gmail import GmailFolderSyncEngine
 from inbox.mailsync.backends.base import MailsyncDone
-from tests.imap.data import uids, uid_data, mock_imapclient  # noqa
+from tests.imap.data import uids, uid_data # noqa
+from inbox.util.testutils import mock_imapclient  # noqa
 
 
 def create_folder_with_syncstatus(account, name, canonical_name,
@@ -220,7 +221,7 @@ def test_handle_uidinvalid_loops(db, generic_account, inbox_folder,
     db.session.expunge(inbox_folder.imapsyncstatus)
 
     with pytest.raises(MailsyncDone):
-        folder_sync_engine._run_impl()
+        folder_sync_engine._run()
 
     assert len(uidinvalid_count) == MAX_UIDINVALID_RESYNCS + 1
 

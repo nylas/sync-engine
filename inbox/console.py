@@ -33,6 +33,7 @@ def user_console(user_email_address):
             banner = """
         You can access the account instance with the 'account' variable.
         """
+            IPython.embed(banner1=banner)
         else:
             with writable_connection_pool(account.id, pool_size=1).get()\
                     as crispin_client:

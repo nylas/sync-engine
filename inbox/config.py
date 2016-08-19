@@ -7,6 +7,7 @@ import yaml
 # more secure than the default python ssl module in python 2.7.4
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
+urllib3.disable_warnings()
 
 # TODO[mike]: This shold be removed once we've updated our base OS. openssl 1.0.1 doesn't support cross-signed certs
 # https://github.com/certifi/python-certifi/issues/26#issuecomment-138322515

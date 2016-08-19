@@ -2,24 +2,30 @@ import functools
 import random
 
 import gevent
+from backports import ssl
+from gevent import socket
+from redis import TimeoutError
 
 from nylas.logging import get_logger
 from nylas.logging.sentry import log_uncaught_errors
 log = get_logger()
+
 BACKOFF_DELAY = 30  # seconds to wait before retrying after a failure
+TRANSIENT_NETWORK_ERRS = (socket.timeout, TimeoutError, socket.error, ssl.SSLError)
 
 
 def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
           backoff_delay=BACKOFF_DELAY):
     """
-    Executes the callable func, retrying on uncaught exceptions.
+    Executes the callable func, retrying on uncaught exceptions matching the
+    class filters.
 
     Arguments
     ---------
     func : function
     exc_callback : function, optional
-        Function to execute if an exception is raised within func
-        (e.g., log something)
+        Function to execute if an exception is raised within func. The exception
+        is passed as the first argument. (e.g., log something)
     retry_classes: list of Exception subclasses, optional
         Configures what to retry on. If specified, func is retried only if one
         of these exceptions is raised. Default is to retry on all exceptions.
@@ -53,7 +59,7 @@ def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
                 if not should_retry_on(e):
                     raise
                 if exc_callback is not None:
-                    exc_callback()
+                    exc_callback(e)
 
             # Sleep a bit so that we don't poll too quickly and re-encounter
             # the error. Also add a random delay to prevent herding effects.
@@ -65,8 +71,21 @@ def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
 def retry_with_logging(func, logger=None, retry_classes=None,
                        fail_classes=None, account_id=None, provider=None,
                        backoff_delay=BACKOFF_DELAY):
-    def callback():
-        log_uncaught_errors(logger, account_id=account_id, provider=provider)
+
+    # Sharing the network_errs counter between invocations of callback by
+    # placing it inside an array:
+    # http://stackoverflow.com/questions/7935966/python-overwriting-variables-in-nested-functions
+    occurrences = [0]
+
+    def callback(e):
+        if isinstance(e, TRANSIENT_NETWORK_ERRS):
+            occurrences[0] += 1
+            if occurrences[0] < 20:
+                return
+        else:
+            occurrences[0] = 1
+        log_uncaught_errors(logger, account_id=account_id, provider=provider,
+                            error_type=type(e).__name__, occurrences=occurrences[0])
 
     return retry(func, exc_callback=callback, retry_classes=retry_classes,
                  fail_classes=fail_classes, backoff_delay=backoff_delay)()
