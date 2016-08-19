@@ -1,6 +1,6 @@
 import contextlib
+import dns
 import json
-import os
 import re
 import pytest
 import subprocess
@@ -57,33 +57,24 @@ class MockAnswer(object):
 
 
 class MockDNSResolver(object):
-    def __init__(self, registry_filename=None):
-        self.registry = {}
-        if registry_filename is not None:
-            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                'tests', 'data', registry_filename).encode('utf-8')
-            with open(path, 'r') as registry_file:
-                for entry in json.load(registry_file):
-                    domain = entry['domain']
-                    del entry['domain']
-                    self.registry[domain] = entry
+    def __init__(self):
+        self._registry = {'mx': {}, 'ns': {}}
 
-    def _register_record(self, domain, record_type, entries):
-        if domain not in self.registry:
-            self.registry[domain] = {'mx_domains': [], 'ns_records': []}
-        if record_type == 'MX':
-            self.registry[domain]['mx_domains'].extend(entries)
-        elif record_type == 'NS':
-            self.registry[domain]['ns_records'].extend(entries)
-        else:
-            raise RuntimeError("Unsupported record type '%s'" % record_type)
+    def _load_records(self, filename):
+        with open(filename, 'r') as registry_file:
+            self._registry = json.load(registry_file)
 
     def query(self, domain, record_type):
-        if record_type == 'MX':
-            return [MockAnswer(entry) for entry in self.registry[domain]['mx_domains']]
-        if record_type == 'NS':
-            return [MockAnswer(entry) for entry in self.registry[domain]['ns_records']]
-        raise RuntimeError("Unsupported record type '%s'" % record_type)
+        record_type = record_type.lower()
+        entry = self._registry[record_type][domain]
+        if isinstance(entry, dict):
+            raise {
+                'NoNameservers': dns.resolver.NoNameservers,
+                'NXDOMAIN': dns.resolver.NXDOMAIN,
+                'Timeout': dns.resolver.Timeout,
+                'NoAnswer': dns.resolver.NoAnswer,
+            }[entry['error']]()
+        return [MockAnswer(e) for e in self._registry[record_type][domain]]
 
 
 @pytest.yield_fixture
@@ -92,6 +83,30 @@ def mock_dns_resolver(monkeypatch):
     monkeypatch.setattr('inbox.util.url.dns_resolver', dns_resolver)
     yield dns_resolver
     monkeypatch.undo()
+
+
+@pytest.yield_fixture(scope='function')
+def dump_dns_queries(monkeypatch):
+    original_query = dns.resolver.Resolver.query
+    query_results = {'ns': {}, 'mx': {}}
+
+    def mock_query(self, domain, record_type):
+        try:
+            result = original_query(self, domain, record_type)
+        except Exception as e:
+            query_results[record_type.lower()][domain] = {'error': type(e).__name__}
+            raise
+        record_type = record_type.lower()
+        if record_type == 'mx':
+            query_results['mx'][domain] = [str(r.exchange).lower() for r in result]
+        elif record_type == 'ns':
+            query_results['ns'][domain] = [str(rdata) for rdata in result]
+        else:
+            raise RuntimeError("Unknown record type: %s" % record_type)
+        return result
+    monkeypatch.setattr('dns.resolver.Resolver.query', mock_query)
+    yield
+    print json.dumps(query_results, indent=4, sort_keys=True)
 
 
 class MockIMAPClient(object):

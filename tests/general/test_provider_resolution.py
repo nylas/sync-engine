@@ -1,5 +1,3 @@
-import json
-import os
 import pytest
 from inbox.util.url import provider_from_address
 from inbox.util.url import InvalidEmailAddressError
@@ -7,11 +5,10 @@ from inbox.auth.base import handler_from_provider
 from inbox.auth.generic import GenericAuthHandler
 from inbox.auth.gmail import GmailAuthHandler
 from inbox.basicauth import NotSupportedError
-from inbox.util.testutils import MockDNSResolver
 
 
-def test_provider_resolution():
-    dns_resolver = MockDNSResolver('dns.json')
+def test_provider_resolution(mock_dns_resolver):
+    mock_dns_resolver._load_records('tests/data/general_test_provider_resolution.json')
     test_cases = [
         ('foo@example.com', 'unknown'),
         ('foo@noresolve.com', 'unknown'),
@@ -45,14 +42,14 @@ def test_provider_resolution():
         ('foo@autobizbrokers.com', 'bluehost'),
     ]
     for email, expected_provider in test_cases:
-        assert provider_from_address(email, lambda: dns_resolver) == expected_provider
+        assert provider_from_address(email, lambda: mock_dns_resolver) == expected_provider
 
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('notanemail', lambda: dns_resolver)
+        provider_from_address('notanemail', lambda: mock_dns_resolver)
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('not@anemail', lambda: dns_resolver)
+        provider_from_address('not@anemail', lambda: mock_dns_resolver)
     with pytest.raises(InvalidEmailAddressError):
-        provider_from_address('notanemail.com', lambda: dns_resolver)
+        provider_from_address('notanemail.com', lambda: mock_dns_resolver)
 
 
 def test_auth_handler_dispatch():
