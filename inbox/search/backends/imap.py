@@ -110,7 +110,7 @@ class IMAPSearchClient(object):
             imap_uids.extend(uids)
 
         query = db_session.query(Thread) \
-            .join(Message) \
+            .join(Message, Message.thread_id == Thread.id) \
             .join(ImapUid) \
             .filter(ImapUid.account_id == self.account_id,
                     ImapUid.msg_uid.in_(imap_uids),
@@ -122,7 +122,6 @@ class IMAPSearchClient(object):
 
         if limit:
             query = query.limit(limit)
-
         return query.all()
 
     def stream_threads(self, search_query):
@@ -132,7 +131,7 @@ class IMAPSearchClient(object):
             with session_scope(self.account_id) as db_session:
                 for imap_uids in self._search(db_session, search_query):
                     query = db_session.query(Thread) \
-                        .join(Message) \
+                        .join(Message, Message.thread_id == Thread.id) \
                         .join(ImapUid) \
                         .filter(ImapUid.account_id == self.account_id,
                                 ImapUid.msg_uid.in_(imap_uids),

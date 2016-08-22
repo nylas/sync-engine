@@ -202,7 +202,7 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                 'FORCE INDEX (ix_message_ns_id_is_draft_received_date)',
                 'mysql')
 
-    query += lambda q: q.join(Thread)
+    query += lambda q: q.join(Thread, Message.thread_id == Thread.id)
     query += lambda q: q.filter(
         Message.namespace_id == bindparam('namespace_id'),
         Message.is_draft == bindparam('drafts'))

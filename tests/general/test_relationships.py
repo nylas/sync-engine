@@ -1,6 +1,6 @@
 import json
 
-from inbox.models import Category, MessageCategory
+from inbox.models import Category, Message, MessageCategory, Thread
 
 from tests.util.base import add_fake_message, add_fake_thread
 from tests.api.base import new_api_client
@@ -75,3 +75,25 @@ def test_message_delete(db, gmail_account):
 
     assert db.session.query(MessageCategory). \
         filter(MessageCategory.message_id == gen_message.id).all() == []
+
+
+def test_thread_delete(db, gmail_account):
+    """ Ensure that all associated Messages are deleted
+        when a Thread is deleted."""
+
+    generic_thread = add_fake_thread(db.session, gmail_account.namespace.id)
+    generic_message = add_fake_message(db.session,
+                                       gmail_account.namespace.id,
+                                       generic_thread)
+    assert db.session.query(Thread). \
+        filter(Thread.id == generic_thread.id).all() == [generic_thread]
+    assert db.session.query(Message). \
+        filter(Message.id == generic_message.id).all() == [generic_message]
+
+    db.session.delete(generic_thread)
+    db.session.commit()
+
+    assert db.session.query(Thread). \
+        filter(Thread.id == generic_thread.id).all() == []
+    assert db.session.query(Message). \
+        filter(Message.id == generic_message.id).all() == []
