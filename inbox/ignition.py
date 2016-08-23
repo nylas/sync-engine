@@ -5,7 +5,8 @@ from socket import gethostname
 from urllib import quote_plus as urlquote
 from sqlalchemy import create_engine, event
 
-from inbox.sqlalchemy_ext.util import ForceStrictMode
+from inbox.sqlalchemy_ext.util import (ForceStrictMode,
+                                       disabled_dubiously_many_queries_warning)
 from inbox.config import config
 from inbox.util.stats import statsd_client
 from nylas.logging import get_logger, find_first_app_frame_and_name
@@ -163,8 +164,8 @@ def init_db(engine, key=0):
         event.listen(table, 'after_create',
                      DDL('ALTER TABLE {tablename} AUTO_INCREMENT={increment}'.
                          format(tablename=table, increment=increment)))
-
-    MailSyncBase.metadata.create_all(engine)
+    with disabled_dubiously_many_queries_warning():
+        MailSyncBase.metadata.create_all(engine)
 
 
 def verify_db(engine, schema, key):
