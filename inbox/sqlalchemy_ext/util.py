@@ -1,4 +1,5 @@
 import abc
+import contextlib
 import uuid
 import struct
 import weakref
@@ -31,6 +32,19 @@ bakery = baked.bakery()
 
 
 query_counts = weakref.WeakKeyDictionary()
+should_log_dubiously_many_queries = True
+
+
+# When setting up the DB for tests we do a bunch of queries all at once which
+# triggers the dreaded dubiously many queries warning. This allows us to avoid
+# that. Don't use this to silence any warnings in application code because
+# these warnings are an indicator of excessive lazy loading from the DB.
+@contextlib.contextmanager
+def disabled_dubiously_many_queries_warning():
+    global should_log_dubiously_many_queries
+    should_log_dubiously_many_queries = False
+    yield
+    should_log_dubiously_many_queries = True
 
 
 @event.listens_for(Engine, "before_cursor_execute")
@@ -44,6 +58,8 @@ def before_cursor_execute(conn, cursor, statement,
 
 @event.listens_for(Engine, 'commit')
 def before_commit(conn):
+    if not should_log_dubiously_many_queries:
+        return
     if query_counts.get(conn, 0) > MAX_SANE_QUERIES_PER_SESSION:
         log.warning('Dubiously many queries per session!',
                     query_count=query_counts.get(conn))
