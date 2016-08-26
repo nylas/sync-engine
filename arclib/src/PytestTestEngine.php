@@ -42,7 +42,7 @@ final class PytestTestEngine extends ArcanistUnitTestEngine {
       $se_path = '/vagrant';
     }
 
-    $cmd_line = csprintf("vagrant ssh -c \"export INBOX_ENV=test; cd $se_path; coverage run --source $se_path/inbox -m py.test --junitxml $se_path/tests/output $se_path/tests; coverage xml -i -o $se_path/tests/coverage; true\"");
+    $cmd_line = csprintf("vagrant ssh -c \"export NYLAS_ENV=test; cd $se_path; coverage run --source $se_path/inbox -m py.test --junitxml $se_path/tests/output $se_path/tests; coverage xml -i -o $se_path/tests/coverage; true\"");
 
     return new ExecFuture('%C', $cmd_line);
   }

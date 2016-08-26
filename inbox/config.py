@@ -58,13 +58,13 @@ def _update_config_from_env(config):
 
     The following paths will always be appended:
 
-    If `INBOX_ENV` is 'prod':
+    If `NYLAS_ENV` is 'prod':
       /etc/inboxapp/secrets.yml:/etc/inboxapp/config.json
 
-    If `INBOX_ENV` is 'test':
+    If `NYLAS_ENV` is 'test':
       {srcdir}/etc/secrets-test.yml:{srcdir}/etc/config-test.yml
 
-    If `INBOX_ENV` is 'dev':
+    If `NYLAS_ENV` is 'dev':
       {srcdir}/etc/secrets-dev.yml:{srcdir}/etc/config-dev.yml
 
     Missing files in the path will be ignored.
@@ -72,10 +72,10 @@ def _update_config_from_env(config):
     """
     srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 
-    if 'INBOX_ENV' in os.environ:
-        assert os.environ['INBOX_ENV'] in ('dev', 'test', 'staging', 'prod'), \
-            "INBOX_ENV must be either 'dev', 'test', staging, or 'prod'"
-        env = os.environ['INBOX_ENV']
+    if 'NYLAS_ENV' in os.environ:
+        assert os.environ['NYLAS_ENV'] in ('dev', 'test', 'staging', 'prod'), \
+            "NYLAS_ENV must be either 'dev', 'test', staging, or 'prod'"
+        env = os.environ['NYLAS_ENV']
     else:
         env = 'prod'
 

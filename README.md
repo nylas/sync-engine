@@ -21,7 +21,7 @@ Need help? [Join our Slack channel ![Slack Invite Button](http://slack-invite.ny
 
 6. `cd /vagrant`
 
-7. `INBOX_ENV=dev bin/inbox-start`
+7. `NYLAS_ENV=dev bin/inbox-start`
 
 And _voilà_! Auth an account via the commandline to start syncing:
 

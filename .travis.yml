@@ -9,4 +9,4 @@ install:
 script:
   - flake8 --select=F inbox
   - pylint -d all -e w0631 inbox
-  - INBOX_ENV=test py.test tests -m "not networkrequired"
+  - NYLAS_ENV=test py.test tests -m "not networkrequired"
