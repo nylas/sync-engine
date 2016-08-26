@@ -109,9 +109,6 @@ def start():
     g.log = log.new(endpoint=request.endpoint,
                     account_id=g.namespace.account_id)
 
-    if 'X-Request-Id' in request.headers:
-        g.log.bind(request_id=request.headers['X-Request-Id'])
-
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
