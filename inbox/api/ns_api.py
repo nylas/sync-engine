@@ -63,6 +63,7 @@ from inbox.crispin import writable_connection_pool
 
 DEFAULT_LIMIT = 100
 LONG_POLL_REQUEST_TIMEOUT = 120
+LONG_POLL_POLL_INTERVAL = 1
 SEND_TIMEOUT = 60
 
 app = Blueprint(
@@ -1552,7 +1553,7 @@ def sync_deltas():
     # The client wants us to wait until there are changes
     g.db_session.expunge(g.namespace)
     g.db_session.close()  # hack to close the flask session
-    poll_interval = 1
+    poll_interval = LONG_POLL_POLL_INTERVAL
 
     start_time = time.time()
     while time.time() - start_time < timeout:
