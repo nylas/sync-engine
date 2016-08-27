@@ -65,11 +65,11 @@ def main(prod, enable_tracer, config, process_num):
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 
-    setproctitle.setproctitle('inbox-sync-{}'.format(process_num))
+    setproctitle.setproctitle('sync-engine-{}'.format(process_num))
 
     log = get_logger()
     log.info('start',
-             components=['mail sync', 'contact sync'],
+             components=['mail sync', 'contact sync', 'calendar sync'],
              host=platform.node(), process_num=process_num,
              total_processes=total_processes,
              recursion_limit=sys.getrecursionlimit())
@@ -99,7 +99,7 @@ def main(prod, enable_tracer, config, process_num):
 
     sync_service.run()
 
-    print >>sys.stderr, "\033[94mInbox exiting...\033[0m"
+    print >>sys.stderr, "\033[94mNylas Sync Engine exiting...\033[0m"
 
 
 if __name__ == '__main__':
