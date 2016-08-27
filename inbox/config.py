@@ -50,7 +50,7 @@ def _update_config_from_env(config):
     Update a config dictionary from configuration files specified in the
     environment.
 
-    The environment variable `INBOX_CFG_PATH` contains a list of .json or .yml
+    The environment variable `SYNC_ENGINE_CFG_PATH` contains a list of .json or .yml
     paths separated by colons.  The files are read in reverse order, so that
     the settings specified in the leftmost configuration files take precedence.
     (This is to emulate the behavior of the unix PATH variable, but the current
@@ -91,8 +91,8 @@ def _update_config_from_env(config):
             '{srcdir}/etc/config-{env}.json'.format(**v),
         ]
 
-    if 'INBOX_CFG_PATH' in os.environ:
-        cfg_path = os.environ.get('INBOX_CFG_PATH', '').split(os.path.pathsep)
+    if 'SYNC_ENGINE_CFG_PATH' in os.environ:
+        cfg_path = os.environ.get('SYNC_ENGINE_CFG_PATH', '').split(os.path.pathsep)
         cfg_path = list(p.strip() for p in cfg_path if p.strip())
     else:
         cfg_path = []
