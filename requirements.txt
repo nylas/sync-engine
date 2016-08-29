@@ -1,4 +1,4 @@
-nylas-production-python>=0.3.1
+nylas-production-python>=0.3.3
 coverage==3.7.1
 httplib2==0.8
 pytest==2.8.3
