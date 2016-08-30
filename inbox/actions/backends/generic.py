@@ -160,8 +160,8 @@ def remote_update_draft(crispin_client, account_id, message_id,
     # 2. Delete the old message the API user is updating
 
     if 'drafts' not in crispin_client.folder_names():
-        log.info('Account has no drafts folder. Will not save draft.',
-                 account_id=account_id)
+        log.warning('Account has no drafts folder. Will not save draft.',
+                    account_id=account_id)
         return
     folder_name = crispin_client.folder_names()['drafts'][0]
     crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
@@ -189,9 +189,8 @@ def remote_update_draft(crispin_client, account_id, message_id,
 def remote_delete_draft(crispin_client, account_id, nylas_uid,
                         message_id_header):
     if 'drafts' not in crispin_client.folder_names():
-        log.info(
-            'Account has no detected drafts folder; not deleting draft',
-            account_id=account_id)
+        log.warning('Account has no detected drafts folder; not deleting draft',
+                    account_id=account_id)
         return
     crispin_client.delete_draft(message_id_header)
 
@@ -199,9 +198,8 @@ def remote_delete_draft(crispin_client, account_id, nylas_uid,
 def remote_delete_sent(crispin_client, account_id, message_id_header,
                        delete_multiple=False):
     if 'sent' not in crispin_client.folder_names():
-        log.info(
-            'Account has no detected sent folder; not deleting message',
-            account_id=account_id)
+        log.warning('Account has no detected sent folder; not deleting message',
+                    account_id=account_id)
         return
     crispin_client.delete_sent_message(message_id_header, delete_multiple)
 
@@ -217,10 +215,16 @@ def remote_save_sent(crispin_client, account_id, message_id):
         mimemsg = _create_email(account, message)
 
     if 'sent' not in crispin_client.folder_names():
-        log.info('Account has no detected sent folder; not saving message',
-                 account_id=account_id)
+        log.warning('Account has no detected sent folder; not saving message',
+                    account_id=account_id)
         return
 
-    folder_name = crispin_client.folder_names()['sent'][0]
+    # If there are multiple sent roles we should at least have a warning about it.
+    sent_folder_names = crispin_client.folder_names()['sent']
+    if len(sent_folder_names) > 1:
+        log.warning("Multiple sent folders found for account",
+                    account_id=account_id)
+
+    folder_name = sent_folder_names[0]
     crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)
     crispin_client.create_message(mimemsg)

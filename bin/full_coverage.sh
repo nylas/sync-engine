@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set +e
-export INBOX_ENV=test
+export NYLAS_ENV=test
 
 pids=()
 

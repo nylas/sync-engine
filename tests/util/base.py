@@ -22,9 +22,9 @@ def absolute_path(path):
 
 def make_config():
     from inbox.config import config
-    assert 'INBOX_ENV' in os.environ and \
-        os.environ['INBOX_ENV'] == 'test', \
-        "INBOX_ENV must be 'test' to run tests"
+    assert 'NYLAS_ENV' in os.environ and \
+        os.environ['NYLAS_ENV'] == 'test', \
+        "NYLAS_ENV must be 'test' to run tests"
     return config
 
 

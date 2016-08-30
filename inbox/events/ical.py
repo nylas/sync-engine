@@ -393,7 +393,7 @@ def import_attached_events(db_session, account, message):
             log.error('Attached event parsing error',
                       account_id=account.id, message_id=message.id,
                       logstash_tag='icalendar_autoimport',
-                      invite=part.block.data)
+                      event_part_id=part.id)
             continue
         except (AssertionError, TypeError, RuntimeError,
                 AttributeError, ValueError, UnboundLocalError,
@@ -402,7 +402,7 @@ def import_attached_events(db_session, account, message):
             # creation because of an error in the attached calendar.
             log.error('Unhandled exception during message parsing',
                       message_id=message.id,
-                      invite=part_data,
+                      event_part_id=part.id,
                       logstash_tag='icalendar_autoimport',
                       traceback=traceback.format_exception(
                           sys.exc_info()[0],
@@ -535,8 +535,9 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
 
 
 def send_invite(ical_txt, event, account, invite_type='request'):
-    MAILGUN_API_KEY = config.get('MAILGUN_API_KEY')
-    MAILGUN_DOMAIN = config.get('MAILGUN_DOMAIN')
+    # We send those transactional emails through a separate domain.
+    MAILGUN_API_KEY = config.get('NOTIFICATIONS_MAILGUN_API_KEY')
+    MAILGUN_DOMAIN = config.get('NOTIFICATIONS_MAILGUN_DOMAIN')
     assert MAILGUN_DOMAIN is not None and MAILGUN_API_KEY is not None
 
     for participant in event.participants:

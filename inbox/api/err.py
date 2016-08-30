@@ -1,10 +1,62 @@
-from flask import jsonify, make_response
-from nylas.logging import get_logger
+import sys
+import traceback
+
+from flask import jsonify, make_response, request
+from nylas.logging.sentry import sentry_alert
+from nylas.logging.log import safe_format_exception, get_logger
 log = get_logger()
+
+from inbox.config import is_live_env
+
+
+def get_request_uid(headers):
+    return headers.get('X-Unique-ID')
+
+
+def log_exception(exc_info, send_to_sentry=True, **kwargs):
+    """ Add exception info to the log context for the request.
+
+    We do not log in a separate log statement in order to make debugging
+    easier. As a bonus, this reduces log volume somewhat.
+
+    """
+    if send_to_sentry:
+        sentry_alert()
+
+    if not is_live_env():
+        print
+        traceback.print_exc()
+        print
+
+    exc_type, exc_value, exc_tb = exc_info
+
+    # Break down the info as much as Python gives us, for easier aggregation of
+    # similar error types.
+    error = exc_type.__name__
+    error_message = exc_value.message
+    error_tb = safe_format_exception(exc_type, exc_value, exc_tb)
+
+    log_context_keys = set(['error', 'error_message', 'error_tb'])
+    log_context_keys.update(kwargs.keys())
+
+    new_log_context = dict(
+        error=error,
+        error_message=error_message,
+        error_tb=error_tb)
+    new_log_context.update(kwargs)
+
+    # guard against programming errors overriding log fields (confusing!)
+    if set(new_log_context.keys()).intersection(
+            set(request.environ['log_context'])):
+        log.warning("attempt to log more than one error to HTTP request",
+                    request_uid=get_request_uid(request.headers),
+                    **new_log_context)
+    else:
+        request.environ['log_context'].update(new_log_context)
 
 
 class APIException(Exception):
-    pass
+    status_code = 500
 
 
 class InputError(APIException):
@@ -57,8 +109,7 @@ class AccountDoesNotExistError(APIException):
 
 
 def err(http_code, message, **kwargs):
-    log.info('Returning API error to client',
-             http_code=http_code, message=message, kwargs=kwargs)
+    log_exception(sys.exc_info(), message, **kwargs)
     resp = {
         'type': 'api_error',
         'message': message

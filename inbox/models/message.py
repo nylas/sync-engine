@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from flanker import mime
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
-                        Boolean, Enum, ForeignKey, Index, bindparam)
+                        Boolean, Enum, Index, bindparam)
 from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import (relationship, backref, validates, joinedload,
                             subqueryload, load_only)
@@ -25,7 +25,6 @@ from inbox.security.blobstorage import encode_blob, decode_blob
 from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
                                  DeletedAtMixin)
 from inbox.models.base import MailSyncBase
-from inbox.models.namespace import Namespace
 from inbox.models.category import Category
 
 from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
@@ -62,19 +61,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
     def API_OBJECT_NAME(self):
         return 'message' if not self.is_draft else 'draft'
 
-    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
-                          index=True, nullable=False)
+    namespace_id = Column(BigInteger, index=True, nullable=False)
     namespace = relationship(
         'Namespace',
+        primaryjoin='foreign(Message.namespace_id) == remote(Namespace.id)',  # noqa
         load_on_pending=True)
 
     # Do delete messages if their associated thread is deleted.
-    thread_id = Column(ForeignKey('thread.id', ondelete='CASCADE'),
-                       nullable=False)
+    thread_id = Column(BigInteger, nullable=False)
     thread = relationship(
         'Thread',
-        backref=backref('messages', order_by='Message.received_date',
-                        passive_deletes=True, cascade='all, delete-orphan'))
+        primaryjoin='foreign(Message.thread_id) == remote(Thread.id)',  # noqa
+        backref=backref('messages',
+                        order_by='Message.received_date',
+                        cascade="all, delete-orphan"))
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
@@ -178,11 +178,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
     # Whether this draft is a reply to an existing thread.
     is_reply = Column(Boolean)
 
-    reply_to_message_id = Column(ForeignKey('message.id'), nullable=True)
+    reply_to_message_id = Column(BigInteger, nullable=True)
     # The backref here is unused, but must be configured so that the child's
     # foreign key gets updated when the parent is deleted.
-    reply_to_message = relationship('Message', remote_side=lambda: Message.id,
-                                    backref='replies')
+    reply_to_message = relationship(
+        'Message',
+        primaryjoin='foreign(Message.reply_to_message_id) == remote(Message.id)',  # noqa
+        backref='replies')
 
     def mark_for_deletion(self):
         """

@@ -26,8 +26,8 @@ OAUTH_CLIENT_SECRET = config.get_required('GOOGLE_OAUTH_CLIENT_SECRET')
 OAUTH_REDIRECT_URI = config.get_required('GOOGLE_OAUTH_REDIRECT_URI')
 
 OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
-OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
-OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
+OAUTH_ACCESS_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
+OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v2/tokeninfo'
 OAUTH_USER_INFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
 
 # NOTE: urls for email address and G+ profile are deprecated
@@ -69,7 +69,7 @@ class GmailAuthHandler(OAuthAuthHandler):
                 raise exc
 
             log.error('Error during IMAP XOAUTH2 login',
-                      account_id=account.id, email=account.email_address,
+                      account_id=account.id,
                       host=host, port=port, error=exc)
             if not isinstance(exc, ImapSupportDisabledError):
                 raise  # Unknown IMAPClient error, reraise

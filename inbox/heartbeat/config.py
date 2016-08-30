@@ -15,7 +15,7 @@ MAX_CONNECTIONS = 70
 WAIT_TIMEOUT = 15
 SOCKET_TIMEOUT = 60
 
-assert REDIS_SHARDS is not None, "REDIS_SHARDS is None. Did you set INBOX_ENV?"
+assert REDIS_SHARDS is not None, "REDIS_SHARDS is None. Did you set NYLAS_ENV?"
 connection_pool_map = {instance_name: None for instance_name in REDIS_SHARDS}
 
 

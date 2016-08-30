@@ -9,7 +9,7 @@ from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
 from inbox.mailsync.gc import DeleteHandler, LabelRenameHandler
-from inbox.models import Folder, Transaction
+from inbox.models import Folder, Message, Transaction
 from inbox.models.label import Label
 from inbox.util.testutils import mock_imapclient, MockIMAPClient
 from tests.util.base import add_fake_imapuid, add_fake_message
@@ -265,3 +265,6 @@ def test_reply_to_message_cascade(db, default_namespace, thread, message):
     db.session.expire_all()
     db.session.delete(message)
     db.session.commit()
+
+    assert db.session.query(Message).filter(Message.id == message.id).all() == []
+    assert db.session.query(Message).filter(Message.id == reply.id).all() == [reply]

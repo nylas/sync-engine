@@ -647,7 +647,6 @@ class CrispinClient(object):
 
         elapsed = time.time() - t
         log.debug('Requested all UIDs',
-                  selected_folder=self.selected_folder_name,
                   search_time=elapsed,
                   total_uids=len(fetch_result))
         return sorted([long(uid) for uid in fetch_result])

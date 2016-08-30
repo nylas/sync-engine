@@ -91,7 +91,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
             else:
                 log.info('Creating category for folder',
                          account_id=self.account_id,
-                         folder_name=folder.name)
+                         folder_id=folder.id)
                 folder.category = Category.find_or_create(
                     db_session, namespace_id=account.namespace.id,
                     name=raw_folder.role,

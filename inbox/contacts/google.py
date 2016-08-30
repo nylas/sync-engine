@@ -110,8 +110,9 @@ class GoogleContactsProvider(object):
         email_addresses = [email for email in google_contact.email if
                            email.primary]
         if email_addresses and len(email_addresses) > 1:
-            self.log.error("Should not have more than one email per entry! {0}"
-                           .format(email_addresses))
+            self.log.error("Should not have more than one email per entry!",
+                           num_email=len(email_addresses))
+
         try:
             # The id.text field of a ContactEntry object takes the form
             # 'http://www.google.com/m8/feeds/contacts/<useremail>/base/<uid>'.

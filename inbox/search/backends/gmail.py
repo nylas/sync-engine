@@ -67,7 +67,7 @@ class GmailSearchClient(object):
         if not g_msgids:
             return []
         query = db_session.query(Thread). \
-            join(Message). \
+            join(Message, Message.thread_id == Thread.id). \
             filter(Thread.namespace_id == self.account.namespace.id,
                    Message.namespace_id == self.account.namespace.id,
                    Message.g_msgid.in_(g_msgids)). \

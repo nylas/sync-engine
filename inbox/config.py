@@ -5,9 +5,12 @@ import yaml
 # TODO[mike]: This should be removed once we've updated python to 2.7.9
 # This tells urllib3 to use pyopenssl, which has the latest tls protocols and is
 # more secure than the default python ssl module in python 2.7.4
+import requests
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 urllib3.disable_warnings()
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # TODO[mike]: This shold be removed once we've updated our base OS. openssl 1.0.1 doesn't support cross-signed certs
 # https://github.com/certifi/python-certifi/issues/26#issuecomment-138322515
@@ -16,6 +19,18 @@ os.environ["REQUESTS_CA_BUNDLE"] = certifi.old_where()
 
 
 __all__ = ['config']
+
+
+if 'NYLAS_ENV' in os.environ:
+    assert os.environ['NYLAS_ENV'] in ('dev', 'test', 'staging', 'prod'), \
+        "NYLAS_ENV must be either 'dev', 'test', staging, or 'prod'"
+    env = os.environ['NYLAS_ENV']
+else:
+    env = 'prod'
+
+
+def is_live_env():
+    return env == 'prod' or env == 'staging'
 
 
 class ConfigError(Exception):
@@ -42,12 +57,12 @@ class Configuration(dict):
         return self[key]
 
 
-def _update_config_from_env(config):
+def _update_config_from_env(config, env):
     """
     Update a config dictionary from configuration files specified in the
     environment.
 
-    The environment variable `INBOX_CFG_PATH` contains a list of .json or .yml
+    The environment variable `SYNC_ENGINE_CFG_PATH` contains a list of .json or .yml
     paths separated by colons.  The files are read in reverse order, so that
     the settings specified in the leftmost configuration files take precedence.
     (This is to emulate the behavior of the unix PATH variable, but the current
@@ -55,26 +70,19 @@ def _update_config_from_env(config):
 
     The following paths will always be appended:
 
-    If `INBOX_ENV` is 'prod':
+    If `NYLAS_ENV` is 'prod':
       /etc/inboxapp/secrets.yml:/etc/inboxapp/config.json
 
-    If `INBOX_ENV` is 'test':
+    If `NYLAS_ENV` is 'test':
       {srcdir}/etc/secrets-test.yml:{srcdir}/etc/config-test.yml
 
-    If `INBOX_ENV` is 'dev':
+    If `NYLAS_ENV` is 'dev':
       {srcdir}/etc/secrets-dev.yml:{srcdir}/etc/config-dev.yml
 
     Missing files in the path will be ignored.
 
     """
     srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-
-    if 'INBOX_ENV' in os.environ:
-        assert os.environ['INBOX_ENV'] in ('dev', 'test', 'staging', 'prod'), \
-            "INBOX_ENV must be either 'dev', 'test', staging, or 'prod'"
-        env = os.environ['INBOX_ENV']
-    else:
-        env = 'prod'
 
     if env in ['prod', 'staging']:
         base_cfg_path = [
@@ -88,8 +96,8 @@ def _update_config_from_env(config):
             '{srcdir}/etc/config-{env}.json'.format(**v),
         ]
 
-    if 'INBOX_CFG_PATH' in os.environ:
-        cfg_path = os.environ.get('INBOX_CFG_PATH', '').split(os.path.pathsep)
+    if 'SYNC_ENGINE_CFG_PATH' in os.environ:
+        cfg_path = os.environ.get('SYNC_ENGINE_CFG_PATH', '').split(os.path.pathsep)
         cfg_path = list(p.strip() for p in cfg_path if p.strip())
     else:
         cfg_path = []
@@ -121,6 +129,6 @@ def _get_process_name(config):
         config['PROCESS_NAME'] = os.environ.get("PROCESS_NAME")
 
 config = Configuration()
-_update_config_from_env(config)
+_update_config_from_env(config, env)
 _get_local_feature_flags(config)
 _get_process_name(config)

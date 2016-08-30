@@ -33,8 +33,6 @@ def resp(http_code, message=None, **kwargs):
 
 @app.before_request
 def start():
-    g.log = get_logger().new(endpoint=request.endpoint)
-
     try:
         watch_state = request.headers[GOOGLE_RESOURCE_STATE_STRING]
         g.watch_channel_id = request.headers[GOOGLE_CHANNEL_ID_STRING]
@@ -42,9 +40,11 @@ def start():
     except KeyError:
         raise InputError('Malformed headers')
 
-    g.log.bind(watch_state=watch_state,
-               watch_channel_id=g.watch_channel_id,
-               watch_resource_id=g.watch_resource_id)
+    request.environ.setdefault('log_context', {}).update({
+        'watch_state': watch_state,
+        'watch_channel_id': g.watch_channel_id,
+        'watch_resource_id': g.watch_resource_id
+    })
 
     if watch_state == 'sync':
         return resp(204)
@@ -60,8 +60,7 @@ def handle_input_error(error):
 
 @app.route('/calendar_list_update/<account_public_id>', methods=['POST'])
 def calendar_update(account_public_id):
-    g.log.info('Received request to update Google calendar list',
-               account_public_id=account_public_id)
+    request.environ['log_context']['account_public_id'] = account_public_id
     try:
         valid_public_id(account_public_id)
         with global_session_scope() as db_session:
@@ -74,16 +73,13 @@ def calendar_update(account_public_id):
     except ValueError:
         raise InputError('Invalid public ID')
     except NoResultFound:
-        g.log.info('Getting push notifications for non-existing account',
-                   account_public_id=account_public_id)
         raise NotFoundError("Couldn't find account `{0}`"
                             .format(account_public_id))
 
 
 @app.route('/calendar_update/<calendar_public_id>', methods=['POST'])
 def event_update(calendar_public_id):
-    g.log.info('Received request to update Google calendar',
-               calendar_public_id=calendar_public_id)
+    request.environ['log_context']['calendar_public_id'] = calendar_public_id
     try:
         valid_public_id(calendar_public_id)
         with global_session_scope() as db_session:
@@ -106,7 +102,5 @@ def event_update(calendar_public_id):
     except ValueError:
         raise InputError('Invalid public ID')
     except NoResultFound:
-        g.log.info('Getting push notifications for non-existing calendar',
-                   calendar_public_id=calendar_public_id)
         raise NotFoundError("Couldn't find calendar `{0}`"
                             .format(calendar_public_id))

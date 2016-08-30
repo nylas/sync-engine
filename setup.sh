@@ -270,8 +270,8 @@ if ! $prod; then
     mysqld_safe &
     sleep 10
 
-    bin/create-db
-    bin/create-test-db
+    env NYLAS_ENV=dev bin/create-db
+    env NYLAS_ENV=dev bin/create-test-db
 fi
 
 if [[ $(mysql --version) != *"5.6"* ]]

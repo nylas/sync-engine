@@ -116,7 +116,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         db_session.commit()
 
-
     def start_new_folder_sync_engines(self):
         running_monitors = {monitor.folder_name: monitor for monitor in
                             self.folder_monitors}
@@ -168,4 +167,4 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             with session_scope(self.namespace_id) as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid()
-                account.update_sync_error(str(exc))
+                account.update_sync_error(exc)

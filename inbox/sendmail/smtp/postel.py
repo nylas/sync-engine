@@ -245,8 +245,7 @@ class SMTPConnection(object):
             if code != SMTP_AUTH_SUCCESS:
                 raise SendMailException(
                     'Could not authenticate with the SMTP server.', 403)
-        self.log.info('SMTP Auth(OAuth2) success',
-                      email_address=self.email_address)
+        self.log.info('SMTP Auth(OAuth2) success', account_id=self.account_id)
 
     # Password authentication
     def smtp_password(self):
@@ -275,7 +274,7 @@ class SMTPConnection(object):
         except UnicodeEncodeError:
             self.log.error('Unicode error when trying to decode email',
                            logstash_tag='sendmail_encode_error',
-                           email=self.email_address, recipients=recipients)
+                           account_id=self.account_id, recipients=recipients)
             raise SendMailException(
                 'Invalid character in recipient address', 402)
 
@@ -427,8 +426,7 @@ class SMTPClient(object):
         self._send(recipient_emails, msg)
 
         # Sent successfully
-        self.log.info('Sending successful', sender=from_addr[1],
-                      recipients=recipient_emails)
+        self.log.info('Sending successful', draft_id=draft.id)
 
     def send(self, draft):
         """
@@ -478,8 +476,7 @@ class SMTPClient(object):
         self._send(recipient_emails, msg)
 
         # Sent to all successfully
-        self.log.info('Sending successful', sender=from_addr[1],
-                      recipients=recipient_emails)
+        self.log.info('Sending successful', draft_id=draft.id)
 
     def send_raw(self, msg):
         recipient_emails = [email for name, email in itertools.chain(
