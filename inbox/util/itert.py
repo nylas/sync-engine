@@ -25,3 +25,7 @@ def partition(pred, iterable):
     """
     t1, t2 = itertools.tee(iterable)
     return list(itertools.ifilterfalse(pred, t1)), filter(pred, t2)
+
+
+def flatten(list_of_lists):
+    return [item for sublist in list_of_lists for item in sublist]
