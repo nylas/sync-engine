@@ -535,9 +535,8 @@ def generate_invite_message(ical_txt, event, account, invite_type='request'):
 
 
 def send_invite(ical_txt, event, account, invite_type='request'):
-    # We send those transactional emails through a separate domain.
-    MAILGUN_API_KEY = config.get('NOTIFICATIONS_MAILGUN_API_KEY')
-    MAILGUN_DOMAIN = config.get('NOTIFICATIONS_MAILGUN_DOMAIN')
+    MAILGUN_API_KEY = config.get('MAILGUN_API_KEY')
+    MAILGUN_DOMAIN = config.get('MAILGUN_DOMAIN')
     assert MAILGUN_DOMAIN is not None and MAILGUN_API_KEY is not None
 
     for participant in event.participants:
