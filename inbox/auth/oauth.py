@@ -42,7 +42,6 @@ class OAuthAuthHandler(AuthHandler):
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,
-                      email=account.email_address,
                       imap_host=host,
                       imap_port=port,
                       error=exc)
@@ -58,7 +57,6 @@ class OAuthAuthHandler(AuthHandler):
         except IMAPClient.Error as exc:
             log.error('Error during IMAP XOAUTH2 login',
                       account_id=account.id,
-                      email=account.email_address,
                       host=host,
                       port=port,
                       error=exc)

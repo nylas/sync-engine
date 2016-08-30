@@ -69,7 +69,7 @@ class GmailAuthHandler(OAuthAuthHandler):
                 raise exc
 
             log.error('Error during IMAP XOAUTH2 login',
-                      account_id=account.id, email=account.email_address,
+                      account_id=account.id,
                       host=host, port=port, error=exc)
             if not isinstance(exc, ImapSupportDisabledError):
                 raise  # Unknown IMAPClient error, reraise

@@ -393,7 +393,7 @@ def import_attached_events(db_session, account, message):
             log.error('Attached event parsing error',
                       account_id=account.id, message_id=message.id,
                       logstash_tag='icalendar_autoimport',
-                      invite=part.block.data)
+                      event_part_id=part.id)
             continue
         except (AssertionError, TypeError, RuntimeError,
                 AttributeError, ValueError, UnboundLocalError,
@@ -402,7 +402,7 @@ def import_attached_events(db_session, account, message):
             # creation because of an error in the attached calendar.
             log.error('Unhandled exception during message parsing',
                       message_id=message.id,
-                      invite=part_data,
+                      event_part_id=part.id,
                       logstash_tag='icalendar_autoimport',
                       traceback=traceback.format_exception(
                           sys.exc_info()[0],

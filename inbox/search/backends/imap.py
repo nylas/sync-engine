@@ -58,12 +58,6 @@ class IMAPSearchClient(object):
         self.crispin_client.logout()
 
     def search_messages(self, db_session, search_query, offset=0, limit=40):
-        self.log.info('Searching account for messages',
-                      account_id=self.account_id,
-                      query=search_query,
-                      offset=offset,
-                      limit=limit)
-
         imap_uids = []
         for uids in self._search(db_session, search_query):
             imap_uids.extend(uids)
@@ -99,12 +93,6 @@ class IMAPSearchClient(object):
         return g
 
     def search_threads(self, db_session, search_query, offset=0, limit=40):
-        self.log.info('Searching account for threads',
-                      account_id=self.account_id,
-                      query=search_query,
-                      offset=offset,
-                      limit=limit)
-
         imap_uids = []
         for uids in self._search(db_session, search_query):
             imap_uids.extend(uids)
@@ -197,6 +185,5 @@ class IMAPSearchClient(object):
                                           'performing search.'), 503)
 
         self.log.debug('Search found messages for folder',
-                       folder_name=folder.name,
-                       uids=len(uids))
+                       folder_name=folder.id, uids=len(uids))
         return uids

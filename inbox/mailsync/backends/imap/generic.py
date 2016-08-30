@@ -226,9 +226,7 @@ class FolderSyncEngine(Greenlet):
             # Folder was deleted by monitor while its sync was running.
             # TODO: Monitor should handle shutting down the folder engine.
             log.info('Folder disappeared. Stopping sync.',
-                     account_id=self.account_id,
-                     folder_name=self.folder_name,
-                     folder_id=self.folder_id)
+                     account_id=self.account_id, folder_id=self.folder_id)
             raise MailsyncDone()
         except ValidationError as exc:
             log.error('Error authenticating; stopping sync', exc_info=True,

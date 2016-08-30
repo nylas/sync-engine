@@ -132,7 +132,6 @@ class GenericAuthHandler(AuthHandler):
         except (IMAPClient.Error, socket.error) as exc:
             log.error('Error instantiating IMAP connection',
                       account_id=account.id,
-                      email=account.email_address,
                       host=host,
                       port=port,
                       ssl_required=ssl_required,
@@ -144,7 +143,6 @@ class GenericAuthHandler(AuthHandler):
             if _auth_is_invalid(exc):
                 log.error('IMAP login failed',
                           account_id=account.id,
-                          email=account.email_address,
                           host=host, port=port,
                           ssl_required=ssl_required,
                           error=exc)
@@ -152,7 +150,6 @@ class GenericAuthHandler(AuthHandler):
             else:
                 log.error('IMAP login failed for an unknown reason',
                           account_id=account.id,
-                          email=account.email_address,
                           host=host,
                           port=port,
                           ssl_required=ssl_required,
@@ -172,7 +169,6 @@ class GenericAuthHandler(AuthHandler):
             except Exception as exc:
                 log.warning('Error issuing IMAP ID command; continuing',
                             account_id=account.id,
-                            email=account.email_address,
                             host=host,
                             port=port,
                             ssl_required=ssl_required,
@@ -224,7 +220,6 @@ class GenericAuthHandler(AuthHandler):
             account.folder_prefix = crispin.folder_prefix
         except Exception as e:
             log.error("account_folder_list_failed",
-                      email=account.email_address,
                       account_id=account.id,
                       error=e.message)
             error_message = ("Full IMAP support is not enabled for this account. "
@@ -243,7 +238,6 @@ class GenericAuthHandler(AuthHandler):
                 pass
         except socket.gaierror as exc:
             log.error('Failed to resolve SMTP server domain',
-                      email=account.email_address,
                       account_id=account.id,
                       error=exc)
             error_message = ("Couldn't resolve the SMTP server domain name. "
@@ -252,7 +246,6 @@ class GenericAuthHandler(AuthHandler):
 
         except socket.timeout as exc:
             log.error('TCP timeout when connecting to SMTP server',
-                      email=account.email_address,
                       account_id=account.id,
                       error=exc)
 
@@ -262,7 +255,6 @@ class GenericAuthHandler(AuthHandler):
 
         except Exception as exc:
             log.error('Failed to establish an SMTP connection',
-                      email=account.email_address,
                       smtp_endpoint=account.smtp_endpoint,
                       account_id=account.id,
                       error=exc)
