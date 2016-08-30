@@ -3,6 +3,7 @@ import getpass
 from backports import ssl
 from imapclient import IMAPClient
 import socket
+from OpenSSL._util import lib as ossllib
 
 from nylas.logging import get_logger
 log = get_logger()
@@ -18,8 +19,6 @@ from inbox.crispin import CrispinClient
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
-
-_ossl = ssl.ossl
 
 
 class GenericAuthHandler(AuthHandler):
@@ -382,21 +381,25 @@ def create_default_context():
     context.check_hostname = False
 
     # SSLv2 considered harmful.
-    context.options |= _ossl.OP_NO_SSLv2
+    context.options |= ossllib.SSL_OP_NO_SSLv2
 
     # SSLv3 has problematic security and is only required for really old
     # clients such as IE6 on Windows XP
-    context.options |= _ossl.OP_NO_SSLv3
+    context.options |= ossllib.SSL_OP_NO_SSLv3
 
     # disable compression to prevent CRIME attacks (OpenSSL 1.0+)
-    context.options |= getattr(_ossl, "OP_NO_COMPRESSION", 0)
+    context.options |= ossllib.SSL_OP_NO_COMPRESSION
 
     # Prefer the server's ciphers by default so that we get stronger
     # encryption
-    context.options |= getattr(_ossl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+    context.options |= ossllib.SSL_OP_CIPHER_SERVER_PREFERENCE
 
     # Use single use keys in order to improve forward secrecy
-    context.options |= getattr(_ossl, "OP_SINGLE_DH_USE", 0)
-    context.options |= getattr(_ossl, "OP_SINGLE_ECDH_USE", 0)
+    context.options |= ossllib.SSL_OP_SINGLE_DH_USE
+    context.options |= ossllib.SSL_OP_SINGLE_ECDH_USE
+
+    context._ctx.set_mode(ossllib.SSL_MODE_ENABLE_PARTIAL_WRITE |
+                          ossllib.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+                          ossllib.SSL_MODE_AUTO_RETRY)
 
     return context
