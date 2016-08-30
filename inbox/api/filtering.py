@@ -8,6 +8,8 @@ from inbox.models import (Contact, Event, Calendar, Message,
                           Metadata)
 from inbox.models.event import RecurringEvent
 from inbox.sqlalchemy_ext.util import bakery
+from inbox.ignition import engine_manager
+from inbox.models.session import session_scope_by_shard_id
 
 
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
@@ -611,6 +613,42 @@ def metadata_for_app(app_id, limit, last, query_value, query_type, db_session):
 
     query = query.order_by(asc(Metadata.id)).limit(limit)
     return query.all()
+
+def page_over_shards(cursor, limit, get_results):
+    start_shard_id = engine_manager.shard_key_for_id(cursor)
+    results = []
+    remaining_limit = limit
+    next_cursor = None
+    for shard_id in sorted(engine_manager.engines):
+        if shard_id < start_shard_id:
+            continue
+
+        if len(results) >= limit:
+            break
+
+        with session_scope_by_shard_id(shard_id) as mailsync_session:
+            latest_cursor = cursor if shard_id == start_shard_id else None
+            latest_results = get_results(mailsync_session, remaining_limit,
+                                         latest_cursor)
+
+            if latest_results:
+                results.extend(latest_results)
+                last = latest_results[-1]
+                if hasattr(last, 'id'):
+                    next_cursor = last.id
+                elif 'id' in last:
+                    next_cursor = last['id']
+                else:
+                    raise ValueError('Results returned from get_results must'
+                                     'have an id')
+
+                # Handle invalid ids
+                cursor_implied_shard = next_cursor >> 48
+                if shard_id != 0 and cursor_implied_shard == 0:
+                    next_cursor += shard_id << 48
+
+                remaining_limit -= len(latest_results)
+    return results, next_cursor
 
 METADATA_QUERY_OPERATORS = {
     '>': lambda v: Metadata.queryable_value > v,
