@@ -1,11 +1,13 @@
-import base64
 import os
-import uuid
+import sys
 import json
-import gevent
 import time
-from datetime import datetime
+import uuid
+import base64
 import itertools
+from datetime import datetime
+
+import gevent
 
 from flask import (request, g, Blueprint, make_response, Response,
                    stream_with_context)
@@ -14,8 +16,6 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from nylas.logging import get_logger, sentry
-log = get_logger()
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache, Category, MessageCategory)
@@ -52,7 +52,7 @@ from inbox.models.session import new_session, session_scope
 from inbox.search.base import get_search_client, SearchBackendException
 from inbox.transactions import delta_sync
 from inbox.api.err import (err, APIException, NotFoundError, InputError,
-                           AccountDoesNotExistError)
+                           AccountDoesNotExistError, log_exception)
 from inbox.events.ical import (generate_icalendar_invite, send_invite,
                                generate_rsvp, send_rsvp)
 from inbox.events.util import removed_participants
@@ -70,6 +70,8 @@ app = Blueprint(
     'namespace_api',
     __name__,
     url_prefix='')
+
+app.log_exception = log_exception
 
 # Configure mimetype -> extension map
 # TODO perhaps expand to encompass non-standard mimetypes too
@@ -99,16 +101,21 @@ def start():
     g.db_session = new_session(engine)
     g.namespace = Namespace.get(g.namespace_id, g.db_session)
 
+    request.environ['log_context'] = {
+        'endpoint': request.endpoint,
+    }
     if not g.namespace:
         # The only way this can occur is if there used to be an account that
         # was deleted, but the API access cache entry has not been expired yet.
         raise AccountDoesNotExistError()
 
+    request.environ['log_context'].update({
+        'account_id': g.namespace.account_id,
+        'namespace_id': g.namespace.id,
+    })
+
     is_n1 = request.environ.get('IS_N1', False)
     g.encoder = APIEncoder(g.namespace.public_id, is_n1=is_n1)
-
-    g.log = log.new(endpoint=request.endpoint,
-                    account_id=g.namespace.account_id)
 
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
@@ -139,7 +146,7 @@ def before_remote_request():
 
 @app.after_request
 def finish(response):
-    if response.status_code == 200 and hasattr(g, 'db_session'):  # be cautions
+    if response.status_code == 200 and hasattr(g, 'db_session'):  # be cautious
         g.db_session.commit()
     if hasattr(g, 'db_session'):
         g.db_session.close()
@@ -148,7 +155,8 @@ def finish(response):
 
 @app.errorhandler(NotImplementedError)
 def handle_not_implemented_error(error):
-    response = flask_jsonify(message="API endpoint not yet implemented.",
+    request.environ['log_context']['error'] = 'NotImplementedError'
+    response = flask_jsonify(message="API endpoint not yet implemented",
                              type='api_error')
     response.status_code = 501
     return response
@@ -156,10 +164,20 @@ def handle_not_implemented_error(error):
 
 @app.errorhandler(APIException)
 def handle_input_error(error):
-    g.log.info('Returning API error to client', error=error)
+    # these "errors" are normal, so we don't need to save a traceback
+    request.environ['log_context']['error'] = error.__class__.__name__
     response = flask_jsonify(message=error.message,
                              type='invalid_request_error')
     response.status_code = error.status_code
+    return response
+
+
+@app.errorhandler(Exception)
+def handle_generic_error(error):
+    log_exception(sys.exc_info())
+    response = flask_jsonify(message=error.message,
+                             type='api_error')
+    response.status_code = 500
     return response
 
 
@@ -234,7 +252,7 @@ def thread_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        g.log.error(err_string)
+        request.environ['log_context']['error'] = err_string
         return err(400, err_string)
 
     try:
@@ -257,7 +275,7 @@ def thread_streaming_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        g.log.error(err_string)
+        request.environ['log_context']['error'] = err_string
         return err(400, err_string)
 
     try:
@@ -385,7 +403,7 @@ def message_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        g.log.error(err_string)
+        request.environ['log_context']['error'] = err_string
         return err(400, err_string)
 
     try:
@@ -408,7 +426,7 @@ def message_streaming_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        g.log.error(err_string)
+        request.environ['log_context']['error'] = err_string
         return err(400, err_string)
 
     try:
@@ -442,7 +460,7 @@ def message_read_api(public_id):
         if raw_message is not None:
             return Response(raw_message, mimetype='message/rfc822')
         else:
-            g.log.error('Missing raw MIME message', id=message.id)
+            request.environ['log_context']['message_id'] = message.id
             raise NotFoundError(
                 "Couldn't find raw contents for message `{0}`"
                 .format(public_id))
@@ -710,7 +728,7 @@ def contact_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        g.log.error(err_string)
+        request.environ['log_context']['error'] = err_string
         return err(400, err_string)
 
     search_client = ContactSearchClient(g.namespace.id)
@@ -1101,7 +1119,7 @@ def file_delete_api(public_id):
 def file_upload_api():
     all_files = []
     for name, uploaded in request.files.iteritems():
-        g.log.info("Processing upload '{0}'".format(name))
+        request.environ['log_context'].setdefault('filenames', []).append(name)
         f = Block()
         f.namespace = g.namespace
         f.content_type = uploaded.content_type
@@ -1137,18 +1155,17 @@ def file_download_api(public_id):
     else:
         # TODO Detect the content-type using the magic library
         # and set ct = the content type, which is used below
-        g.log.error("Content type not set! Defaulting to text/plain")
+        request.environ['log_context']['no_content_type'] = True
         ct = 'text/plain'
+    request.environ['log_context']['content_type'] = ct
 
     if f.filename:
         name = f.filename
     else:
-        g.log.debug("No filename. Generating...")
+        request.environ['log_context']['no_filename'] = True
         if ct in common_extensions:
             name = 'attachment.{0}'.format(common_extensions[ct])
         else:
-            g.log.error("Unknown extension for content-type: {0}"
-                        .format(ct))
             # HACK just append the major part of the content type
             name = 'attachment.{0}'.format(ct.split('/')[0])
 
@@ -1167,7 +1184,7 @@ def file_download_api(public_id):
     response.headers['Content-Disposition'] = \
         'attachment; filename={0}'.format(name)
 
-    g.log.info(response.headers)
+    request.environ['log_context']['headers'] = response.headers
     return response
 
 
@@ -1395,8 +1412,7 @@ def multi_send_create():
     # Mark the draft as sending, which ensures that it cannot be modified.
     draft.mark_as_sending()
     g.db_session.add(draft)
-    g.log.info("Initiated a new multi-send session",
-               draft_public_id=draft.public_id)
+    request.environ['log_context']['draft_public_id'] = draft.public_id
     return g.encoder.jsonify(draft)
 
 
@@ -1435,14 +1451,13 @@ def multi_send(draft_id):
         # message.
         return err(504, 'Request timed out.')
 
-    g.log.info("Sending a multi-send message", draft_public_id=draft.public_id)
+    start_time = time.time()
 
     # Send a copy of the draft with the new body to the send_to address
     resp = send_draft_copy(account, draft, body, send_to)
 
-    g.log.info("Multi-send message sent!", draft_public_id=draft.public_id)
+    request.environ['log_context']["time_to_send"] = time.time() - start_time
 
-    # Return the response from sending
     return resp
 
 
@@ -1470,24 +1485,15 @@ def multi_send_finish(draft_id):
                 remote_delete_sent(crispin_client, account.id,
                                    draft.message_id_header,
                                    delete_multiple=True)
-                g.log.info("Deleted remote sent messages for multi-send",
-                           draft_public_id=draft.public_id)
         except Exception:
             # Even if this fails, we need to finish off the multi-send session
-            sentry.sentry_alert()
-            g.log.critical("Error occured while deleting remote sent messages "
-                           "during multi-send",
-                           draft_public_id=draft.public_id,
-                           exc_info=True)
+            log_exception(sys.exc_info(), draft_public_id=draft.public_id)
 
     # Mark the draft as sent in our database
     update_draft_on_send(account, draft, g.db_session)
 
     # Save the sent message with its existing body to the user's sent folder
     schedule_action('save_sent_email', draft, draft.namespace.id, g.db_session)
-
-    g.log.info("Closed out multi-send session, scheduled save to sent folder.",
-               draft_public_id=draft.public_id)
 
     return g.encoder.jsonify(draft)
 

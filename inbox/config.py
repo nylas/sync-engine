@@ -21,6 +21,18 @@ os.environ["REQUESTS_CA_BUNDLE"] = certifi.old_where()
 __all__ = ['config']
 
 
+if 'NYLAS_ENV' in os.environ:
+    assert os.environ['NYLAS_ENV'] in ('dev', 'test', 'staging', 'prod'), \
+        "NYLAS_ENV must be either 'dev', 'test', staging, or 'prod'"
+    env = os.environ['NYLAS_ENV']
+else:
+    env = 'prod'
+
+
+def is_live_env():
+    return env == 'prod' or env == 'staging'
+
+
 class ConfigError(Exception):
 
     def __init__(self, error=None, help=None):
@@ -45,7 +57,7 @@ class Configuration(dict):
         return self[key]
 
 
-def _update_config_from_env(config):
+def _update_config_from_env(config, env):
     """
     Update a config dictionary from configuration files specified in the
     environment.
@@ -71,13 +83,6 @@ def _update_config_from_env(config):
 
     """
     srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-
-    if 'NYLAS_ENV' in os.environ:
-        assert os.environ['NYLAS_ENV'] in ('dev', 'test', 'staging', 'prod'), \
-            "NYLAS_ENV must be either 'dev', 'test', staging, or 'prod'"
-        env = os.environ['NYLAS_ENV']
-    else:
-        env = 'prod'
 
     if env in ['prod', 'staging']:
         base_cfg_path = [
@@ -124,6 +129,6 @@ def _get_process_name(config):
         config['PROCESS_NAME'] = os.environ.get("PROCESS_NAME")
 
 config = Configuration()
-_update_config_from_env(config)
+_update_config_from_env(config, env)
 _get_local_feature_flags(config)
 _get_process_name(config)

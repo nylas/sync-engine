@@ -7,6 +7,7 @@ import pytest
 import traceback
 import contextlib
 from flanker import mime
+import nylas.logging
 import inbox.api.ns_api
 from inbox.basicauth import OAuthError
 from inbox.models import Message, Event
@@ -826,7 +827,7 @@ def patch_sentry_to_raise(monkeypatch):
     def make_sentry_raise():
         traceback.print_exc()
         raise
-    monkeypatch.setattr(inbox.api.ns_api.sentry, 'sentry_alert',
+    monkeypatch.setattr(nylas.logging.sentry, 'sentry_alert',
                         make_sentry_raise)
 
 
