@@ -614,7 +614,7 @@ def metadata_for_app(app_id, limit, last, query_value, query_type, db_session):
     query = query.order_by(asc(Metadata.id)).limit(limit)
     return query.all()
 
-def page_over_shards(cursor, limit, get_results):
+def page_over_shards(Model, cursor, limit, get_results=lambda q:q.all()):
     start_shard_id = engine_manager.shard_key_for_id(cursor)
     results = []
     remaining_limit = limit
@@ -628,8 +628,11 @@ def page_over_shards(cursor, limit, get_results):
 
         with session_scope_by_shard_id(shard_id) as mailsync_session:
             latest_cursor = cursor if shard_id == start_shard_id else None
-            latest_results = get_results(mailsync_session, remaining_limit,
-                                         latest_cursor)
+            query = mailsync_session.query(Model)
+            if latest_cursor:
+                query = query.filter(Model.id > latest_cursor)
+            query = query.order_by(asc(Model.id)).limit(remaining_limit)
+            latest_results = get_results(query)
 
             if latest_results:
                 results.extend(latest_results)
@@ -639,7 +642,7 @@ def page_over_shards(cursor, limit, get_results):
                 elif 'id' in last:
                     next_cursor = last['id']
                 else:
-                    raise ValueError('Results returned from get_results must'
+                    raise ValueError('Results returned from get_query must'
                                      'have an id')
 
                 # Handle invalid ids
