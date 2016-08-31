@@ -92,7 +92,8 @@ def retry_with_logging(func, logger=None, retry_classes=None,
             try:
                 with session_scope(account_id) as db_session:
                     account = db_session.query(Account).get(account_id)
-                    if not account.sync_error:
+                    sync_error = account.sync_error
+                    if not sync_error or isinstance(sync_error, basestring):
                         account.update_sync_error(e)
                         db_session.commit()
             except:

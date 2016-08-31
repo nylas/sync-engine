@@ -320,7 +320,6 @@ class FolderSyncEngine(Greenlet):
     @retry_crispin
     def poll(self):
         log.bind(state='poll')
-        log.info('polling')
         self.poll_impl()
         return 'poll'
 
@@ -449,7 +448,6 @@ class FolderSyncEngine(Greenlet):
     def poll_for_changes(self):
         log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
-            log.info('polling for changes')
             self.poll_impl()
 
     def create_message(self, db_session, acct, folder, msg):
