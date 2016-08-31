@@ -47,12 +47,12 @@ def log_exception(exc_info, send_to_sentry=True, **kwargs):
 
     # guard against programming errors overriding log fields (confusing!)
     if set(new_log_context.keys()).intersection(
-            set(request.environ['log_context'])):
+            set(request.environ.get('log_context', {}))):
         log.warning("attempt to log more than one error to HTTP request",
                     request_uid=get_request_uid(request.headers),
                     **new_log_context)
     else:
-        request.environ['log_context'].update(new_log_context)
+        request.environ.setdefault('log_context', {}).update(new_log_context)
 
 
 class APIException(Exception):
