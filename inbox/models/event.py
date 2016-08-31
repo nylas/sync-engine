@@ -18,23 +18,26 @@ from inbox.models.namespace import Namespace
 from inbox.models.message import Message
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 from email.utils import parseaddr
-from inbox.util.encoding import unicode_truncate
+from inbox.util.encoding import unicode_safe_truncate
 
 from nylas.logging import get_logger
 log = get_logger()
+
+EVENT_STATUSES = ["confirmed", "tentative", "cancelled"]
 
 TITLE_MAX_LEN = 1024
 LOCATION_MAX_LEN = 255
 RECURRENCE_MAX_LEN = 255
 REMINDER_MAX_LEN = 255
 OWNER_MAX_LEN = 1024
-_LENGTHS = {'location': LOCATION_MAX_LEN,
-            'owner': OWNER_MAX_LEN,
-            'recurrence': MAX_TEXT_LENGTH,
-            'reminders': REMINDER_MAX_LEN,
-            'title': TITLE_MAX_LEN,
-            'raw_data': MAX_TEXT_LENGTH}
-EVENT_STATUSES = ["confirmed", "tentative", "cancelled"]
+MAX_LENS = {
+    'location': LOCATION_MAX_LEN,
+    'owner': OWNER_MAX_LEN,
+    'recurrence': MAX_TEXT_LENGTH,
+    'reminders': REMINDER_MAX_LEN,
+    'title': TITLE_MAX_LEN,
+    'raw_data': MAX_TEXT_LENGTH
+}
 
 
 def time_parse(x):
@@ -144,11 +147,9 @@ class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
     @validates('reminders', 'recurrence', 'owner', 'location', 'title',
                'raw_data')
     def validate_length(self, key, value):
-        max_len = _LENGTHS[key]
-        if isinstance(value, unicode):
-            return value if value is None else unicode_truncate(value, max_len)
-        else:
-            return value if value is None else value[:max_len]
+        if value is None:
+            return None
+        return unicode_safe_truncate(value, MAX_LENS[key])
 
     @property
     def when(self):

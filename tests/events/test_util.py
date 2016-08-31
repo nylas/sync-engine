@@ -42,8 +42,8 @@ def test_removed_participants():
 
 
 def test_unicode_event_truncation(db, default_account):
-    emoji_str = u"".join([u"😁" for i in range(256)])
-    title = "".join(["a" for i in range(2048)])
+    emoji_str = u"".join([u"😁" for i in range(300)])
+    title = "".join(["a" for i in range(2000)])
 
     e = Event(raw_data='',
               busy=True,
@@ -61,8 +61,8 @@ def test_unicode_event_truncation(db, default_account):
     db.session.add(e)
     db.session.commit()
 
-    # Original location had 256 emoji chars. Emoji in utf-8 are
-    # 4 bytes in length. The field is at most 255 chars, so
-    # 255 / 4 = 63.
-    assert len(e.location) == 63
+    # Both location and title should be properly truncated to their max lengths.
+    # It's ok to have N unicode characters in a VARCHAR(N) field because
+    # the column is uft8-encoded.
+    assert len(e.location) == 255
     assert len(e.title) == 1024
