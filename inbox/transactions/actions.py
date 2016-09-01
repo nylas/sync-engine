@@ -239,10 +239,10 @@ class SyncbackService(gevent.Greenlet):
                         self.task_queue.put(task)
 
         after = datetime.utcnow()
-        self.log.info('Syncback completed one iteration',
-                      process=self.process_number,
-                      duration=(after - before).total_seconds(),
-                      idle_workers=self.num_idle_workers)
+        self.log.debug('Syncback completed one iteration',
+                       process=self.process_number,
+                       duration=(after - before).total_seconds(),
+                       idle_workers=self.num_idle_workers)
 
     def _restart_workers(self):
         while len(self.workers) < self.num_workers:
