@@ -166,6 +166,7 @@ def handle_not_implemented_error(error):
 def handle_input_error(error):
     # these "errors" are normal, so we don't need to save a traceback
     request.environ['log_context']['error'] = error.__class__.__name__
+    request.environ['log_context']['error_message'] = error.message
     response = flask_jsonify(message=error.message,
                              type='invalid_request_error')
     response.status_code = error.status_code
@@ -252,8 +253,7 @@ def thread_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        request.environ['log_context']['error'] = err_string
-        return err(400, err_string)
+        raise InputError(err_string)
 
     try:
         search_client = get_search_client(g.namespace.account)
@@ -273,10 +273,8 @@ def thread_streaming_search_api():
     g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     if not args['q']:
-        err_string = ('GET HTTP method must include query'
-                      ' url parameter')
-        request.environ['log_context']['error'] = err_string
-        return err(400, err_string)
+        err_string = 'GET HTTP method must include query url parameter'
+        raise InputError(err_string)
 
     try:
         search_client = get_search_client(g.namespace.account)
@@ -401,10 +399,8 @@ def message_search_api():
     g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     if not args['q']:
-        err_string = ('GET HTTP method must include query'
-                      ' url parameter')
-        request.environ['log_context']['error'] = err_string
-        return err(400, err_string)
+        err_string = 'GET HTTP method must include query url parameter'
+        raise InputError(err_string)
 
     try:
         search_client = get_search_client(g.namespace.account)
@@ -424,10 +420,8 @@ def message_streaming_search_api():
     g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     if not args['q']:
-        err_string = ('GET HTTP method must include query'
-                      ' url parameter')
-        request.environ['log_context']['error'] = err_string
-        return err(400, err_string)
+        err_string = 'GET HTTP method must include query url parameter'
+        raise InputError(err_string)
 
     try:
         search_client = get_search_client(g.namespace.account)
@@ -728,8 +722,7 @@ def contact_search_api():
     if not args['q']:
         err_string = ('GET HTTP method must include query'
                       ' url parameter')
-        request.environ['log_context']['error'] = err_string
-        return err(400, err_string)
+        raise InputError(err_string)
 
     search_client = ContactSearchClient(g.namespace.id)
     results = search_client.search_contacts(g.db_session, args['q'],
@@ -1399,7 +1392,7 @@ def multi_send_create():
     account = g.namespace.account
 
     if account.discriminator == 'easaccount':
-        return err(400, 'Multiple send is not supported for this provider.')
+        raise InputError('Multiple send is not supported for this provider.')
 
     data = request.get_json(force=True)
 
@@ -1427,7 +1420,7 @@ def multi_send(draft_id):
     account = g.namespace.account
 
     if account.discriminator == 'easaccount':
-        return err(400, 'Multiple send is not supported for this provider.')
+        raise InputError('Multiple send is not supported for this provider.')
 
     data = request.get_json(force=True)
     valid_public_id(draft_id)
@@ -1437,13 +1430,13 @@ def multi_send(draft_id):
     draft = get_sending_draft(draft_id, g.namespace.id, g.db_session)
 
     if not draft.is_sending:
-        return err(400, 'Invalid draft, not part of a multi-send transaction')
+        raise InputError('Invalid draft, not part of a multi-send transaction')
 
     emails = {email for name, email in itertools.chain(draft.to_addr,
                                                        draft.cc_addr,
                                                        draft.bcc_addr)}
     if send_to[1] not in emails:
-        return err(400, 'Invalid send_to, not present in message recipients')
+        raise InputError('Invalid send_to, not present in message recipients')
 
     if time.time() - request_started > SEND_TIMEOUT:
         # Preemptively time out the request if we got stuck doing database work
@@ -1469,13 +1462,13 @@ def multi_send_finish(draft_id):
     account = g.namespace.account
 
     if account.discriminator == 'easaccount':
-        return err(400, 'Multiple send is not supported for this provider.')
+        raise InputError('Multiple send is not supported for this provider.')
 
     valid_public_id(draft_id)
 
     draft = get_sending_draft(draft_id, g.namespace.id, g.db_session)
     if not draft.is_sending:
-        return err(400, 'Invalid draft, not part of a multi-send transaction')
+        raise InputError('Invalid draft, not part of a multi-send transaction')
 
     # Synchronously delete any matching messages from the sent folder, left
     # over from the send calls (in gmail only)
@@ -1540,8 +1533,8 @@ def sync_deltas():
     timeout = args['timeout']
 
     if include_types and exclude_types:
-        return err(400, "Invalid Request. Cannot specify both include_types"
-                   "and exclude_types")
+        raise InputError("Invalid Request. Cannot specify both include_types"
+                         "and exclude_types")
 
     if cursor == '0':
         start_pointer = 0
@@ -1661,8 +1654,8 @@ def stream_changes():
     # End shim #
 
     if include_types and exclude_types:
-        return err(400, "Invalid Request. Cannot specify both include_types"
-                   "and exclude_types")
+        raise InputError("Invalid Request. Cannot specify both include_types"
+                         "and exclude_types")
 
     if cursor == '0':
         transaction_pointer = 0
