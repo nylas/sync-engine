@@ -1,3 +1,4 @@
+import sys
 import functools
 import random
 
@@ -9,7 +10,7 @@ from redis import TimeoutError
 from inbox.models import Account
 from inbox.models.session import session_scope
 
-from nylas.logging import get_logger
+from nylas.logging import get_logger, create_error_log_context
 from nylas.logging.sentry import log_uncaught_errors
 log = get_logger()
 
@@ -97,11 +98,12 @@ def retry_with_logging(func, logger=None, retry_classes=None,
                         account.update_sync_error(e)
                         db_session.commit()
             except:
-                log.error('Error saving sync_error to account object',
-                          account_id=account_id, exc_info=True)
+                logger.error('Error saving sync_error to account object',
+                             account_id=account_id,
+                             **create_error_log_context(sys.exc_info()))
 
         log_uncaught_errors(logger, account_id=account_id, provider=provider,
-                            error_type=type(e).__name__, occurrences=occurrences[0])
+                            occurrences=occurrences[0])
 
     return retry(func, exc_callback=callback, retry_classes=retry_classes,
                  fail_classes=fail_classes, backoff_delay=backoff_delay)()

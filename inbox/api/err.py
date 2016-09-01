@@ -3,7 +3,7 @@ import traceback
 
 from flask import jsonify, make_response, request
 from nylas.logging.sentry import sentry_alert
-from nylas.logging.log import safe_format_exception, get_logger
+from nylas.logging.log import get_logger, create_error_log_context
 log = get_logger()
 
 from inbox.config import is_live_env
@@ -28,21 +28,7 @@ def log_exception(exc_info, send_to_sentry=True, **kwargs):
         traceback.print_exc()
         print
 
-    exc_type, exc_value, exc_tb = exc_info
-
-    # Break down the info as much as Python gives us, for easier aggregation of
-    # similar error types.
-    error = exc_type.__name__
-    error_message = exc_value.message
-    error_tb = safe_format_exception(exc_type, exc_value, exc_tb)
-
-    log_context_keys = set(['error', 'error_message', 'error_tb'])
-    log_context_keys.update(kwargs.keys())
-
-    new_log_context = dict(
-        error=error,
-        error_message=error_message,
-        error_tb=error_tb)
+    new_log_context = create_error_log_context(exc_info)
     new_log_context.update(kwargs)
 
     # guard against programming errors overriding log fields (confusing!)
