@@ -222,9 +222,9 @@ class SyncbackService(gevent.Greenlet):
                 else:
                     namespaces_to_process = random.sample(namespace_ids,
                                                           NUM_PARALLEL_ACCOUNTS)
-                self.log.info('Syncback namespace_ids count', shard_id=key,
-                              process=self.process_number,
-                              num_namespace_ids=len(namespace_ids))
+                self.log.debug('Syncback namespace_ids count', shard_id=key,
+                               process=self.process_number,
+                               num_namespace_ids=len(namespace_ids))
 
                 for ns_id in namespaces_to_process:
                     # The discriminator filter restricts actions to IMAP. EAS
@@ -239,10 +239,10 @@ class SyncbackService(gevent.Greenlet):
                         self.task_queue.put(task)
 
         after = datetime.utcnow()
-        self.log.info('Syncback completed one iteration',
-                      process=self.process_number,
-                      duration=(after - before).total_seconds(),
-                      idle_workers=self.num_idle_workers)
+        self.log.debug('Syncback completed one iteration',
+                       process=self.process_number,
+                       duration=(after - before).total_seconds(),
+                       idle_workers=self.num_idle_workers)
 
     def _restart_workers(self):
         while len(self.workers) < self.num_workers:

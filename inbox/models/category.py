@@ -14,22 +14,14 @@ from inbox.models.mixins import (HasRevisions, HasPublicID,
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from nylas.logging import get_logger
 from inbox.util.misc import fs_folder_path
+from inbox.util.encoding import unicode_safe_truncate
 log = get_logger()
 
 EPOCH = datetime.utcfromtimestamp(0)
 
 
 def sanitize_name(name):
-    # g_label may not have unicode type (in particular for a numeric
-    # label, e.g. '42'), so coerce to unicode.
-    if not isinstance(name, unicode):
-        name = str(name).decode('utf-8', 'ignore')
-
-    # Remove trailing whitespace, truncate (due to MySQL limitations).
-    name = name.rstrip()
-    if len(name) > MAX_INDEXABLE_LENGTH:
-        name = name[:MAX_INDEXABLE_LENGTH]
-    return name
+    return unicode_safe_truncate(name, MAX_INDEXABLE_LENGTH)
 
 
 class CategoryNameString(StringWithTransform):

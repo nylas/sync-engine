@@ -18,14 +18,11 @@ def base36decode(number):
     return int(number, 36)
 
 
-# From: http://stackoverflow.com/a/1820949
-# Quick and dirty hack to truncate a unicode string
-# on a codepoint boundary.
-def unicode_truncate(s, new_length):
-    assert isinstance(s, unicode)
-    encoded = s.encode('utf-8')[:new_length]
-
-    # This assumes that we've been able to decode the string
-    # to unicode in the first place, so any errors would be
-    # caused by the truncation.
-    return encoded.decode('utf-8', 'ignore')
+def unicode_safe_truncate(s, max_length):
+    """
+    Implements unicode-safe truncation and trims whitespace for a given input
+    string, number or unicode string.
+    """
+    if not isinstance(s, unicode):
+        s = str(s).decode('utf-8', 'ignore')
+    return s.rstrip()[:max_length]

@@ -8,6 +8,7 @@ from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRevisions,
 from inbox.models.base import MailSyncBase
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
+from inbox.util.encoding import unicode_safe_truncate
 
 
 class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
@@ -45,7 +46,9 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
 
     @validates('raw_data')
     def validate_length(self, key, value):
-        return value if value is None else value[:MAX_TEXT_LENGTH]
+        if value is None:
+            return None
+        return unicode_safe_truncate(value, MAX_TEXT_LENGTH)
 
     @property
     def versioned_relationships(self):

@@ -109,7 +109,8 @@ class AccountDoesNotExistError(APIException):
 
 
 def err(http_code, message, **kwargs):
-    log_exception(sys.exc_info(), message, **kwargs)
+    """ Handle unexpected errors, including sending the traceback to Sentry. """
+    log_exception(sys.exc_info(), user_error_message=message, **kwargs)
     resp = {
         'type': 'api_error',
         'message': message

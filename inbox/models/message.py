@@ -28,6 +28,9 @@ from inbox.models.base import MailSyncBase
 from inbox.models.category import Category
 
 from inbox.sqlalchemy_ext.util import MAX_MYSQL_INTEGER
+from inbox.util.encoding import unicode_safe_truncate
+
+SNIPPET_LENGTH = 191
 
 
 def _trim_filename(s, namespace_id, max_len=255):
@@ -127,7 +130,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
 
     _compacted_body = Column(LONGBLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
-    SNIPPET_LENGTH = 191
 
     # this might be a mail-parsing bug, or just a message from a bad client
     decode_error = Column(Boolean, server_default=false(), nullable=False,
@@ -201,8 +203,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
         # contains null bytes.
         if value is None:
             return
-        if len(value) > 255:
-            value = value[:255]
+        value = unicode_safe_truncate(value, 255)
         value = value.replace('\0', '')
         return value
 
@@ -455,7 +456,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
         return self.calculate_plaintext_snippet(text)
 
     def calculate_plaintext_snippet(self, text):
-        return ' '.join(text.split())[:self.SNIPPET_LENGTH]
+        return unicode_safe_truncate(' '.join(text.split()), SNIPPET_LENGTH)
 
     @property
     def body(self):

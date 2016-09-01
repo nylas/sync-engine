@@ -7,6 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 from inbox.sqlalchemy_ext.util import Base36UID, generate_public_id, ABCMixin
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.util.addr import canonicalize_address
+from inbox.util.encoding import unicode_safe_truncate
 
 
 class HasRevisions(ABCMixin):
@@ -126,11 +127,11 @@ class HasEmailAddress(object):
 
     @email_address.setter
     def email_address(self, value):
+        # Silently truncate if necessary. In practice, this may be too
+        # long if somebody put a super-long email into their contacts by
+        # mistake or something.
         if value is not None:
-            # Silently truncate if necessary. In practice, this may be too
-            # long if somebody put a super-long email into their contacts by
-            # mistake or something.
-            value = value[:MAX_INDEXABLE_LENGTH]
+            value = unicode_safe_truncate(value, MAX_INDEXABLE_LENGTH)
         self._raw_address = value
         self._canonicalized_address = canonicalize_address(value)
 
