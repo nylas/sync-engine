@@ -53,8 +53,7 @@ from inbox.search.base import get_search_client, SearchBackendException
 from inbox.transactions import delta_sync
 from inbox.api.err import (err, APIException, NotFoundError, InputError,
                            AccountDoesNotExistError, log_exception)
-from inbox.events.ical import (generate_icalendar_invite, send_invite,
-                               generate_rsvp, send_rsvp)
+from inbox.events.ical import generate_rsvp, send_rsvp
 from inbox.events.util import removed_participants
 from inbox.util.blockstore import get_from_blockstore
 from inbox.util.misc import imap_folder_path
