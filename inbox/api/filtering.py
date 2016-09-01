@@ -617,6 +617,7 @@ def metadata_for_app(app_id, limit, last, query_value, query_type, db_session):
 
 def page_over_shards(Model, cursor, limit, get_results=lambda q: q.all()):
     # TODO revisit passing lambda, and cursor format
+    cursor = int(cursor)
     start_shard_id = engine_manager.shard_key_for_id(cursor)
     results = []
     remaining_limit = limit
@@ -653,7 +654,7 @@ def page_over_shards(Model, cursor, limit, get_results=lambda q: q.all()):
                     next_cursor += shard_id << 48
 
                 remaining_limit -= len(latest_results)
-    return results, next_cursor
+    return results, str(next_cursor)
 
 METADATA_QUERY_OPERATORS = {
     '>': lambda v: Metadata.queryable_value > v,

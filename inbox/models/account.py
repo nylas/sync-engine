@@ -180,7 +180,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
             self._sync_status['sync_error'] = None
         else:
             error_obj = {
-                'message': error.message,
+                'message': str(error.message),
                 'traceback': traceback.format_exc(20)}
 
             self._sync_status['sync_error'] = error_obj
