@@ -222,9 +222,9 @@ class SyncbackService(gevent.Greenlet):
                 else:
                     namespaces_to_process = random.sample(namespace_ids,
                                                           NUM_PARALLEL_ACCOUNTS)
-                self.log.info('Syncback namespace_ids count', shard_id=key,
-                              process=self.process_number,
-                              num_namespace_ids=len(namespace_ids))
+                self.log.debug('Syncback namespace_ids count', shard_id=key,
+                               process=self.process_number,
+                               num_namespace_ids=len(namespace_ids))
 
                 for ns_id in namespaces_to_process:
                     # The discriminator filter restricts actions to IMAP. EAS
