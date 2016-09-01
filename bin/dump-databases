@@ -1,0 +1,2 @@
+#!/bin/sh
+mysqldump --databases inbox inbox_1 inbox_2 inbox_3 -uroot -proot

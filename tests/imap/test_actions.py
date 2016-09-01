@@ -127,10 +127,12 @@ def test_folder_crud(db, default_account, mock_imapclient, obj_type):
         db.session.commit()
         if obj_type == 'folder':
             update_folder(crispin_client, default_account.id, cat.id,
-                          {'old_name': 'MyFolder'})
+                          {'old_name': 'MyFolder',
+                           'new_name': 'MyRenamedFolder'})
         else:
             update_label(crispin_client, default_account.id, cat.id,
-                         {'old_name': 'MyFolder'})
+                         {'old_name': 'MyFolder',
+                          'new_name': 'MyRenamedFolder'})
         mock_imapclient.rename_folder.assert_called_with('MyFolder',
                                                          'MyRenamedFolder')
 

@@ -40,13 +40,9 @@ def remote_create_label(crispin_client, account_id, category_id):
     crispin_client.conn.create_folder(display_name)
 
 
-def remote_update_label(crispin_client, account_id, category_id, old_name):
-    with session_scope(account_id) as db_session:
-        category = db_session.query(Category).get(category_id)
-        if category is None:
-            return
-        display_name = category.display_name
-    crispin_client.conn.rename_folder(old_name, display_name)
+def remote_update_label(crispin_client, account_id, category_id, old_name,
+                        new_name):
+    crispin_client.conn.rename_folder(old_name, new_name)
 
 
 def remote_delete_label(crispin_client, account_id, category_id):
@@ -63,6 +59,9 @@ def remote_delete_label(crispin_client, account_id, category_id):
         # no-op.
         pass
 
+    # TODO @karim --- the main sync loop has a hard time detecting
+    # Gmail renames because of a Gmail issue (see https://github.com/nylas/sync-engine/blob/c99656df3c048faf7951e54d74cb5ef9d7dc3c97/inbox/mailsync/gc.py#L146 for more details).
+    # Fix the problem and then remove the following shortcut.
     with session_scope(account_id) as db_session:
         category = db_session.query(Category).get(category_id)
         db_session.delete(category)
