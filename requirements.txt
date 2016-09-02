@@ -60,5 +60,5 @@ psutil==3.3.0
 pyopenssl>=0.15.1
 gevent_openssl==1.2
 backports.ssl==0.0.9
-git+https://github.com/nylas/imapclient.git@5ae2b9283aba024ed4b4dc3f826515e01ae2380b#egg=imapclient
+git+https://github.com/nylas/imapclient.git@3b0cffc2a4964aceb0b7f41d40855c6d285e88ef#egg=imapclient
 tldextract==1.7.5
