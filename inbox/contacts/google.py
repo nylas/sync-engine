@@ -180,9 +180,14 @@ class GoogleContactsProvider(object):
                 return [self._parse_contact_result(result) for result in
                         results]
             except gdata.client.RequestError as e:
-                self.log.info('contact sync request failure; retrying',
-                              message=e)
-                gevent.sleep(30 + random.randrange(0, 60))
+                if e.status == 503:
+                    self.log.info('Ran into Google bot detection. Sleeping.',
+                                  message=e)
+                    gevent.sleep(5 * 60 + random.randrange(0, 60))
+                else:
+                    self.log.info('contact sync request failure; retrying',
+                                  message=e)
+                    gevent.sleep(30 + random.randrange(0, 60))
             except gdata.client.Unauthorized:
                 self.log.warning(
                     'Invalid access token; refreshing and retrying')
