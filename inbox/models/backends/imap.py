@@ -67,6 +67,10 @@ class ImapAccount(Account):
         self._smtp_server_host = host
         self._smtp_server_port = int(port)
 
+    def get_raw_message_contents(self, message):
+        from inbox.s3.backends.imap import get_imap_raw_contents
+        return get_imap_raw_contents(message)
+
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 
@@ -238,7 +242,7 @@ class ImapFolderInfo(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     # Note that some IMAP providers do not support the CONDSTORE extension, and
     # therefore will not use this field.
     highestmodseq = Column(BigInteger, nullable=True)
-    uidnext = Column(Integer, nullable=True)
+    uidnext = Column(BigInteger, nullable=True)
     last_slow_refresh = Column(DateTime)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)

@@ -42,11 +42,36 @@ def save_to_blockstore(data_sha256, data):
             f.write(data)
 
 
-def is_in_blockstore(data_sha256):
-    if STORE_MSG_ON_S3:
-        return _is_in_s3(data_sha256)
-    else:
-        return os.path.exists(_data_file_path(data_sha256))
+def _save_to_s3(data_sha256, data):
+    assert 'TEMP_MESSAGE_STORE_BUCKET_NAME' in config, \
+        'Need temp bucket name to store message data!'
+
+    _save_to_s3_bucket(data_sha256,
+                       config.get('TEMP_MESSAGE_STORE_BUCKET_NAME'), data)
+
+
+def _save_to_s3_bucket(data_sha256, bucket_name, data):
+    assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
+    assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
+    start = time.time()
+
+    # Boto pools connections at the class level
+    conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                        config.get('AWS_SECRET_ACCESS_KEY'))
+    bucket = conn.get_bucket(bucket_name, validate=False)
+
+    # See if it already exists; if so, don't recreate.
+    key = bucket.get_key(data_sha256)
+    if key:
+        return
+
+    key = Key(bucket)
+    key.key = data_sha256
+    key.set_contents_from_string(data)
+
+    end = time.time()
+    latency_millis = (end - start) * 1000
+    statsd_client.timing('s3_blockstore.save_latency', latency_millis)
 
 
 def get_from_blockstore(data_sha256):
@@ -65,57 +90,36 @@ def get_from_blockstore(data_sha256):
     return value
 
 
-def _save_to_s3(data_sha256, data):
-    assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
-    assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
-    assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
-        'Need bucket name to store message data!'
-
-    start = time.time()
-
-    # Boto pools connections at the class level
-    conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
-                        config.get('AWS_SECRET_ACCESS_KEY'))
-    bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
-                             validate=False)
-
-    # See if it already exists; if so, don't recreate.
-    key = bucket.get_key(data_sha256)
-    if key:
-        return
-
-    key = Key(bucket)
-    key.key = data_sha256
-    key.set_contents_from_string(data)
-
-    end = time.time()
-    latency_millis = (end - start) * 1000
-    statsd_client.timing('s3.save_latency', latency_millis)
-
-
-def _is_in_s3(data_sha256):
-    assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
-    assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
-    assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
-        'Need bucket name to store message data!'
-
-    # Boto pools connections at the class level
-    conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
-                        config.get('AWS_SECRET_ACCESS_KEY'))
-    bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
-                             validate=False)
-
-    return bool(bucket.get_key(data_sha256))
-
-
 def _get_from_s3(data_sha256):
+    assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
+    assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
+
+    assert 'TEMP_MESSAGE_STORE_BUCKET_NAME' in config, \
+        'Need temp bucket name to store message data!'
+
+    # Try getting data from our temporary blockstore before
+    # trying getting it from the provider.
+    data = _get_from_s3_bucket(data_sha256,
+                               config.get('TEMP_MESSAGE_STORE_BUCKET_NAME'))
+
+    if data is not None:
+        log.info('Found hash in temporary blockstore!',
+                 sha256=data_sha256, logstash_tag='s3_direct')
+        return data
+
+    log.info("Couldn't find data in blockstore",
+             sha256=data_sha256, logstash_tag='s3_direct')
+
+    return None
+
+
+def _get_from_s3_bucket(data_sha256, bucket_name):
     if not data_sha256:
         return None
 
     conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
                         config.get('AWS_SECRET_ACCESS_KEY'))
-    bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
-                             validate=False)
+    bucket = conn.get_bucket(bucket_name, validate=False)
 
     key = bucket.get_key(data_sha256)
 

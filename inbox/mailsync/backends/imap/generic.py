@@ -492,8 +492,8 @@ class FolderSyncEngine(Greenlet):
                 datetime.utcnow() - new_uid.message.received_date) \
                 .total_seconds() * 1000
             metrics = [
-                '.'.join(['accounts', 'overall', 'message_latency']),
-                '.'.join(['providers', self.provider_name, 'message_latency']),
+                '.'.join(['mailsync', 'providers', 'overall', 'message_latency']),
+                '.'.join(['mailsync', 'providers', self.provider_name, 'message_latency']),
             ]
             for metric in metrics:
                 statsd_client.timing(metric, latency_millis)
@@ -549,8 +549,7 @@ class FolderSyncEngine(Greenlet):
                         new_uids.add(uid)
                 db_session.commit()
 
-        log.info('Committed new UIDs',
-                 new_committed_message_count=len(new_uids))
+        log.debug('Committed new UIDs', new_committed_message_count=len(new_uids))
         # If we downloaded uids, record message velocity (#uid / latency)
         if self.state == 'initial' and len(new_uids):
             self._report_message_velocity(datetime.utcnow() - start,
@@ -562,16 +561,22 @@ class FolderSyncEngine(Greenlet):
         return len(new_uids)
 
     def _report_first_message(self):
-        now = datetime.utcnow()
+        # Only record the "time to first message" in the inbox. Because users
+        # can add more folders at any time, "initial sync"-style metrics for
+        # other folders don't mean much.
+        if self.folder_role not in ['inbox', 'all']:
+            return
 
+        now = datetime.utcnow()
         with session_scope(self.namespace_id) as db_session:
             account = db_session.query(Account).get(self.account_id)
             account_created = account.created_at
 
         latency = (now - account_created).total_seconds() * 1000
+
         metrics = [
-            '.'.join(['providers', self.provider_name, 'first_message']),
-            '.'.join(['providers', 'overall', 'first_message'])
+            '.'.join(['mailsync', 'providers', self.provider_name, 'first_message']),
+            '.'.join(['mailsync', 'providers', 'overall', 'first_message'])
         ]
 
         for metric in metrics:
@@ -581,9 +586,9 @@ class FolderSyncEngine(Greenlet):
         latency = (timedelta).total_seconds() * 1000
         latency_per_uid = float(latency) / num_uids
         metrics = [
-            '.'.join(['providers', self.provider_name,
+            '.'.join(['mailsync', 'providers', self.provider_name,
                       'message_velocity']),
-            '.'.join(['providers', 'overall', 'message_velocity'])
+            '.'.join(['mailsync', 'providers', 'overall', 'message_velocity'])
         ]
         for metric in metrics:
             statsd_client.timing(metric, latency_per_uid)
@@ -617,8 +622,8 @@ class FolderSyncEngine(Greenlet):
                 raise e
         if remote_uidnext is not None and remote_uidnext == self.uidnext:
             return
-        log.info('UIDNEXT changed, checking for new UIDs',
-                 remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
+        log.debug('UIDNEXT changed, checking for new UIDs',
+                  remote_uidnext=remote_uidnext, saved_uidnext=self.uidnext)
 
         crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
         with session_scope(self.namespace_id) as db_session:
@@ -652,9 +657,9 @@ class FolderSyncEngine(Greenlet):
                         saved_highestmodseq=self.highestmodseq)
             return
 
-        log.info('HIGHESTMODSEQ has changed, getting changed UIDs',
-                 new_highestmodseq=new_highestmodseq,
-                 saved_highestmodseq=self.highestmodseq)
+        log.debug('HIGHESTMODSEQ has changed, getting changed UIDs',
+                  new_highestmodseq=new_highestmodseq,
+                  saved_highestmodseq=self.highestmodseq)
         crispin_client.select_folder(self.folder_name, self.uidvalidity_cb)
         changed_flags = crispin_client.condstore_changed_flags(
             self.highestmodseq)

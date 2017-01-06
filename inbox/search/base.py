@@ -17,3 +17,12 @@ class SearchBackendException(Exception):
         self.server_error = server_error
         super(SearchBackendException, self).__init__(
             message, http_code, server_error)
+
+
+class SearchStoreException(Exception):
+    """Raised if there's an error proxying the search request to the provider.
+    This is a special EAS case where the Status code for the Store element has
+    an error"""
+    def __init__(self, err_code):
+        self.err_code = err_code
+        super(SearchStoreException, self).__init__(err_code)

@@ -102,6 +102,7 @@ class IMAPSearchClient(object):
             .join(ImapUid) \
             .filter(ImapUid.account_id == self.account_id,
                     ImapUid.msg_uid.in_(imap_uids),
+                    Thread.deleted_at == None,
                     Thread.id == Message.thread_id)\
             .order_by(desc(Message.received_date))
 

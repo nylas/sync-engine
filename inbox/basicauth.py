@@ -26,7 +26,7 @@ class OAuthError(ValidationError):
     pass
 
 
-class ConfigError(Exception):
+class ConfigurationError(Exception):
     pass
 
 
@@ -50,4 +50,8 @@ class ImapSupportDisabledError(ValidationError):
 
 
 class AccessNotEnabledError(Exception):
+    pass
+
+
+class AppPasswordError(ValidationError):
     pass

@@ -88,7 +88,7 @@ def create_email(from_name,
         If this message is a reply, the Message-Ids of prior messages in the
         thread.
     attachments: list of dicts, optional
-        a list of dicts(filename, data, content_type)
+        a list of dicts(filename, data, content_type, content_disposition)
     """
     html = html if html else ''
     plaintext = html2text(html)
@@ -110,11 +110,14 @@ def create_email(from_name,
         # The subsequent parts are the attachment parts
         for a in attachments:
             # Disposition should be inline if we add Content-ID
-            msg.append(mime.create.attachment(
+            attachment = mime.create.attachment(
                 a['content_type'],
                 a['data'],
                 filename=a['filename'],
-                disposition='attachment'))
+                disposition=a['content_disposition'])
+            if a['content_disposition'] == 'inline':
+                attachment.headers['Content-Id'] = '<{}>'.format(a['block_id'])
+            msg.append(attachment)
 
     msg.headers['Subject'] = subject if subject else ''
 

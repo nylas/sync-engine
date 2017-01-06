@@ -1,0 +1,68 @@
+From: John Example <john@example.com>
+To: "inboxapptest.french@gmail.com" <inboxapptest.french@gmail.com>
+Subject: Smiley
+Thread-Topic: Smiley
+Thread-Index: AQHQ5LKeWxugXw4roE+fHlPO0MpKoQ==
+Date: Tue, 1 Sep 2015 12:35:01 +0000
+Message-ID: <CY1PR10MB0521064804BF73AC6B8A8B33A06A0@CY1PR10MB0521.namprd10.prod.outlook.com>
+Accept-Language: en-US, fr-FR
+Content-Language: en-US
+spamdiagnosticmetadata: NSPM
+Content-Type: multipart/related;
+    boundary="_004_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_";
+    type="multipart/alternative"
+MIME-Version: 1.0
+X-OriginatorOrg: nylas.com
+X-MS-Exchange-CrossTenant-originalarrivaltime: 01 Sep 2015 12:35:01.7780
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: b6c65e69-9405-47aa-a7f8-15d1677da46c
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: CY1PR10MB0524
+
+--_004_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_
+Content-Type: multipart/alternative;
+    boundary="_000_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_"
+
+--_000_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+W/CfmIpdDQo=
+
+--_000_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+DQo8aGVhZD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0i
+dGV4dC9odG1sOyBjaGFyc2V0PXV0Zi04Ij4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyIgc3R5bGU9
+ImRpc3BsYXk6bm9uZTsiPjwhLS0gUCB7bWFyZ2luLXRvcDowO21hcmdpbi1ib3R0b206MDt9IC0t
+Pjwvc3R5bGU+DQo8L2hlYWQ+DQo8Ym9keSBkaXI9Imx0ciI+DQo8ZGl2IGlkPSJkaXZ0YWdkZWZh
+dWx0d3JhcHBlciIgc3R5bGU9ImZvbnQtc2l6ZToxMnB0O2NvbG9yOiMwMDAwMDA7YmFja2dyb3Vu
+ZC1jb2xvcjojRkZGRkZGO2ZvbnQtZmFtaWx5OkNhbGlicmksQXJpYWwsSGVsdmV0aWNhLHNhbnMt
+c2VyaWY7Ij4NCjxwPjxpbWcgY2xhc3M9IkVtb2ppSW5zZXJ0IiBzcmM9ImNpZDozZjBlYTM1MS03
+NzllLTQ4YjMtYmZhOS03YzJhOWUzNzNhZWIiIGFsdD0i8J+YiiIgc3R5bGU9InZlcnRpY2FsLWFs
+aWduOmJvdHRvbSI+PGJyPg0KPC9wPg0KPC9kaXY+DQo8L2JvZHk+DQo8L2h0bWw+DQo=
+
+--_000_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_--
+
+--_004_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_
+Content-Type: image/png; name="=?utf-8?B?T3V0bG9va0Vtb2ppLfCfmIoucG5n?="
+Content-Description: =?utf-8?B?T3V0bG9va0Vtb2ppLfCfmIoucG5n?=
+Content-Disposition: inline;
+    filename="=?utf-8?B?T3V0bG9va0Vtb2ppLfCfmIoucG5n?="; size=488;
+    creation-date="Tue, 01 Sep 2015 12:35:01 GMT";
+    modification-date="Tue, 01 Sep 2015 12:35:01 GMT"
+Content-ID: <3f0ea351-779e-48b3-bfa9-7c2a9e373aeb>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
+bWFnZVJlYWR5ccllPAAAAYpJREFUeNpi/P//PwO1ACM2wf9njBWAVD4QBwCxApLUAyDeAMQTGU3O
+PkDRA3QUIxaD+oFUAREOaQQa2IDTMKBB84FUAgk+WwA0MBFmGBOaixJIDKYEoD6465igBjkge+3C
+rW94TUCTr4eGMdxl8TCZxMYHDIZR1xk2HPiA1SCQOEgepA4J5CMbFgAPhM1vwfTFW9+xGgYTh6lD
+1s8IdKIAkH4PEz1w9jOYVpBiZ1CQZMMw7MHzXwwPnv0Esx2MeRESxmcYWYCUAbJiFAVYAMgCbJbA
+vPmAWjmACZqS4aHdOOs5wdgEBcWE5a8Y0HIGPAIOwETtjXkYJqIqxAAgeQM1ThTzkQ2biB5mC7a8
+xZ7kgeICvMzoYTsRJaMDY3U9chIBpaMHz34xxPsKgwMcFIsLgckB5KL+YllkgyYAg6oQJW9Ck8h+
+5NgFhd3GAx/humAGI2cGIHYEGvYBW0YHGTgf2YX4MjkQF4IMwlkEIeXVfByGwsqzAwTLMywGg7wN
+cvED9AIR3TCAAAMAqh+p+YMVeBQAAAAASUVORK5CYII=
+
+--_004_CY1PR10MB0521064804BF73AC6B8A8B33A06A0CY1PR10MB0521namp_--

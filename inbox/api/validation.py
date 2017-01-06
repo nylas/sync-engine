@@ -221,6 +221,7 @@ def get_thread(thread_public_id, namespace_id, db_session):
     try:
         return db_session.query(Thread). \
             filter(Thread.public_id == thread_public_id,
+                   Thread.deleted_at == None,
                    Thread.namespace_id == namespace_id).one()
     except NoResultFound:
         raise InputError('Invalid thread public id {}'.

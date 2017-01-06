@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+"""Watches a redis priority queue for deferred account migrations to execute."""
+
+import gevent.monkey
+gevent.monkey.patch_all()
+
+from setproctitle import setproctitle
+from inbox.scheduling.deferred_migration import DeferredAccountMigrationExecutor
+from nylas.logging import configure_logging
+configure_logging()
+
+
+def main():
+    setproctitle('deferred-migration-service')
+    print "Starting DeferredAccountMigrationExecutor..."
+    dame = DeferredAccountMigrationExecutor()
+    dame.start()
+    print "Done"
+    dame.join()
+
+
+if __name__ == '__main__':
+    main()

@@ -9,18 +9,20 @@ include *.yml
 include LICENSE
 include Vagrantfile
 include alembic.ini
-include runtests
 include tox.ini
 recursive-include arclib *.php
 recursive-include bin *.sh
 recursive-include debian *.triggers
 recursive-include migrations *.mako
 recursive-include migrations *.py
-recursive-include tests *.agignore
-recursive-include tests *.gitignore
-recursive-include tests *.ics
-recursive-include tests *.ini
-recursive-include tests *.jpg
-recursive-include tests *.py
-recursive-include tests *.sql
-recursive-include tests *.wav
+recursive-include inbox *.agignore
+recursive-include inbox *.ics
+recursive-include inbox *.ini
+recursive-include inbox *.jpg
+recursive-include inbox *.py
+recursive-include inbox *.sql
+recursive-include inbox *.wav
+recursive-include inbox *.txt
+recursive-include inbox *.json
+recursive-include inbox *.key
+recursive-include inbox *.pem

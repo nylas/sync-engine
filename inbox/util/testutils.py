@@ -1,11 +1,18 @@
+# -*- coding: utf-8 -*-
 import contextlib
 import dns
 import json
+import os
 import re
 import pytest
 import subprocess
+import pkgutil
 
 from inbox.basicauth import ValidationError
+
+
+FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg',
+             'andra-moi-ennepe.txt', 'long-non-ascii-filename.txt']
 
 
 def create_test_db():
@@ -13,19 +20,19 @@ def create_test_db():
     from inbox.config import config
 
     database_hosts = config.get_required('DATABASE_HOSTS')
-    schemas = [shard['SCHEMA_NAME'] for host in database_hosts for
-               shard in host['SHARDS']]
+    schemas = [(shard['SCHEMA_NAME'], host['HOSTNAME'])
+               for host in database_hosts for shard in host['SHARDS']]
     # The various test databases necessarily have "test" in their name.
-    assert all(['test' in s for s in schemas])
+    assert all(['test' in s for s, h in schemas])
 
-    for name in schemas:
+    for name, host in schemas:
         cmd = 'DROP DATABASE IF EXISTS {name}; ' \
               'CREATE DATABASE IF NOT EXISTS {name} ' \
               'DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE ' \
               'utf8mb4_general_ci'.format(name=name)
 
-        subprocess.check_call('mysql -uinboxtest -pinboxtest '
-                              '-e "{}"'.format(cmd), shell=True)
+        subprocess.check_call('mysql -h {} -uinboxtest -pinboxtest '
+                              '-e "{}"'.format(host, cmd), shell=True)
 
 
 def setup_test_db():
@@ -60,9 +67,8 @@ class MockDNSResolver(object):
     def __init__(self):
         self._registry = {'mx': {}, 'ns': {}}
 
-    def _load_records(self, filename):
-        with open(filename, 'r') as registry_file:
-            self._registry = json.load(registry_file)
+    def _load_records(self, pkg, filename):
+        self._registry = json.loads(pkgutil.get_data(pkg, filename))
 
     def query(self, domain, record_type):
         record_type = record_type.lower()
@@ -164,10 +170,10 @@ class MockIMAPClient(object):
             # Slow implementation, but whatever
             return [u for u, v in uid_dict.items() if headerstring in
                     v['BODY[]'].lower()]
-        if criteria[0] == 'X-GM-THRID':
+        if criteria[0] in ['X-GM-THRID', 'X-GM-MSGID']:
             assert len(criteria) == 2
             thrid = criteria[1]
-            return [u for u, v in uid_dict.items() if v['X-GM-THRID'] == thrid]
+            return [u for u, v in uid_dict.items() if v[criteria[0]] == thrid]
         raise ValueError('unsupported test criteria: {!r}'.format(criteria))
 
     def select_folder(self, folder_name, readonly=False):
@@ -198,7 +204,8 @@ class MockIMAPClient(object):
                            k == 'MODSEQ'}
         return resp
 
-    def append(self, folder_name, mimemsg, flags, date):
+    def append(self, folder_name, mimemsg, flags, date,
+               x_gm_msgid=0, x_gm_thrid=0):
         uid_dict = self._data[folder_name]
         uidnext = max(uid_dict) if uid_dict else 1
         uid_dict[uidnext] = {
@@ -207,8 +214,8 @@ class MockIMAPClient(object):
             'INTERNALDATE': None,
             'X-GM-LABELS': (),
             'FLAGS': (),
-            'X-GM-MSGID': 0,
-            'X-GM-THRID': 0
+            'X-GM-MSGID': x_gm_msgid,
+            'X-GM-THRID': x_gm_thrid,
         }
 
     def copy(self, matching_uids, folder_name):
@@ -238,6 +245,12 @@ class MockIMAPClient(object):
     def delete_messages(self, uids, silent=False):
         for u in uids:
             del self._data[self.selected_folder][u]
+
+    def remove_flags(self, uids, flags):
+        pass
+
+    def remove_gmail_labels(self, uids, labels):
+        pass
 
     def expunge(self):
         pass
@@ -283,3 +296,37 @@ def mock_smtp_get_connection(monkeypatch):
     )
     yield client
     monkeypatch.undo()
+
+
+@pytest.fixture(scope='function')
+def files(db):
+    filenames = FILENAMES
+    data = []
+    for filename in filenames:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                            'test', 'data', filename).encode('utf-8')
+        data.append((filename, path))
+    return data
+
+
+@pytest.fixture(scope='function')
+def uploaded_file_ids(api_client, files):
+    file_ids = []
+    upload_path = '/files'
+    for filename, path in files:
+        # Mac and linux fight over filesystem encodings if we store this
+        # filename on the fs. Work around by changing the filename we upload
+        # instead.
+        if filename == 'piece-jointe.jpg':
+            filename = u'pièce-jointe.jpg'
+        elif filename == 'andra-moi-ennepe.txt':
+            filename = u'ἄνδρα μοι ἔννεπε'
+        elif filename == 'long-non-ascii-filename.txt':
+            filename = 100 * u'μ'
+        data = {'file': (open(path, 'rb'), filename)}
+        r = api_client.post_raw(upload_path, data=data)
+        assert r.status_code == 200
+        file_id = json.loads(r.data)[0]['id']
+        file_ids.append(file_id)
+
+    return file_ids

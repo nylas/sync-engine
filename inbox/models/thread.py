@@ -1,3 +1,4 @@
+import datetime
 import itertools
 from collections import defaultdict
 
@@ -7,13 +8,15 @@ from sqlalchemy.orm import (relationship, backref, validates, object_session,
 
 from nylas.logging import get_logger
 log = get_logger()
-from inbox.models.mixins import HasPublicID, HasRevisions, UpdatedAtMixin
+from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
+                                 DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.util.misc import cleanup_subject
 
 
-class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin):
+class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin,
+             DeletedAtMixin):
     """
     Threads are a first-class object in Nylas. This thread aggregates
     the relevant thread metadata from elsewhere so that clients can only
@@ -69,7 +72,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin):
     def most_recent_received_date(self):
         received_recent_date = None
         for m in self.messages:
-            if all(category.name != "sent" for category in m.categories) and \
+            if all(category.name != "sent" for category in m.categories if category is not None) and \
                     not m.is_draft and not m.is_sent:
                 if not received_recent_date or \
                         m.received_date > received_recent_date:
@@ -182,6 +185,14 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin):
             .joinedload('block')
         )
 
+    def mark_for_deletion(self):
+        """
+        Mark this message to be deleted by an asynchronous delete
+        handler.
+
+        """
+        self.deleted_at = datetime.datetime.utcnow()
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
 
@@ -189,3 +200,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin):
 # subject column is too long to be fully indexed with utf8mb4 collation.
 Index('ix_thread_subject', Thread.subject, mysql_length=191)
 Index('ix_cleaned_subject', Thread._cleaned_subject, mysql_length=191)
+
+# For async deletion.
+Index('ix_thread_namespace_id_deleted_at', Thread.namespace_id,
+      Thread.deleted_at)

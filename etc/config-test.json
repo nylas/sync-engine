@@ -1,46 +1,49 @@
 {
-"MYSQL_DATABASE": "test",
-"MYSQL_HOSTNAME": "localhost",
-"MYSQL_PORT": 3306,
-
 "DATABASE_HOSTS": [
     {
-        "HOSTNAME": "localhost",
+        "HOSTNAME": "127.0.0.1",
         "PORT": 3306,
         "ZONE": "testzone",
         "SHARDS": [
             {
                 "ID": 0,
-                "SCHEMA_NAME": "test",
+                "SCHEMA_NAME": "synctest",
                 "OPEN": true
             },
             {
                 "ID": 1,
-                "SCHEMA_NAME": "test_1",
+                "SCHEMA_NAME": "synctest_1",
                 "OPEN": false
             }
         ]
     }
 ],
+"DATABASE_USERS": {
+    "127.0.0.1": {
+        "USER": "inboxtest",
+        "PASSWORD": "inboxtest"
+    }
+},
 
 "SYNCBACK_ASSIGNMENTS": {
-    0:[0, 1, 2, 3, 4, 5]
-
+    0: [0,1,2,3,4,5]
 },
 
 "SYNC_STEAL_ACCOUNTS": true,
-
+"CONCURRENT_QUERY_LIMIT": 5,
 "DB_POOL_SIZE": 25,
 
 "LOGDIR": "/tmp/log",
 "LOGLEVEL": 10,
-"TEST_LOGFILE": "/tmp/log/test.log",
-
-"REDIS_SHARDS": ["localhost", "127.0.0.1"],
-"REDIS_PORT": 6379,
 
 "ACCOUNT_QUEUE_REDIS_HOSTNAME": "mockredis",
 "ACCOUNT_QUEUE_REDIS_DB": 1,
+
+"EVENT_QUEUE_REDIS_HOSTNAME": "mockredis",
+"EVENT_QUEUE_REDIS_DB": 1,
+
+"REDIS_SHARDS": ["127.0.0.1"],
+"REDIS_PORT": 6379,
 
 "BASE_ALIVE_THRESHOLD": 480,
 "CONTACTS_ALIVE_THRESHOLD": 480,
@@ -48,19 +51,11 @@
 "EAS_THROTTLED_ALIVE_THRESHOLD": 600,
 "EAS_PING_ALIVE_THRESHOLD": 780,
 
-"BASE_DUMP": "data/base_dump.sql",
-
 "GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",
-"MS_LIVE_OAUTH_REDIRECT_URI": "https://login.live.com/oauth20_desktop.srf",
-
+"GOOGLE_OAUTH_CLIENT_ID": "986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com",
+"GOOGLE_OAUTH_CLIENT_SECRET": "zgY9wgwML0kmQ6mmYHYJE05d",
 "STORE_MESSAGES_ON_S3": false,
-
 "MSG_PARTS_DIRECTORY": "tests/data/parts",
-
-"EMAIL_EXCEPTIONS": false,
-"ENCRYPT_SECRETS": false,
-
-"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
 
 "FEATURE_FLAGS": "ical_autoimport",
 
@@ -71,5 +66,9 @@
 "MAILGUN_API_KEY": null,
 
 "NOTIFICATIONS_MAILGUN_DOMAIN": null,
-"NOTIFICATIONS_MAILGUN_API_KEY": null
+"NOTIFICATIONS_MAILGUN_API_KEY": null,
+
+"EMAIL_EXCEPTIONS": false,
+"SENTRY_EXCEPTIONS": false,
+"ENCRYPT_SECRETS": false
 }

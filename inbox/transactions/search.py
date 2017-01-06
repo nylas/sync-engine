@@ -39,7 +39,7 @@ class ContactSearchIndexService(Greenlet):
 
     def _report_batch_upload(self):
         metric_names = [
-            "inbox-contacts-search.transactions.batch_upload",
+            "contacts_search_index.transactions.batch_upload",
         ]
 
         for metric in metric_names:
@@ -47,7 +47,7 @@ class ContactSearchIndexService(Greenlet):
 
     def _report_transactions_latency(self, latency):
         metric_names = [
-            "inbox-contacts-search.transactions.latency",
+            "contacts_search_index.transactions.latency",
         ]
 
         for metric in metric_names:
@@ -55,7 +55,7 @@ class ContactSearchIndexService(Greenlet):
 
     def _publish_heartbeat(self):
         metric_names = [
-            "inbox-contacts-search.heartbeat",
+            "contacts_search_index.heartbeat",
         ]
 
         for metric in metric_names:

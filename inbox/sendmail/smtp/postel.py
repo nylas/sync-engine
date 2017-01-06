@@ -406,7 +406,7 @@ class SMTPClient(object):
         recipient_emails: email addresses to send copies of this message to.
         """
         blocks = [p.block for p in draft.attachments]
-        attachments = generate_attachments(blocks)
+        attachments = generate_attachments(draft, blocks)
         from_addr = draft.from_addr[0]
         msg = create_email(from_name=from_addr[0],
                            from_email=from_addr[1],
@@ -438,7 +438,7 @@ class SMTPClient(object):
             the draft message to send.
         """
         blocks = [p.block for p in draft.attachments]
-        attachments = generate_attachments(blocks)
+        attachments = generate_attachments(draft, blocks)
         # @emfree - 3/19/2015
         #
         # Note that we intentionally don't set the Bcc header in the message we

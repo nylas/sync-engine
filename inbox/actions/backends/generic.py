@@ -38,7 +38,7 @@ def uids_by_folder(message_id, db_session):
 
 def _create_email(account, message):
     blocks = [p.block for p in message.attachments]
-    attachments = generate_attachments(blocks)
+    attachments = generate_attachments(message, blocks)
     from_name, from_email = message.from_addr[0]
     msg = create_email(from_name=from_name,
                        from_email=from_email,

@@ -46,6 +46,8 @@ providers = dict([
             "stsci.edu",
             "kms-technology.com",
             "cigital.com",
+            "iontrading.com",
+            "adaptiveinsights.com",
         ],
         "mx_servers": [
             # Office365
@@ -94,14 +96,14 @@ providers = dict([
     ("fastmail", {
         "type": "generic",
         "condstore": True,
-        "imap": ("mail.messagingengine.com", 993),
-        "smtp": ("mail.messagingengine.com", 587),
+        "imap": ("imap.fastmail.com", 993),
+        "smtp": ("smtp.fastmail.com", 465),
         "auth": "password",
         "folder_map": {"INBOX.Archive": "archive",
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
                        "INBOX.Sent": "sent", "INBOX.Sent Items": "sent",
                        "INBOX.Trash": "trash"},
-        "domains": ["fastmail.fm"],
+        "domains": ["fastmail.fm", "fastmail.com"],
         "mx_servers": ["in[12]-smtp.messagingengine.com"],
         # exact string matches
         "ns_servers": ["ns1.messagingengine.com.",

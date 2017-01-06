@@ -10,7 +10,7 @@ from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, Index, bindparam)
 from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import (relationship, backref, validates, joinedload,
-                            subqueryload, load_only)
+                            subqueryload, load_only, synonym)
 from sqlalchemy.sql.expression import false
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -72,12 +72,24 @@ class Message(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
 
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(BigInteger, nullable=False)
-    thread = relationship(
+    _thread = relationship(
         'Thread',
         primaryjoin='foreign(Message.thread_id) == remote(Thread.id)',  # noqa
         backref=backref('messages',
                         order_by='Message.received_date',
                         cascade="all, delete-orphan"))
+
+    @property
+    def thread(self):
+        return self._thread
+
+    @thread.setter
+    def thread(self, value):
+        if value is not None and self._thread is not None:
+            self._thread.deleted_at = None
+        self._thread = value
+
+    thread = synonym('_thread', descriptor=thread)
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)

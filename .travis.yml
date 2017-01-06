@@ -2,11 +2,15 @@ cache:
   directories:
     - /home/travis/virtualenv
 before_install:
-  - mysql -uroot -Dmysql -e 'UPDATE user SET password=PASSWORD("root") WHERE user="root"; FLUSH PRIVILEGES;'
+  - mysql -u root -e "CREATE USER 'inboxtest'@'%' IDENTIFIED BY 'inboxtest'"
+  - mysql -u root -e "CREATE USER 'inboxtest'@'localhost' IDENTIFIED BY 'inboxtest'"
+  - mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'inboxtest'@'%'"
+  - mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'inboxtest'@'localhost'"
+
 install:
   - sudo -H pip install flake8
   - sudo -H ./setup.sh | awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; fflush(); }'
 script:
   - flake8 --select=F inbox
   - pylint -d all -e w0631 inbox
-  - NYLAS_ENV=test py.test tests -m "not networkrequired"
+  - NYLAS_ENV=test py.test inbox/test -m "not networkrequired"

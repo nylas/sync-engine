@@ -38,8 +38,7 @@ class ConfigError(Exception):
     def __init__(self, error=None, help=None):
         self.error = error or ''
         self.help = help or \
-            'Run `sudo cp etc/config-dev.json /etc/inboxapp/config.json` and '\
-            'retry.'
+            'Run `sudo cp etc/config-dev.json /etc/inboxapp/config.json` and retry.'
 
     def __str__(self):
         return '{0} {1}'.format(self.error, self.help)

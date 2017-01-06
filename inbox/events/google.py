@@ -563,7 +563,7 @@ def _dump_event(event):
 
     if event.all_day:
         dump["start"] = {"date": event.start.strftime('%Y-%m-%d')}
-        dump["end"] = {"date": event.start.strftime('%Y-%m-%d')}
+        dump["end"] = {"date": event.end.strftime('%Y-%m-%d')}
     else:
         dump["start"] = {"dateTime": event.start.isoformat('T'),
                          "timeZone": "UTC"}

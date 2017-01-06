@@ -63,7 +63,7 @@ class ContactSync(BaseSyncMonitor):
         database. This function runs every `self.poll_frequency`.
 
         """
-        self.log.info('syncing contacts')
+        self.log.debug('syncing contacts')
         # Grab timestamp so next sync gets deltas from now
         sync_timestamp = datetime.utcnow()
 
@@ -120,6 +120,6 @@ class ContactSync(BaseSyncMonitor):
             account = db_session.query(Account).get(self.account_id)
             account.last_synced_contacts = sync_timestamp
 
-        self.log.info('synced contacts', added=change_counter['added'],
-                      updated=change_counter['updated'],
-                      deleted=change_counter['deleted'])
+        self.log.debug('synced contacts', added=change_counter['added'],
+                       updated=change_counter['updated'],
+                       deleted=change_counter['deleted'])

@@ -25,7 +25,9 @@ log = get_logger()
 
 
 MAX_SANE_QUERIES_PER_SESSION = 100
-MAX_TEXT_LENGTH = 65535
+MAX_TEXT_BYTES = 65535
+MAX_BYTES_PER_CHAR = 4  # For collation of utf8mb4
+MAX_TEXT_CHARS = int(MAX_TEXT_BYTES / float(MAX_BYTES_PER_CHAR))
 MAX_MYSQL_INTEGER = 2147483647
 
 bakery = baked.bakery()
@@ -140,7 +142,7 @@ class JSON(TypeDecorator):
 
 
 def json_field_too_long(value):
-    return len(json_util.dumps(value)) > MAX_TEXT_LENGTH
+    return len(json_util.dumps(value)) > MAX_TEXT_CHARS
 
 
 class LittleJSON(JSON):

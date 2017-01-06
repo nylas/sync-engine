@@ -10,7 +10,8 @@ log = get_logger()
 
 from inbox.auth.base import AuthHandler, account_or_none
 from inbox.basicauth import (ValidationError, UserRecoverableConfigError,
-                             SSLNotSupportedError, SettingUpdateError)
+                             SSLNotSupportedError, SettingUpdateError,
+                             AppPasswordError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.sendmail.smtp.postel import SMTPClient
@@ -146,8 +147,10 @@ class GenericAuthHandler(AuthHandler):
                           ssl_required=ssl_required,
                           error=exc)
                 raise ValidationError(exc)
+            elif _auth_requires_app_password(exc):
+                raise AppPasswordError(exc)
             else:
-                log.error('IMAP login failed for an unknown reason',
+                log.error('IMAP login failed for an unknown reason. Check _auth_is_invalid',
                           account_id=account.id,
                           host=host,
                           port=port,
@@ -309,6 +312,18 @@ class GenericAuthHandler(AuthHandler):
         return response
 
 
+def _auth_requires_app_password(exc):
+    # Some servers require an application specific password, token, or
+    # authorization code to login
+    PREFIXES = (
+        'Please using authorized code to login.',  # http://service.mail.qq.com/cgi-bin/help?subtype=1&&id=28&&no=1001256
+        'Authorized code is incorrect',  # http://service.mail.qq.com/cgi-bin/help?subtype=1&&id=28&&no=1001256
+        'Login fail. Please using weixin token',  # http://service.exmail.qq.com/cgi-bin/help?subtype=1&no=1001023&id=23.
+    )
+    return any(exc.message.lower().startswith(msg.lower()) for msg in
+               PREFIXES)
+
+
 def _auth_is_invalid(exc):
     # IMAP doesn't really have error semantics, so we have to match the error
     # message against a list of known response strings to determine whether we
@@ -323,8 +338,18 @@ def _auth_is_invalid(exc):
         '[auth] authentication failed.',
         'invalid login credentials',
         '[ALERT] Please log in via your web browser',
+        'LOGIN Authentication failed',
+        'authentication failed',
+        '[ALERT] Invalid credentials(Failure)',
+        'Invalid email login',
+        'failed: Re-Authentication Failure',
+        'Invalid',
+        'Login incorrect',
+        'LOGIN GroupWise login failed',
+        'authentication failed',
+        'LOGIN bad',  # LOGIN bad username or password
     )
-    return any(exc.message.lower().startswith(msg) for msg in
+    return any(exc.message.lower().startswith(msg.lower()) for msg in
                AUTH_INVALID_PREFIXES)
 
 

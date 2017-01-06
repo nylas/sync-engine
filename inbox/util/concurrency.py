@@ -6,6 +6,8 @@ import gevent
 from backports import ssl
 from gevent import socket
 from redis import TimeoutError
+import _mysql_exceptions
+from sqlalchemy.exc import StatementError
 
 from inbox.models import Account
 from inbox.models.session import session_scope
@@ -15,7 +17,20 @@ from nylas.logging.sentry import log_uncaught_errors
 log = get_logger()
 
 BACKOFF_DELAY = 30  # seconds to wait before retrying after a failure
-TRANSIENT_NETWORK_ERRS = (socket.timeout, TimeoutError, socket.error, ssl.SSLError)
+
+TRANSIENT_NETWORK_ERRS = (
+    socket.timeout,
+    TimeoutError,
+    socket.error,
+    ssl.SSLError)
+
+TRANSIENT_MYSQL_MESSAGES = (
+    "try restarting transaction",
+    "Too many connections",
+    "Lost connection to MySQL server",
+    "MySQL server has gone away",
+    "Can't connect to MySQL server",
+    "Max connect timeout reached")
 
 
 def retry(func, retry_classes=None, fail_classes=None, exc_callback=None,
@@ -82,7 +97,22 @@ def retry_with_logging(func, logger=None, retry_classes=None,
     occurrences = [0]
 
     def callback(e):
-        if isinstance(e, TRANSIENT_NETWORK_ERRS):
+        is_transient = isinstance(e, TRANSIENT_NETWORK_ERRS)
+        mysql_error = None
+
+        log = logger or get_logger()
+
+        if isinstance(e, _mysql_exceptions.OperationalError):
+            mysql_error = e
+        elif isinstance(e, StatementError) and isinstance(e.orig, _mysql_exceptions.OperationalError):
+            mysql_error = e.orig
+
+        if mysql_error:
+            for msg in TRANSIENT_MYSQL_MESSAGES:
+                if msg in mysql_error.message:
+                    is_transient = True
+
+        if is_transient:
             occurrences[0] += 1
             if occurrences[0] < 20:
                 return
@@ -98,9 +128,9 @@ def retry_with_logging(func, logger=None, retry_classes=None,
                         account.update_sync_error(e)
                         db_session.commit()
             except:
-                logger.error('Error saving sync_error to account object',
-                             account_id=account_id,
-                             **create_error_log_context(sys.exc_info()))
+                log.error('Error saving sync_error to account object',
+                          account_id=account_id,
+                          **create_error_log_context(sys.exc_info()))
 
         log_uncaught_errors(logger, account_id=account_id, provider=provider,
                             occurrences=occurrences[0])

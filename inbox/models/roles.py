@@ -5,7 +5,9 @@ from sqlalchemy import Column, Integer, String
 from nylas.logging import get_logger
 log = get_logger()
 from inbox.config import config
-from inbox.util.blockstore import save_to_blockstore, get_from_blockstore
+from inbox.util import blockstore
+from inbox.s3.base import get_raw_from_provider
+from inbox.util.stats import statsd_client
 
 # TODO: store AWS credentials in a better way.
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
@@ -25,22 +27,51 @@ class Blob(object):
             # On initial download we temporarily store data in memory
             value = self._data
         else:
-            value = get_from_blockstore(self.data_sha256)
+            value = blockstore.get_from_blockstore(self.data_sha256)
 
         if value is None:
-            log.warning("Couldn't find data on S3 for block with hash {}"
-                        .format(self.data_sha256))
+            log.warning("Couldn't find data on S3 for block",
+                        sha_hash=self.data_sha256)
 
             from inbox.models.block import Block
             if isinstance(self, Block):
                 if self.parts:
                     # This block is an attachment of a message that was
-                    # accidentially deleted. We will attempt to fetch the raw
+                    # deleted. We will attempt to fetch the raw
                     # message and parse out the needed attachment.
 
                     message = self.parts[0].message  # only grab one
-                    raw_mime = get_from_blockstore(message.data_sha256)
+                    account = message.namespace.account
 
+                    statsd_string = 'api.direct_fetching.{}.{}'.format(
+                        account.provider, account.id)
+
+                    # Try to fetch the message from S3 first.
+                    with statsd_client.timer('{}.blockstore_latency'.format(
+                                             statsd_string)):
+                        raw_mime = blockstore.get_from_blockstore(message.data_sha256)
+
+                    # If it's not there, get it from the provider.
+                    if raw_mime is None:
+                        statsd_client.incr('{}.cache_misses'.format(statsd_string))
+
+                        with statsd_client.timer('{}.provider_latency'.format(
+                                                 statsd_string)):
+                            raw_mime = get_raw_from_provider(message)
+
+                        msg_sha256 = sha256(raw_mime).hexdigest()
+
+                        # Cache the raw message in the blockstore so that
+                        # we don't have to fetch it over and over.
+
+                        with statsd_client.timer('{}.blockstore_save_latency'.format(
+                                                 statsd_string)):
+                            blockstore.save_to_blockstore(msg_sha256, raw_mime)
+                    else:
+                        # We found it in the blockstore --- report this.
+                        statsd_client.incr('{}.cache_hits'.format(statsd_string))
+
+                    # If we couldn't find it there, give up.
                     if raw_mime is None:
                         log.error("Don't have raw message for hash {}"
                                   .format(message.data_sha256))
@@ -58,12 +89,19 @@ class Blob(object):
                             if isinstance(data, unicode):
                                 data = data.encode('utf-8', 'strict')
 
+                            if data is None:
+                                continue
+
                             # Found it!
                             if sha256(data).hexdigest() == self.data_sha256:
                                 log.info('Found subpart with hash {}'.format(
                                     self.data_sha256))
-                                save_to_blockstore(self.data_sha256, data)
-                                return data
+
+                                with statsd_client.timer('{}.blockstore_save_latency'.format(
+                                                         statsd_string)):
+                                    blockstore.save_to_blockstore(self.data_sha256, data)
+                                    return data
+                    log.error("Couldn't find the attachment in the raw message", message_id=message.id)
 
             log.error('No data returned!')
             return value
@@ -88,4 +126,4 @@ class Blob(object):
             log.warning('Not saving 0-length data blob')
             return
 
-        save_to_blockstore(self.data_sha256, value)
+        blockstore.save_to_blockstore(self.data_sha256, value)

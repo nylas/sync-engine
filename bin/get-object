@@ -55,7 +55,8 @@ def main(type, id, public_id, account_id, namespace_id, readwrite):
                 qu = qu.filter(cls.public_id == public_id)
             elif id:
                 qu = qu.filter(cls.id == id)
-            elif account_id:
+
+            if account_id:
                 qu = qu.filter(cls.account_id == account_id)
             elif namespace_id:
                 qu = qu.filter(cls.namespace_id == namespace_id)

@@ -316,6 +316,10 @@ class GmailAccount(OAuthAccount, ImapAccount):
         return (self.gpush_calendar_list_expiration is None or
                 self.gpush_calendar_list_expiration < datetime.utcnow())
 
+    def get_raw_message_contents(self, message):
+        from inbox.s3.backends.gmail import get_gmail_raw_contents
+        return get_gmail_raw_contents(message)
+
 
 class GmailAuthCredentials(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     """

@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship, backref, object_session
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.models.constants import MAX_INDEXABLE_LENGTH
 
 from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
                                  DeletedAtMixin)
@@ -22,7 +23,7 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin,
         load_on_pending=True,
         backref=backref('calendars'))
 
-    name = Column(String(191), nullable=True)
+    name = Column(String(MAX_INDEXABLE_LENGTH), nullable=True)
     provider_name = Column(String(128), nullable=True, default='DEPRECATED')
     description = Column(Text, nullable=True)
 
@@ -51,7 +52,7 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions, UpdatedAtMixin,
 
     def update(self, calendar):
         self.uid = calendar.uid
-        self.name = calendar.name
+        self.name = calendar.name[:MAX_INDEXABLE_LENGTH]
         self.read_only = calendar.read_only
         self.description = calendar.description
 

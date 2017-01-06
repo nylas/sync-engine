@@ -1,5 +1,6 @@
 from sqlalchemy import Column, BigInteger
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.orm.exc import DetachedInstanceError
 
 from inbox.models.mixins import CreatedAtMixin
 
@@ -21,4 +22,10 @@ class MailSyncBase(CreatedAtMixin):
         return {'extend_existing': True}
 
     def __repr__(self):
-        return "<{} (id: {})>".format(self.__module__ + "." + self.__class__.__name__, self.id)
+        try:
+            return "<{} (id: {})>".format(self.__module__ + "." + self.__class__.__name__, self.id)
+        except DetachedInstanceError:
+            # SQLAlchemy has expired all values for this object and is trying
+            # to refresh them from the database, but has no session for the
+            # refresh.
+            return "<{} (id: detached)>".format(self.__module__ + "." + self.__class__.__name__)

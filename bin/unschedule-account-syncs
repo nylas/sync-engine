@@ -1,29 +1,8 @@
 #!/usr/bin/env python
 import click
-import redis
 
-from boto import ec2
-
-from inbox.scheduling.queue import QueueClient
-
-
-def get_zone_for_instance(hostname):
-    conn = ec2.connect_to_region('us-west-2')
-
-    instances = []
-    for r in conn.get_all_instances():
-        for i in r.instances:
-            instances.append(i)
-
-    instances = [i for i in instances if i.tags.get('Name') == hostname and
-                 i.tags.get('Role') == 'sync']
-
-    if not instances:
-        raise Exception("No sync host with hostname '{}'".format(hostname))
-
-    assert len(instances) == 1
-
-    return instances[0].placement
+from inbox.models.account import Account
+from inbox.models.session import global_session_scope, session_scope
 
 
 @click.command()
@@ -45,29 +24,35 @@ def main(dry_run, number, hostname, process):
             print 'Will not proceed'
             return
 
-    zone = get_zone_for_instance(hostname)
-    qc = QueueClient(zone)
-    # hosts in redis are of the format hostname:<cpu_id>
-    if process is not None:
-        hostname = ':'.join([hostname, process])
-    to_unschedule = [(account_id, host) for account_id, host in
-                     qc.assigned().items() if host.startswith(hostname)]
-    if number:
-        to_unschedule = to_unschedule[:number]
+    if not dry_run:
+        message = 'It is unsafe to unassign hosts while mailsync processes are running. '\
+                  'Have you shut down the appropriate mailsync processes on {}? [Y/n]'.format(hostname)
+        if raw_input(message).strip().lower() == 'n':
+            print 'Bailing out'
+            return
 
-    if to_unschedule:
-        if dry_run:
-            for account_id, host in to_unschedule:
+    with global_session_scope() as db_session:
+        if process is not None:
+            hostname = ':'.join([hostname, process])
+        to_unschedule = db_session.query(Account.id). \
+                filter(Account.sync_host.like('{}%'.format(hostname)))
+        if number:
+            to_unschedule = to_unschedule.limit(number)
+        to_unschedule = [id_ for id_, in to_unschedule.all()]
+        if number:
+            to_unschedule = to_unschedule[:number]
+
+    for account_id in to_unschedule:
+        with session_scope(account_id) as db_session:
+            if dry_run:
                 print "Would unassign", account_id
-        else:
-            for account_id, host in to_unschedule:
-                try:
-                    print "Unassigning", account_id
-                    qc.unassign(account_id, host)
-                except redis.exceptions.TimeoutError:
-                    print "Couldn't unassign", account_id, "due to redis timeout"
-    else:
-        print "No syncs to unschedule for", hostname
+            else:
+                account = db_session.query(Account).get(account_id)
+                print "Unassigning", account.id
+                account.desired_sync_host = None
+                account.sync_host = None
+                db_session.commit()
+
 
 if __name__ == '__main__':
     main()

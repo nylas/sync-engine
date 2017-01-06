@@ -1,5 +1,6 @@
 import pkg_resources
 from datetime import datetime
+import re
 
 from inbox.api.validation import (
     get_recipients, get_attachments, get_thread, get_message)
@@ -89,6 +90,21 @@ def create_draft_from_mime(account, raw_mime, db_session):
     return msg
 
 
+def block_to_part(block, message, namespace):
+    inline_image_uri = r'cid:{}'.format(block.public_id)
+    is_inline = re.search(inline_image_uri, message.body) is not None
+    # Create a new Part object to associate to the message object.
+    # (You can't just set block.message, because if block is an
+    # attachment on an existing message, that would dissociate it from
+    # the existing message.)
+    part = Part(block=block)
+    part.content_id = block.public_id if is_inline else None
+    part.namespace_id = namespace.id
+    part.content_disposition = 'inline' if is_inline else 'attachment'
+    part.is_inboxapp_attachment = True
+    return part
+
+
 def create_message_from_json(data, namespace, db_session, is_draft):
     """ Construct a Message instance from `data`, a dictionary representing the
     POST body of an API request. All new objects are added to the session, but
@@ -173,15 +189,7 @@ def create_message_from_json(data, namespace, db_session, is_draft):
 
         # Associate attachments to the draft message
         for block in blocks:
-            # Create a new Part object to associate to the message object.
-            # (You can't just set block.message, because if block is an
-            # attachment on an existing message, that would dissociate it from
-            # the existing message.)
-            part = Part(block=block)
-            part.namespace_id = namespace.id
-            part.content_disposition = 'attachment'
-            part.is_inboxapp_attachment = True
-            message.parts.append(part)
+            message.parts.append(block_to_part(block, message, namespace))
 
         update_contacts_from_message(db_session, message, namespace)
 
@@ -261,11 +269,7 @@ def update_draft(db_session, account, draft, to_addr=None,
         # Don't re-add attachments that are already attached
         if block.id in [p.block_id for p in draft.parts]:
             continue
-        part = Part(block=block)
-        part.namespace_id = account.namespace.id
-        part.content_disposition = 'attachment'
-        part.is_inboxapp_attachment = True
-        draft.parts.append(part)
+        draft.parts.append(block_to_part(block, draft, account.namespace))
 
     thread = draft.thread
     if len(thread.messages) == 1:
@@ -320,13 +324,22 @@ def delete_draft(db_session, account, draft):
     db_session.commit()
 
 
-def generate_attachments(blocks):
+def generate_attachments(message, blocks):
     attachment_dicts = []
     for block in blocks:
+        content_disposition = 'attachment'
+        for part in block.parts:
+            if part.message_id == message.id and part.content_disposition == 'inline':
+                content_disposition = 'inline'
+                break
+
         attachment_dicts.append({
+            'block_id': block.public_id,
             'filename': block.filename,
             'data': block.data,
-            'content_type': block.content_type})
+            'content_type': block.content_type,
+            'content_disposition': content_disposition,
+        })
     return attachment_dicts
 
 

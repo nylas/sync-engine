@@ -126,6 +126,10 @@ def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
         raise Exception("Should never be serializing accounts")
 
     elif isinstance(obj, Message):
+        thread_public_id = None
+        if obj.thread:
+            thread_public_id = obj.thread.public_id
+
         resp = {
             'id': obj.public_id,
             'object': 'message',
@@ -137,7 +141,7 @@ def _encode(obj, namespace_public_id=None, expand=False, is_n1=False):
             'cc': format_address_list(obj.cc_addr),
             'bcc': format_address_list(obj.bcc_addr),
             'date': obj.received_date,
-            'thread_id': obj.thread.public_id,
+            'thread_id': thread_public_id,
             'snippet': obj.snippet,
             'body': obj.body,
             'unread': not obj.is_read,

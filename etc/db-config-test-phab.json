@@ -1,0 +1,21 @@
+{
+    "DATABASE_HOSTS": [
+        {
+            "HOSTNAME": "127.0.0.1",
+            "PORT": 3306,
+            "ZONE": "testzone",
+            "SHARDS": [
+                {
+                    "ID": 0,
+                    "SCHEMA_NAME": "synctest_phab",
+                    "OPEN": true
+                },
+                {
+                    "ID": 1,
+                    "SCHEMA_NAME": "synctest_1_phab",
+                    "OPEN": false
+                }
+            ]
+        }
+    ]
+}

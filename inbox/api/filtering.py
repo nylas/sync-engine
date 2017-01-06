@@ -12,6 +12,17 @@ from inbox.ignition import engine_manager
 from inbox.models.session import session_scope_by_shard_id
 
 
+def contact_subquery(db_session, namespace_id, email_address, field):
+    return db_session.query(Message.thread_id) \
+        .join(MessageContactAssociation) \
+        .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+        .filter(
+            Contact.email_address == email_address,
+            Contact.namespace_id == namespace_id,
+            MessageContactAssociation.field == field) \
+        .subquery()
+
+
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             any_email, thread_public_id, started_before, started_after,
             last_message_before, last_message_after, filename, in_, unread,
@@ -24,7 +35,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     else:
         query = db_session.query(Thread)
 
-    filters = [Thread.namespace_id == namespace_id]
+    filters = [Thread.namespace_id == namespace_id, Thread.deleted_at == None]
     if thread_public_id is not None:
         filters.append(Thread.public_id == thread_public_id)
 
@@ -46,42 +57,32 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     query = query.filter(*filters)
 
     if from_addr is not None:
-        from_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == from_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'from_addr').subquery()
+        from_query = contact_subquery(db_session, namespace_id,
+                                      from_addr, 'from_addr')
         query = query.filter(Thread.id.in_(from_query))
 
     if to_addr is not None:
-        to_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == to_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'to_addr').subquery()
+        to_query = contact_subquery(db_session, namespace_id,
+                                    to_addr, 'to_addr')
         query = query.filter(Thread.id.in_(to_query))
 
     if cc_addr is not None:
-        cc_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == cc_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'cc_addr').subquery()
+        cc_query = contact_subquery(db_session, namespace_id,
+                                    cc_addr, 'cc_addr')
         query = query.filter(Thread.id.in_(cc_query))
 
     if bcc_addr is not None:
-        bcc_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact).filter(
-                Contact.email_address == bcc_addr,
-                Contact.namespace_id == namespace_id,
-                MessageContactAssociation.field == 'bcc_addr').subquery()
+        bcc_query = contact_subquery(db_session, namespace_id,
+                                     bcc_addr, 'bcc_addr')
         query = query.filter(Thread.id.in_(bcc_query))
 
     if any_email is not None:
-        any_contact_query = db_session.query(Message.thread_id). \
-            join(MessageContactAssociation).join(Contact). \
-            filter(Contact.email_address.in_(any_email),
-                   Contact.namespace_id == namespace_id).subquery()
+        any_contact_query = db_session.query(Message.thread_id) \
+            .join(MessageContactAssociation) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(Contact.email_address.in_(any_email),
+                    Contact.namespace_id == namespace_id)\
+            .subquery()
         query = query.filter(Thread.id.in_(any_contact_query))
 
     if filename is not None:
@@ -207,7 +208,8 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     query += lambda q: q.join(Thread, Message.thread_id == Thread.id)
     query += lambda q: q.filter(
         Message.namespace_id == bindparam('namespace_id'),
-        Message.is_draft == bindparam('drafts'))
+        Message.is_draft == bindparam('drafts'),
+        Thread.deleted_at == None)
 
     if subject is not None:
         query += lambda q: q.filter(Message.subject == bindparam('subject'))
@@ -253,8 +255,9 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if to_addr is not None:
         query.spoil()
-        to_query = db_session.query(MessageContactAssociation.message_id). \
-            join(Contact).filter(
+        to_query = db_session.query(MessageContactAssociation.message_id) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(
                 MessageContactAssociation.field == 'to_addr',
                 Contact.email_address == to_addr,
                 Contact.namespace_id == bindparam('namespace_id')).subquery()
@@ -262,8 +265,9 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if from_addr is not None:
         query.spoil()
-        from_query = db_session.query(MessageContactAssociation.message_id). \
-            join(Contact).filter(
+        from_query = db_session.query(MessageContactAssociation.message_id) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(
                 MessageContactAssociation.field == 'from_addr',
                 Contact.email_address == from_addr,
                 Contact.namespace_id == bindparam('namespace_id')).subquery()
@@ -271,8 +275,9 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if cc_addr is not None:
         query.spoil()
-        cc_query = db_session.query(MessageContactAssociation.message_id). \
-            join(Contact).filter(
+        cc_query = db_session.query(MessageContactAssociation.message_id) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(
                 MessageContactAssociation.field == 'cc_addr',
                 Contact.email_address == cc_addr,
                 Contact.namespace_id == bindparam('namespace_id')).subquery()
@@ -280,8 +285,9 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if bcc_addr is not None:
         query.spoil()
-        bcc_query = db_session.query(MessageContactAssociation.message_id). \
-            join(Contact).filter(
+        bcc_query = db_session.query(MessageContactAssociation.message_id) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(
                 MessageContactAssociation.field == 'bcc_addr',
                 Contact.email_address == bcc_addr,
                 Contact.namespace_id == bindparam('namespace_id')).subquery()
@@ -290,10 +296,12 @@ def messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if any_email is not None:
         query.spoil()
         any_email_query = db_session.query(
-            MessageContactAssociation.message_id).join(Contact). \
-            filter(Contact.email_address.in_(any_email),
-                   Contact.namespace_id == bindparam('namespace_id')). \
-            subquery()
+            MessageContactAssociation.message_id) \
+            .join(Contact, MessageContactAssociation.contact_id == Contact.id)\
+            .filter(
+                Contact.email_address.in_(any_email),
+                Contact.namespace_id == bindparam('namespace_id')) \
+            .subquery()
         query += lambda q: q.filter(Message.id.in_(any_email_query))
 
     if filename is not None:
@@ -397,7 +405,8 @@ def files(namespace_id, message_public_id, filename, content_type,
 def filter_event_query(query, event_cls, namespace_id, event_public_id,
                        calendar_public_id, title, description, location, busy):
 
-    query = query.filter(event_cls.namespace_id == namespace_id)
+    query = query.filter(event_cls.namespace_id == namespace_id).filter(
+                event_cls.deleted_at == None)  # noqa
 
     if event_public_id:
         query = query.filter(event_cls.public_id == event_public_id)

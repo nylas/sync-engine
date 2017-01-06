@@ -49,7 +49,7 @@ class EventSync(BaseSyncMonitor):
         """Query a remote provider for updates and persist them to the
         database. This function runs every `self.poll_frequency`.
         """
-        self.log.info('syncing events')
+        self.log.debug('syncing events')
 
         try:
             deleted_uids, calendar_changes = self.provider.sync_calendars()
@@ -210,7 +210,7 @@ class GoogleEventSync(EventSync):
         currently subscribed to push notificaitons and haven't heard anything
         new from Google.
         """
-        self.log.info('syncing events')
+        self.log.debug('syncing events')
 
         try:
             self._refresh_gpush_subscriptions()

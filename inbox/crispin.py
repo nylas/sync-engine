@@ -83,6 +83,10 @@ class FolderMissingError(Exception):
     pass
 
 
+class DraftDeletionException(Exception):
+    pass
+
+
 def _get_connection_pool(account_id, pool_size, pool_map, readonly):
     with _lock_map[account_id]:
         if account_id not in pool_map:
@@ -138,8 +142,8 @@ class CrispinConnectionPool(object):
     """
 
     def __init__(self, account_id, num_connections, readonly):
-        log.info('Creating Crispin connection pool for account {} with {} '
-                 'connections'.format(account_id, num_connections))
+        log.info('Creating Crispin connection pool',
+                 account_id=account_id, num_connections=num_connections)
         self.account_id = account_id
         self.readonly = readonly
         self._queue = Queue(num_connections, items=num_connections * [None])
@@ -949,6 +953,20 @@ class GmailCrispinClient(CrispinClient):
         return {uid: ret['X-GM-MSGID']
                 for uid, ret in data.items() if uid in uid_set}
 
+    def g_msgid_to_uids(self, g_msgid):
+        """
+        Find all message UIDs in the selected folder with X-GM-MSGID equal to
+        g_msgid.
+
+        Returns
+        -------
+        list
+        """
+        uids = [long(uid) for uid in
+                self.conn.search(['X-GM-MSGID', g_msgid])]
+        # UIDs ascend over time; return in order most-recent first
+        return sorted(uids, reverse=True)
+
     def folder_names(self, force_resync=False):
         """
         Return the folder names ( == label names for Gmail) for the account
@@ -1093,21 +1111,54 @@ class GmailCrispinClient(CrispinClient):
                  message_id_header=message_id_header)
         drafts_folder_name = self.folder_names()['drafts'][0]
         trash_folder_name = self.folder_names()['trash'][0]
+        sent_folder_name = self.folder_names()['sent'][0]
 
-        # First find the draft in the drafts folder
+        # There's a race condition in how Gmail reconciles sent messages
+        # which sometimes causes us to delete both the sent and draft
+        # (because for a brief moment in time they're the same message).
+        # To work around this, we use x-gm-msgid and check that the
+        # sent message and the draft have been reconciled to different
+        # values.
+
+        # First find the message in the sent folder
+        self.conn.select_folder(sent_folder_name)
+        matching_uids = self.find_by_header('Message-Id', message_id_header)
+
+        if len(matching_uids) == 0:
+            raise DraftDeletionException(
+                "Couldn't find sent message in sent folder.")
+
+        sent_gm_msgids = self.g_msgids(matching_uids)
+        if len(sent_gm_msgids) != 1:
+            raise DraftDeletionException(
+                "Only one message should have this msgid")
+
+        # Then find the draft in the draft folder
         self.conn.select_folder(drafts_folder_name)
         matching_uids = self.find_by_header('Message-Id', message_id_header)
         if not matching_uids:
             return False
 
-        # To delete, first copy the message to trash (sufficient to move from
-        # gmail's All Mail folder to Trash folder)
-        self.conn.copy(matching_uids, trash_folder_name)
+        # Make sure to remove the \\Draft flags so that Gmail removes it from
+        # the draft folder.
+        self.conn.remove_flags(matching_uids, ['\\Draft'])
+        self.conn.remove_gmail_labels(matching_uids, ['\\Draft'])
 
-        # Next, delete the message from trash (in the normal way) to permanently
-        # delete it.
+        gm_msgids = self.g_msgids(matching_uids)
+        for msgid in gm_msgids.values():
+            if msgid == sent_gm_msgids.values()[0]:
+                raise DraftDeletionException(
+                    "Send and draft should have been reconciled as "
+                    "different messages.")
+
+        self.conn.copy(matching_uids, trash_folder_name)
         self.conn.select_folder(trash_folder_name)
-        self._delete_message(message_id_header, False)
+
+        for msgid in gm_msgids.values():
+            uids = self.g_msgid_to_uids(msgid)
+            self.conn.delete_messages(uids, silent=True)
+
+        self.conn.expunge()
         return True
 
     def delete_sent_message(self, message_id_header, delete_multiple=False):

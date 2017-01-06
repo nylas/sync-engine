@@ -46,7 +46,7 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
     engine = create_engine(database_uri,
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
-                           echo=False,
+                           echo=echo,
                            pool_size=pool_size,
                            pool_timeout=pool_timeout,
                            pool_recycle=3600,
@@ -60,17 +60,18 @@ def engine(database_name, database_uri, pool_size=DB_POOL_SIZE,
                          connection_proxy):
         '''Log checkedout and overflow when a connection is checked out'''
         hostname = gethostname().replace(".", "-")
-        process_name = str(config.get("PROCESS_NAME", "unknown"))
+        process_name = str(config.get("PROCESS_NAME", "main_process"))
 
-        statsd_client.gauge(".".join(
-            ["dbconn", database_name, hostname, process_name,
-             "checkedout"]),
-            connection_proxy._pool.checkedout())
+        if config.get('ENABLE_DB_TXN_METRICS', False):
+            statsd_client.gauge(".".join(
+                ["dbconn", database_name, hostname, process_name,
+                 "checkedout"]),
+                                connection_proxy._pool.checkedout())
 
-        statsd_client.gauge(".".join(
-            ["dbconn", database_name, hostname, process_name,
-             "overflow"]),
-            connection_proxy._pool.overflow())
+            statsd_client.gauge(".".join(
+                ["dbconn", database_name, hostname, process_name,
+                 "overflow"]),
+                                connection_proxy._pool.overflow())
 
         # Keep track of where and why this connection was checked out.
         log = get_logger()
@@ -98,6 +99,7 @@ class EngineManager(object):
 
     def __init__(self, databases, users, include_disabled=False):
         self.engines = {}
+        self._engine_zones = {}
         keys = set()
         schema_names = set()
         use_proxysql = config.get('USE_PROXYSQL', False)
@@ -106,6 +108,7 @@ class EngineManager(object):
             port = database['PORT']
             username = users[hostname]['USER']
             password = users[hostname]['PASSWORD']
+            zone = database.get('ZONE')
             for shard in database['SHARDS']:
                 schema_name = shard['SCHEMA_NAME']
                 key = shard['ID']
@@ -131,12 +134,19 @@ class EngineManager(object):
                                 hostname=hostname,
                                 port=port)
                 self.engines[key] = engine(schema_name, uri)
+                self._engine_zones[key] = zone
 
     def shard_key_for_id(self, id_):
         return id_ >> 48
 
     def get_for_id(self, id_):
         return self.engines[self.shard_key_for_id(id_)]
+
+    def zone_for_id(self, id_):
+        return self._engine_zones[self.shard_key_for_id(id_)]
+
+    def shards_for_zone(self, zone):
+        return [k for k, z in self._engine_zones.items() if z == zone]
 
 engine_manager = EngineManager(config.get_required('DATABASE_HOSTS'),
                                config.get_required('DATABASE_USERS'))

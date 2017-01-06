@@ -45,6 +45,10 @@ from nylas.logging import get_logger
 log = get_logger()
 
 
+def can_handle_multiple_records(action_name):
+    return action_name == 'change_labels'
+
+
 def mark_unread(crispin_client, account_id, message_id, args):
     unread = args['unread']
     set_remote_unread(crispin_client, account_id, message_id, unread)
@@ -60,10 +64,10 @@ def move(crispin_client, account_id, message_id, args):
     remote_move(crispin_client, account_id, message_id, destination)
 
 
-def change_labels(crispin_client, account_id, message_id, args):
+def change_labels(crispin_client, account_id, message_ids, args):
     added_labels = args['added_labels']
     removed_labels = args['removed_labels']
-    remote_change_labels(crispin_client, account_id, message_id,
+    remote_change_labels(crispin_client, account_id, message_ids,
                          removed_labels, added_labels)
 
 

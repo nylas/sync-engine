@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
 
-mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON test.* TO inboxtest@localhost IDENTIFIED BY 'inboxtest'"
-mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON test_1.* TO inboxtest@localhost IDENTIFIED BY 'inboxtest'"
+mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON synctest.* TO inboxtest@localhost IDENTIFIED BY 'inboxtest'"
+mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON synctest_1.* TO inboxtest@localhost IDENTIFIED BY 'inboxtest'"
 mysql -uroot -proot -e 'GRANT ALL PRIVILEGES ON `test%`.* TO inboxtest@localhost IDENTIFIED BY "inboxtest"'

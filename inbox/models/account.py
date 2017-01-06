@@ -3,10 +3,12 @@ import traceback
 from datetime import datetime
 
 from sqlalchemy import (Column, BigInteger, String, DateTime, Boolean,
-                        ForeignKey, Enum, inspect, bindparam, Index)
+                        ForeignKey, Enum, inspect, bindparam, Index, event)
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import false
 
+from inbox.config import config
 from inbox.sqlalchemy_ext.util import JSON, MutableDict, bakery
 
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
@@ -14,7 +16,11 @@ from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRunState,
                                  DeletedAtMixin)
 from inbox.models.base import MailSyncBase
 from inbox.models.calendar import Calendar
+from inbox.scheduling.event_queue import EventQueue
 from inbox.providers import provider_info
+from nylas.logging.sentry import log_uncaught_errors
+from nylas.logging import get_logger
+log = get_logger()
 
 
 # Note, you should never directly create Account objects. Instead you
@@ -116,6 +122,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         self._emailed_events_calendar = cal
 
     sync_host = Column(String(255), nullable=True)
+    desired_sync_host = Column(String(255), nullable=True)
 
     # current state of this account
     state = Column(Enum('live', 'down', 'invalid'), nullable=True)
@@ -146,7 +153,8 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
                  provider=self.provider,
                  is_enabled=self.sync_enabled,
                  state=self.sync_state,
-                 sync_host=self.sync_host)
+                 sync_host=self.sync_host,
+                 desired_sync_host=self.desired_sync_host)
         d.update(self._sync_status or {})
 
         return d
@@ -180,8 +188,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
             self._sync_status['sync_error'] = None
         else:
             error_obj = {
-                'message': str(error.message),
-                'traceback': traceback.format_exc(20)}
+                'message': str(error.message)[:3000],
+                'exception': "".join(traceback.format_exception_only(type(error), error))[:500],
+                'traceback': traceback.format_exc(20)[:3000]}
 
             self._sync_status['sync_error'] = error_obj
 
@@ -208,11 +217,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
 
         self.sync_state = 'running'
 
-    def enable_sync(self, sync_host=None):
+    def enable_sync(self):
         """ Tell the monitor that this account should be syncing. """
         self.sync_should_run = True
-        if sync_host is not None:
-            self.sync_host = sync_host
 
     def disable_sync(self, reason):
         """ Tell the monitor that this account should stop syncing. """
@@ -293,9 +300,118 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
     def server_settings(self):
         return None
 
+    def get_raw_message_contents(self, message):
+        # Get the raw contents of a message. We do this differently
+        # for every backend (Gmail, IMAP, EAS), and the best way
+        # to do this across repos is to make it a method of the
+        # account class.
+        raise NotImplementedError
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}
+
+
+def should_send_event(obj):
+    if not isinstance(obj, Account):
+        return False
+    inspected_obj = inspect(obj)
+    hist = inspected_obj.attrs.sync_host.history
+    if hist.has_changes():
+        return True
+    hist = inspected_obj.attrs.desired_sync_host.history
+    if hist.has_changes():
+        return True
+    hist = inspected_obj.attrs.sync_should_run.history
+    return hist.has_changes()
+
+
+def already_registered_listener(obj):
+    return getattr(obj, '_listener_state', None) is not None
+
+
+def update_listener_state(obj):
+    obj._listener_state['sync_should_run'] = obj.sync_should_run
+    obj._listener_state['sync_host'] = obj.sync_host
+    obj._listener_state['desired_sync_host'] = obj.desired_sync_host
+    obj._listener_state['sent_event'] = False
+
+
+@event.listens_for(Session, "after_flush")
+def after_flush(session, flush_context):
+    from inbox.mailsync.service import shared_sync_event_queue_for_zone, SYNC_EVENT_QUEUE_NAME
+
+    def send_migration_events(obj_state):
+        def f(session):
+            if obj_state['sent_event']:
+                return
+
+            id = obj_state['id']
+            sync_should_run = obj_state['sync_should_run']
+            sync_host = obj_state['sync_host']
+            desired_sync_host = obj_state['desired_sync_host']
+
+            try:
+                if sync_host is not None:
+                    # Somebody is actively syncing this Account, so notify them if
+                    # they should give up the Account.
+                    if not sync_should_run or (sync_host != desired_sync_host and desired_sync_host is not None):
+                        queue_name = SYNC_EVENT_QUEUE_NAME.format(sync_host)
+                        log.info("Sending 'migrate_from' event for Account",
+                                 account_id=id, queue_name=queue_name)
+                        EventQueue(queue_name).send_event({'event': 'migrate_from', 'id': id})
+                    return
+
+                if not sync_should_run:
+                    # We don't need to notify anybody because the Account is not
+                    # actively being synced (sync_host is None) and sync_should_run is False,
+                    # so just return early.
+                    return
+
+                if desired_sync_host is not None:
+                    # Nobody is actively syncing the Account, and we have somebody
+                    # who wants to sync this Account, so notify them.
+                    queue_name = SYNC_EVENT_QUEUE_NAME.format(desired_sync_host)
+                    log.info("Sending 'migrate_to' event for Account",
+                             account_id=id, queue_name=queue_name)
+                    EventQueue(queue_name).send_event({'event': 'migrate_to', 'id': id})
+                    return
+
+                # Nobody is actively syncing the Account, and nobody in particular
+                # wants to sync the Account so notify the shared queue.
+                shared_queue = shared_sync_event_queue_for_zone(config.get('ZONE'))
+                log.info("Sending 'migrate' event for Account",
+                         account_id=id, queue_name=shared_queue.queue_name)
+                shared_queue.send_event({'event': 'migrate', 'id': id})
+                obj_state['sent_event'] = True
+            except:
+                log_uncaught_errors(log, account_id=id, sync_host=sync_host,
+                                    desired_sync_host=desired_sync_host)
+        return f
+
+    for obj in session.new:
+        if isinstance(obj, Account):
+            if already_registered_listener(obj):
+                update_listener_state(obj)
+            else:
+                obj._listener_state = {'id': obj.id}
+                update_listener_state(obj)
+                event.listen(session,
+                             'after_commit',
+                             send_migration_events(obj._listener_state))
+
+    for obj in session.dirty:
+        if not session.is_modified(obj):
+            continue
+        if should_send_event(obj):
+            if already_registered_listener(obj):
+                update_listener_state(obj)
+            else:
+                obj._listener_state = {'id': obj.id}
+                update_listener_state(obj)
+                event.listen(session,
+                             'after_commit',
+                             send_migration_events(obj._listener_state))
 
 
 Index('ix_account_sync_should_run_sync_host', Account.sync_should_run,

@@ -46,5 +46,6 @@ class ActionLog(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     __mapper_args__ = {'polymorphic_identity': 'actionlog',
                        'polymorphic_on': discriminator}
 
+
 Index('ix_actionlog_status_retries', ActionLog.status, ActionLog.retries)
 Index('idx_actionlog_status_type', ActionLog.status, ActionLog.discriminator)

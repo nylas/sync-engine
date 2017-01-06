@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+from gevent import monkey
+monkey.patch_all()
+
+import click
+import json
+import requests
+
+from inbox.config import config
+from inbox.ignition import engine_manager
+from inbox.mailsync.service import MAX_ACCOUNTS_PER_PROCESS
+from inbox.models.account import Account
+from inbox.models.session import session_scope_by_shard_id
+from inbox.util import fleet
+
+NUM_PROCESSES_PER_HOST = 16
+
+
+def runnable_accounts_in_zone(zone):
+    accounts = set()
+    for key in engine_manager.shards_for_zone(zone):
+        with session_scope_by_shard_id(key) as db_session:
+            accounts.update(
+                id_ for id_, in db_session.query(Account.id).filter(
+                    Account.sync_should_run))
+    return accounts
+
+
+def get_account_loads(zone, hosts):
+    load_per_account = dict()
+    total_times_per_account = dict()
+    for host in hosts:
+        for i in range(NUM_PROCESSES_PER_HOST):
+            url = "http://{}:{}/load".format(host['ip_address'], 16384 + i)
+            try:
+                load_profile = requests.get(url).json()
+            except Exception:
+                continue
+
+            total_time = load_profile['total_time']
+            for run_time in load_profile['times']:
+                # run_time is a string of the form <object>:id:<opt>. e.g:
+                # "easfoldersyncengine:1:22:2": 0.0002319812774658203
+
+                if run_time in ['hub', 'null']:
+                    # This is the gevent hub, which is called when the process
+                    # is idle.
+                    continue
+
+                splat = run_time.split(':')
+                account_id = int(splat[1])
+
+                account_time = load_profile['times'][run_time]
+
+                if account_id not in load_per_account:
+                    load_per_account[account_id] = 0.0
+                if account_id not in total_times_per_account:
+                    total_times_per_account[account_id] = 0.0
+                load_per_account[account_id] += account_time
+                total_times_per_account[account_id] += total_time
+
+    # Scale the load based on the total time.
+    for account_id in load_per_account:
+        load_per_account[account_id] /= total_times_per_account[account_id]
+
+    # Sometimes we're not able to find the load for a particular account.
+    # E.g. we might have been unable to contact the sync host it was on to ask
+    # about the account's load because the sync host was overloaded. In this
+    # situation we look at all runnable accounts and diff it with the set
+    # of accounts that we were able to get numbers on. We then assign those
+    # accounts a default load. While this isn't ideal, it's better than ignoring
+    # those missing accounts entirely.
+    default_load = 1.0 / MAX_ACCOUNTS_PER_PROCESS
+    runnable_accounts = runnable_accounts_in_zone(zone)
+    found_accounts = {account_id for account_id in load_per_account}
+    missing_accounts = runnable_accounts - found_accounts
+    for account_id in missing_accounts:
+        load_per_account[account_id] = default_load
+    return load_per_account
+
+
+@click.command()
+@click.option('--level', default='staging')
+def main(level):
+    zones = {h.get('ZONE') for h in config['DATABASE_HOSTS']}
+    zone_map = {}
+    for zone in zones:
+        hosts = fleet.get_sync_hosts_in_zone(zone, level)
+        load_per_account = get_account_loads(zone, hosts)
+        zone_map[zone] = load_per_account
+    print json.dumps(zone_map)
+
+
+if __name__ == '__main__':
+    main()

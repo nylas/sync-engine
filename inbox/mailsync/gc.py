@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import load_only
 from nylas.logging import get_logger
 log = get_logger()
-from inbox.models import Message
+from inbox.models import Message, Thread
 from inbox.models.category import Category, EPOCH
 from inbox.models.message import MessageCategory
 from inbox.models.folder import Folder
@@ -18,7 +18,8 @@ from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.crispin import connection_pool
 from imapclient.imap_utf7 import encode as utf7_encode
 
-DEFAULT_MESSAGE_TTL = 120
+DEFAULT_MESSAGE_TTL = 2 * 60            # 2 minutes
+DEFAULT_THREAD_TTL = 60 * 60 * 24 * 7   # 7 days
 MAX_FETCH = 1000
 
 
@@ -50,7 +51,7 @@ class DeleteHandler(gevent.Greenlet):
     """
 
     def __init__(self, account_id, namespace_id, provider_name, uid_accessor,
-                 message_ttl=DEFAULT_MESSAGE_TTL):
+                 message_ttl=DEFAULT_MESSAGE_TTL, thread_ttl=DEFAULT_THREAD_TTL):
         bind_context(self, 'deletehandler', account_id)
         self.account_id = account_id
         self.namespace_id = namespace_id
@@ -58,6 +59,7 @@ class DeleteHandler(gevent.Greenlet):
         self.uids_for_message = uid_accessor
         self.log = log.new(account_id=account_id)
         self.message_ttl = datetime.timedelta(seconds=message_ttl)
+        self.thread_ttl = datetime.timedelta(seconds=thread_ttl)
         gevent.Greenlet.__init__(self)
 
     def _run(self):
@@ -69,6 +71,7 @@ class DeleteHandler(gevent.Greenlet):
         current_time = datetime.datetime.utcnow()
         self.check(current_time)
         self.gc_deleted_categories()
+        self.gc_deleted_threads(current_time)
         gevent.sleep(self.message_ttl.total_seconds())
 
     def check(self, current_time):
@@ -100,7 +103,10 @@ class DeleteHandler(gevent.Greenlet):
                 # db_session.deleted.
                 db_session.delete(message)
                 if not thread.messages:
-                    db_session.delete(thread)
+                    # We don't eagerly delete empty Threads because there's a
+                    # race condition between deleting a Thread and creating a
+                    # new Message that refers to the old deleted Thread.
+                    thread.mark_for_deletion()
                 else:
                     # TODO(emfree): This is messy. We need better
                     # abstractions for recomputing a thread's attributes
@@ -141,6 +147,20 @@ class DeleteHandler(gevent.Greenlet):
                 if count == 0:
                     db_session.delete(category)
                     db_session.commit()
+
+    def gc_deleted_threads(self, current_time):
+        with session_scope(self.namespace_id) as db_session:
+            deleted_threads = db_session.query(Thread).filter(
+                Thread.namespace_id == self.namespace_id,
+                Thread.deleted_at <= current_time - self.thread_ttl
+            ).limit(MAX_FETCH)
+            for thread in deleted_threads:
+                if thread.messages:
+                    thread.deleted_at = None
+                    db_session.commit()
+                    continue
+                db_session.delete(thread)
+                db_session.commit()
 
 
 class LabelRenameHandler(gevent.Greenlet):

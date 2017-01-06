@@ -1,5 +1,6 @@
 import collections
 import math
+import thread
 import signal
 import socket
 import sys
@@ -15,7 +16,8 @@ from inbox.util.stats import get_statsd_client
 from nylas.logging import get_logger
 
 
-MAX_BLOCKING_TIME = 5
+BLOCKING_SAMPLE_PERIOD = 5
+MAX_BLOCKING_TIME_BEFORE_INTERRUPT = 60
 GREENLET_SAMPLING_INTERVAL = 1
 LOGGING_INTERVAL = 60
 
@@ -76,16 +78,16 @@ class GreenletTracer(object):
 
     Parameters
     ----------
-    max_blocking_time: float
-        Log a warning if a greenlet blocks for more than max_blocking_time
+    blocking_sample_period: float
+        Log a warning if a greenlet blocks for more than blocking_sample_period
         seconds.
     """
 
     def __init__(self,
-                 max_blocking_time=MAX_BLOCKING_TIME,
+                 blocking_sample_period=BLOCKING_SAMPLE_PERIOD,
                  sampling_interval=GREENLET_SAMPLING_INTERVAL,
                  logging_interval=LOGGING_INTERVAL):
-        self.max_blocking_time = max_blocking_time
+        self.blocking_sample_period = blocking_sample_period
         self.sampling_interval = sampling_interval
         self.logging_interval = logging_interval
 
@@ -108,6 +110,7 @@ class GreenletTracer(object):
         # We need a new client instance here because this runs in its own
         # thread.
         self.statsd_client = get_statsd_client()
+        self.start_time = time.time()
 
     def start(self):
         self.start_time = time.time()
@@ -156,19 +159,22 @@ class GreenletTracer(object):
         self._last_switch_time = current_time
         self._switch_flag = True
 
-    def _check_blocking(self):
+    def _check_blocking(self, current_time):
         if self._switch_flag is False:
             active_greenlet = self._active_greenlet
             if active_greenlet is not None and active_greenlet != self._hub:
-                # greenlet.gr_frame doesn't work on another thread -- we have
-                # to get the main thread's frame.
-                frame = sys._current_frames()[self._main_thread_id]
-                formatted_frame = '\t'.join(traceback.format_stack(frame))
-                self.log.warning(
-                    'greenlet blocking', frame=formatted_frame,
-                    context=getattr(active_greenlet, 'context', None),
-                    blocking_greenlet_id=id(active_greenlet))
+                self._notify_greenlet_blocked(active_greenlet, current_time)
         self._switch_flag = False
+
+    def _notify_greenlet_blocked(self, active_greenlet, current_time):
+        # greenlet.gr_frame doesn't work on another thread -- we have
+        # to get the main thread's frame.
+        frame = sys._current_frames()[self._main_thread_id]
+        formatted_frame = '\t'.join(traceback.format_stack(frame))
+        self.log.warning(
+            'greenlet blocking', frame=formatted_frame,
+            context=getattr(active_greenlet, 'context', None),
+            blocking_greenlet_id=id(active_greenlet))
 
     def _calculate_pending_avgs(self):
         # Calculate a "load average" for greenlet scheduling in roughly the
@@ -191,12 +197,12 @@ class GreenletTracer(object):
 
     def _publish_load_avgs(self):
         for k, v in self.pending_avgs.items():
-            path = 'pending_avg.{}.{}.{:02d}'.format(self.hostname,
-                                                     self.process_name, k)
+            path = 'greenlet_tracer.pending_avg.{}.{}.{:02d}'.format(
+                self.hostname, self.process_name, k)
             self.statsd_client.gauge(path, v)
         for k, v in self.cpu_avgs.items():
-            path = 'cpu_avg.{}.{}.{:02d}'.format(self.hostname,
-                                                 self.process_name, k)
+            path = 'greenlet_tracer.cpu_avg.{}.{}.{:02d}'.format(
+                self.hostname, self.process_name, k)
             self.statsd_client.gauge(path, v)
 
     def _monitoring_thread(self):
@@ -210,8 +216,8 @@ class GreenletTracer(object):
             self._calculate_pending_avgs()
             self._calculate_cpu_avgs()
             now = time.time()
-            if now - self.last_checked_blocking > self.max_blocking_time:
-                self._check_blocking()
+            if now - self.last_checked_blocking > self.blocking_sample_period:
+                self._check_blocking(now)
                 self.last_checked_blocking = now
             if now - self.last_logged_stats > self.logging_interval:
                 self.log_stats()
@@ -221,3 +227,34 @@ class GreenletTracer(object):
         except Exception:
             if sys is not None:
                 raise
+
+
+class KillerGreenletTracer(GreenletTracer):
+    def __init__(self,
+                 blocking_sample_period=BLOCKING_SAMPLE_PERIOD,
+                 sampling_interval=GREENLET_SAMPLING_INTERVAL,
+                 logging_interval=LOGGING_INTERVAL,
+                 max_blocking_time=MAX_BLOCKING_TIME_BEFORE_INTERRUPT):
+        self._max_blocking_time = max_blocking_time
+        super(KillerGreenletTracer, self).__init__(blocking_sample_period,
+                                                   sampling_interval,
+                                                   logging_interval)
+
+    def _notify_greenlet_blocked(self, active_greenlet, current_time):
+        super(KillerGreenletTracer, self)._notify_greenlet_blocked(active_greenlet, current_time)
+        if self._last_switch_time is None:
+            return
+
+        time_spent = current_time - self._last_switch_time
+        if time_spent <= self._max_blocking_time:
+            return
+        # This will cause the main thread (which is running the blocked greenlet)
+        # to raise a KeyboardInterrupt exception.
+        # We can't just call activet_greenlet.kill() here because gevent will
+        # throw an exception on this thread saying that we would block forever
+        # (which is true).
+        self.log.warning(
+            'interrupting blocked greenlet',
+            context=getattr(active_greenlet, 'context', None),
+            blocking_greenlet_id=id(active_greenlet))
+        thread.interrupt_main()

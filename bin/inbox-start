@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import gevent
 from gevent import monkey
 monkey.patch_all()
 
@@ -27,8 +26,7 @@ except ImportError:
 from inbox.util.startup import preflight
 from nylas.logging import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
-from inbox.mailsync.frontend import HTTPFrontend
-from inbox.scheduling.queue import QueuePopulator
+from inbox.mailsync.frontend import SyncHTTPFrontend
 
 # Set a default timeout for sockets.
 SOCKET_TIMEOUT = 2 * 60
@@ -41,12 +39,14 @@ socket.setdefaulttimeout(SOCKET_TIMEOUT)
                    'non-production features.')
 @click.option('--enable-tracer/--disable-tracer', default=True,
               help='Disables the stuck greenlet tracer')
+@click.option('--enable-profiler/--disable-profiler', default=False,
+              help='Enables the CPU profiler web API')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
 @click.option('--process_num', default=0,
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
-def main(prod, enable_tracer, config, process_num):
+def main(prod, enable_tracer, enable_profiler, config, process_num):
     """ Launch the Nylas sync service. """
     level = os.environ.get('LOGLEVEL', inbox_config.get('LOGLEVEL'))
     configure_logging(log_level=level)
@@ -59,9 +59,6 @@ def main(prod, enable_tracer, config, process_num):
 
     if not prod:
         preflight()
-        # Start the queue populator agent for development ease.
-        populator = QueuePopulator(None)
-        gevent.spawn(populator.run)
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 
@@ -89,12 +86,17 @@ def main(prod, enable_tracer, config, process_num):
      Use CTRL-C to stop.
      """
 
+    if enable_profiler:
+        inbox_config['DEBUG_PROFILING_ON'] = True
+
     port = 16384 + process_num
-    enable_profiler = inbox_config.get('DEBUG_PROFILING_ON')
+    enable_profiler_api = inbox_config.get('DEBUG_PROFILING_ON')
+
     process_identifier = '{}:{}'.format(platform.node(), process_num)
     sync_service = SyncService(process_identifier, process_num)
-    http_frontend = HTTPFrontend(sync_service, port, enable_tracer,
-                                 enable_profiler)
+    http_frontend = SyncHTTPFrontend(sync_service, port, enable_tracer,
+                                     enable_profiler_api)
+    sync_service.register_pending_avgs_provider(http_frontend)
     http_frontend.start()
 
     sync_service.run()

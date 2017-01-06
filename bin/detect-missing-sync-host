@@ -4,50 +4,29 @@ import click
 
 from sqlalchemy.orm import load_only
 
-from inbox.scheduling.queue import QueueClient
-
 from inbox.models.account import Account
 from inbox.models.session import global_session_scope
 
 
 @click.command()
-@click.option('--fix', is_flag=True, default=False, help='use with caution')
-def main(fix):
+def main():
     """
     Detects accounts with sync_state and sync_host inconsistent with
     sync_should_run bit. (At one point, this could happen if, say, an account
     was _started_ on a new host without being first stopped on its previous
     host.)
 
-    If --fix is specified, will make these bits consistent with what is in
-    the scheduler redis store. You MUST restart account syncs on all affected
-    processes after doing this in order to ensure that accounts have all
-    been started correctly! Otherwise it is possible that some accounts will
-    have a sync_host assigned but won't actually be running on the process,
-    and appear as dead accounts.
-
     """
-    qc_a = QueueClient('us-west-2a')
-    qc_b = QueueClient('us-west-2b')
-
-    assigned_a = qc_a.assigned()
-    assigned_b = qc_b.assigned()
-
     with global_session_scope() as db_session:
         for acc in db_session.query(Account).options(
-                load_only('sync_state', 'sync_should_run', 'sync_host'))\
+                load_only('sync_state', 'sync_should_run', 'sync_host', 'desired_sync_host'))\
                 .filter(Account.sync_state == 'stopped'):
 
-            if acc.id in assigned_a or acc.id in assigned_b:
-                sync_host = assigned_a.get(acc.id) or assigned_b.get(acc.id)
+            if acc.desired_sync_host is not None:
                 print "account {} assigned to {} but has sync_state 'stopped'"\
                       " ({}, {})"\
-                    .format(acc.id, sync_host,
+                    .format(acc.id, acc.sync_host,
                             acc.sync_should_run, acc.sync_host)
-                if fix:
-                    acc.sync_host = sync_host
-        if fix:
-            db_session.commit()
 
 
 if __name__ == '__main__':

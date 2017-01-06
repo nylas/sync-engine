@@ -16,10 +16,16 @@ def _encode_labels(labels):
     return map(imapclient.imap_utf7.encode, labels)
 
 
-def remote_change_labels(crispin_client, account_id, message_id,
+def remote_change_labels(crispin_client, account_id, message_ids,
                          removed_labels, added_labels):
+    uids_for_message = {}
     with session_scope(account_id) as db_session:
-        uids_for_message = uids_by_folder(message_id, db_session)
+        for message_id in message_ids:
+            folder_uids_map = uids_by_folder(message_id, db_session)
+            for folder_name, uids in folder_uids_map.items():
+                if folder_name not in uids_for_message:
+                    uids_for_message[folder_name] = []
+                uids_for_message[folder_name].extend(uids)
 
     for folder_name, uids in uids_for_message.items():
         crispin_client.select_folder_if_necessary(folder_name, uidvalidity_cb)

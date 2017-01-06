@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Index
+from sqlalchemy import Column, Integer, String, Enum, Text, Index, BigInteger, \
+    ForeignKey
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
-from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
+from inbox.sqlalchemy_ext.util import MAX_TEXT_CHARS
 from inbox.models.mixins import (HasPublicID, HasEmailAddress, HasRevisions,
                                  UpdatedAtMixin, DeletedAtMixin)
 from inbox.models.base import MailSyncBase
@@ -16,12 +17,15 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
     """Data for a user's contact."""
     API_OBJECT_NAME = 'contact'
 
-    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
-                          nullable=False)
-    namespace = relationship(Namespace, load_on_pending=True)
+    namespace_id = Column(BigInteger, nullable=False, index=True)
+    namespace = relationship(
+        Namespace,
+        primaryjoin='foreign(Contact.namespace_id) == remote(Namespace.id)',
+        load_on_pending=True)
 
     # A server-provided unique ID.
-    uid = Column(String(64), nullable=False)
+    # NB: We specify the collation here so that the test DB gets setup correctly.
+    uid = Column(String(64, collation='utf8mb4_bin'), nullable=False)
     # A constant, unique identifier for the remote backend this contact came
     # from. E.g., 'google', 'eas', 'inbox'
     provider_name = Column(String(64))
@@ -45,10 +49,10 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
                             'namespace_id', 'uid', 'provider_name'))
 
     @validates('raw_data')
-    def validate_length(self, key, value):
+    def validate_text_column_length(self, key, value):
         if value is None:
             return None
-        return unicode_safe_truncate(value, MAX_TEXT_LENGTH)
+        return unicode_safe_truncate(value, MAX_TEXT_CHARS)
 
     @property
     def versioned_relationships(self):
@@ -65,10 +69,11 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
 class PhoneNumber(MailSyncBase, UpdatedAtMixin, DeletedAtMixin):
     STRING_LENGTH = 64
 
-    contact_id = Column(ForeignKey(Contact.id, ondelete='CASCADE'), index=True)
-    contact = relationship(Contact,
-                           backref=backref('phone_numbers',
-                                           cascade='all, delete-orphan'))
+    contact_id = Column(BigInteger, index=True)
+    contact = relationship(
+        Contact,
+        primaryjoin='foreign(PhoneNumber.contact_id) == remote(Contact.id)',
+        backref=backref('phone_numbers', cascade='all, delete-orphan'))
 
     type = Column(String(STRING_LENGTH), nullable=True)
     number = Column(String(STRING_LENGTH), nullable=False)
@@ -86,8 +91,7 @@ class MessageContactAssociation(MailSyncBase):
     [assoc.message for assoc in c.message_associations if assoc.field ==
     ...  'to_addr']
     """
-    contact_id = Column(ForeignKey(Contact.id, ondelete='CASCADE'),
-                        primary_key=True)
+    contact_id = Column(BigInteger, primary_key=True)
     message_id = Column(ForeignKey(Message.id, ondelete='CASCADE'),
                         primary_key=True)
     field = Column(Enum('from_addr', 'to_addr',
@@ -97,6 +101,8 @@ class MessageContactAssociation(MailSyncBase):
     # when you try to delete a message or a contact.
     contact = relationship(
         Contact,
+        primaryjoin='foreign(MessageContactAssociation.contact_id) == '
+                    'remote(Contact.id)',
         backref=backref('message_associations', cascade='all, delete-orphan'))
     message = relationship(
         Message,

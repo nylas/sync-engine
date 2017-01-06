@@ -72,8 +72,9 @@ def new_session(engine, versioned=True):
 
             t = time.time()
             latency = int((t - start_time) * 1000)
-            statsd_client.timing(metric_name, latency)
-            statsd_client.incr(metric_name)
+            if config.get('ENABLE_DB_TXN_METRICS', False):
+                statsd_client.timing(metric_name, latency)
+                statsd_client.incr(metric_name)
             if latency > MAX_SANE_TRX_TIME_MS:
                 log.warning('Long transaction', latency=latency,
                             modname=modname, funcname=funcname)
@@ -117,11 +118,11 @@ def session_scope(id_, versioned=True):
 
     Parameters
     ----------
+    id_ : int
+        Object primary key to grab a session for.
+
     versioned : bool
         Do you want to enable the transaction log?
-    debug : bool
-        Do you want to turn on SQL echoing? Use with caution. Engine is not
-        cached in this case!
 
     Yields
     ------

@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship, backref, validates, reconstructor
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.dialects.mysql import LONGTEXT
 
-from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, BigJSON, MutableList
+from inbox.sqlalchemy_ext.util import MAX_TEXT_CHARS, BigJSON, MutableList
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import (HasPublicID, HasRevisions, UpdatedAtMixin,
                                  DeletedAtMixin)
@@ -33,10 +33,10 @@ OWNER_MAX_LEN = 1024
 MAX_LENS = {
     'location': LOCATION_MAX_LEN,
     'owner': OWNER_MAX_LEN,
-    'recurrence': MAX_TEXT_LENGTH,
+    'recurrence': MAX_TEXT_CHARS,
     'reminders': REMINDER_MAX_LEN,
     'title': TITLE_MAX_LEN,
-    'raw_data': MAX_TEXT_LENGTH
+    'raw_data': MAX_TEXT_CHARS
 }
 
 

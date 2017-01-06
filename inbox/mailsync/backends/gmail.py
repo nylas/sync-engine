@@ -410,8 +410,8 @@ class GmailFolderSyncEngine(FolderSyncEngine):
                         db_session.commit()
                         new_uids.add(uid)
 
-        log.info('Committed new UIDs',
-                 new_committed_message_count=len(new_uids))
+        log.debug('Committed new UIDs',
+                  new_committed_message_count=len(new_uids))
         # If we downloaded uids, record message velocity (#uid / latency)
         if self.state == "initial" and len(new_uids):
             self._report_message_velocity(datetime.utcnow() - start,
