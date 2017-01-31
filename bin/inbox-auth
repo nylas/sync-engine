@@ -53,8 +53,11 @@ def main(email_address, reauth, target, provider):
         auth_info['provider'] = provider
         auth_handler = handler_from_provider(provider)
         auth_info.update(auth_handler.interactive_auth(email_address))
-
-        account = auth_handler.create_account(email_address, auth_info)
+        
+        if reauth:
+          account = auth_handler.update_account(account, auth_info)
+        else:
+          account = auth_handler.create_account(email_address, auth_info)
 
         try:
             if auth_handler.verify_account(account):
