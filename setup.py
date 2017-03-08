@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="inbox-sync",
-    version="17.1.6",  # Release Jan 6, 2017
+    version="17.3.8",  # Release Mar 8, 2017
     packages=find_packages(),
 
     install_requires=[],
