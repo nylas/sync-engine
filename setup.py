@@ -43,7 +43,6 @@ setup(
              'bin/contact-search-service',
              'bin/contact-search-backfill',
              'bin/contact-search-delete-index',
-             'bin/delete-marked-accounts',
              'bin/backfix-generic-imap-separators.py',
              'bin/backfix-duplicate-categories.py',
              'bin/correct-autoincrements',

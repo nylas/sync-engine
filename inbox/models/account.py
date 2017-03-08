@@ -244,12 +244,20 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
             self.disable_sync(reason)
             self.sync_state = 'invalid'
 
-    def mark_deleted(self):
+    def mark_for_deletion(self):
         """
         Mark account for deletion
         """
         self.disable_sync('account deleted')
         self.sync_state = 'stopped'
+        # Commit this to prevent race conditions
+        inspect(self).session.commit()
+
+    def unmark_for_deletion(self):
+        self.enable_sync()
+        self._sync_status = {}
+        self.sync_state = 'running'
+        inspect(self).session.commit()
 
     def sync_stopped(self, requesting_host):
         """
@@ -284,7 +292,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState,
         return self.sync_state == 'running'
 
     @property
-    def is_deleted(self):
+    def is_marked_for_deletion(self):
         return self.sync_state in ('stopped', 'killed', 'invalid') and \
             self.sync_should_run is False and \
             self._sync_status.get('sync_disabled_reason') == 'account deleted'

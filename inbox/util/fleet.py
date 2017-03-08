@@ -1,4 +1,5 @@
 from boto import ec2
+import random
 
 
 def get_sync_hosts_in_zone(zone, level, include_debug=False):
@@ -36,6 +37,34 @@ def get_sync_hosts_in_zone(zone, level, include_debug=False):
         'num_procs': num_vcpus(i.instance_type) * 2,
         'debug': i.tags.get('Debug') == 'true',
     } for i in instances]
+
+
+def get_random_sync_host(level):
+    instances = []
+
+    if level not in ('staging', 'prod'):
+        return None
+
+    regions = ec2.regions()
+    for region in regions:
+        try:
+            conn = ec2.connect_to_region(region.name)
+
+            for reservation in conn.get_all_instances():
+                for instance in reservation.instances:
+                    instances.append(instance)
+
+            instances = filter(lambda instance: instance.state == "running", instances)
+            instances = filter(lambda instance: instance.tags.get('Role') == "sync", instances)
+            instances = filter(lambda instance: instance.tags.get('Level') == level, instances)
+            instances = filter(lambda instance: instance.tags.get('Debug') == 'false' , instances)
+
+        except:
+            print "Unable to connect to region {}".format(region.name)
+            raise
+
+    instance = random.choice(instances)
+    return instance.tags.get('Name')
 
 
 # For whatever reason, the ec2 API doesn't provide us with an easy way to get

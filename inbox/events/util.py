@@ -82,9 +82,9 @@ def valid_base36(uid):
 def removed_participants(original_participants, update_participants):
     """Returns the name and addresses of the participants which have been
     removed."""
-    original_table = {part['email']: part.get('name') for part in original_participants
+    original_table = {part['email'].lower(): part.get('name') for part in original_participants
                       if 'email' in part}
-    update_table = {part['email']: part.get('name') for part in update_participants
+    update_table = {part['email'].lower(): part.get('name') for part in update_participants
                     if 'email' in part}
 
     ret = []

@@ -98,7 +98,7 @@ def test_get_accounts_to_delete(db):
     assert len(accounts_to_delete) == 0
 
     # get_accounts_to_delete() with one account marked as deleted
-    accounts[0].mark_deleted()
+    accounts[0].mark_for_deletion()
     db.session.commit()
 
     accounts_to_delete = get_accounts_to_delete(0)
@@ -106,7 +106,7 @@ def test_get_accounts_to_delete(db):
 
     # get_accounts_to_delete() with more than one account marked as deleted
     for i in range(1, 4):
-        accounts[i].mark_deleted()
+        accounts[i].mark_for_deletion()
     db.session.commit()
 
     accounts_to_delete = get_accounts_to_delete(0)
@@ -115,7 +115,7 @@ def test_get_accounts_to_delete(db):
 
 def test_bulk_namespace_deletion(db):
     from inbox.models import Account
-    from inbox.models.util import get_accounts_to_delete, delete_marked_accounts
+    from inbox.models.util import get_accounts_to_delete, batch_delete_namespaces
 
     db.session.query(Account).delete(synchronize_session=False)
     db.session.commit()
@@ -139,30 +139,30 @@ def test_bulk_namespace_deletion(db):
     # Ensure all of the accounts have been created successfully
     assert db.session.query(Account).count() == 5
 
-    # delete_marked_accounts() with no accounts marked as deleted
+    # batch_delete_namespaces() with no accounts marked as deleted
     to_delete = get_accounts_to_delete(0)
-    delete_marked_accounts(0, to_delete)
+    batch_delete_namespaces(to_delete)
     assert len(db.session.query(Account.id).all()) == 5
 
-    # delete_marked_accounts() with one account marked as deleted
-    account_1.mark_deleted()
+    # batch_delete_namespaces() with one account marked as deleted
+    account_1.mark_for_deletion()
     db.session.commit()
 
     to_delete = get_accounts_to_delete(0)
-    delete_marked_accounts(0, to_delete)
+    batch_delete_namespaces(to_delete)
 
     alive_accounts = db.session.query(Account.id).all()
     assert len(alive_accounts) == 4
     assert account_1_id not in alive_accounts
 
-    # delete_marked_accounts() with more than one account marked as deleted
-    account_2.mark_deleted()
-    account_3.mark_deleted()
-    account_4.mark_deleted()
+    # batch_delete_namespaces() with more than one account marked as deleted
+    account_2.mark_for_deletion()
+    account_3.mark_for_deletion()
+    account_4.mark_for_deletion()
     db.session.commit()
 
     to_delete = get_accounts_to_delete(0)
-    delete_marked_accounts(0, to_delete)
+    batch_delete_namespaces(to_delete)
 
     alive_accounts = db.session.query(Account.id).all()
     assert len(alive_accounts) == 1
@@ -174,7 +174,7 @@ def test_bulk_namespace_deletion(db):
 @freeze_time("2016-02-02 11:01:34")
 def test_deletion_no_throttle(db, patch_requests_no_throttle):
     from inbox.models import Account
-    from inbox.models.util import get_accounts_to_delete, delete_marked_accounts
+    from inbox.models.util import get_accounts_to_delete, batch_delete_namespaces
 
     new_accounts = set()
     account_1 = add_completely_fake_account(db)
@@ -183,12 +183,12 @@ def test_deletion_no_throttle(db, patch_requests_no_throttle):
     account_2 = add_completely_fake_account(db, "test2@nylas.com")
     new_accounts.add(account_2.id)
 
-    account_1.mark_deleted()
-    account_2.mark_deleted()
+    account_1.mark_for_deletion()
+    account_2.mark_for_deletion()
     db.session.commit()
 
     to_delete = get_accounts_to_delete(0)
-    greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
+    greenlet = gevent.spawn(batch_delete_namespaces, to_delete, throttle=True)
     greenlet.join()
 
     alive_accounts = db.session.query(Account.id).all()
@@ -200,7 +200,7 @@ def test_deletion_no_throttle(db, patch_requests_no_throttle):
 @freeze_time("2016-02-02 11:01:34")
 def test_deletion_metric_throttle(db, patch_requests_throttle):
     from inbox.models import Account
-    from inbox.models.util import get_accounts_to_delete, delete_marked_accounts
+    from inbox.models.util import get_accounts_to_delete, batch_delete_namespaces
 
     account_1 = add_completely_fake_account(db)
     account_1_id = account_1.id
@@ -208,12 +208,12 @@ def test_deletion_metric_throttle(db, patch_requests_throttle):
     account_2 = add_completely_fake_account(db, "test2@nylas.com")
     account_2_id = account_2.id
 
-    account_1.mark_deleted()
-    account_2.mark_deleted()
+    account_1.mark_for_deletion()
+    account_2.mark_for_deletion()
     db.session.commit()
 
     to_delete = get_accounts_to_delete(0)
-    greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
+    greenlet = gevent.spawn(batch_delete_namespaces, to_delete, throttle=True)
     greenlet.join()
 
     alive_accounts = [acc.id for acc in db.session.query(Account).all()]
@@ -226,7 +226,7 @@ def test_deletion_metric_throttle(db, patch_requests_throttle):
 @freeze_time("2016-02-02 01:01:34")
 def test_deletion_time_throttle(db, patch_requests_no_throttle):
     from inbox.models import Account
-    from inbox.models.util import get_accounts_to_delete, delete_marked_accounts
+    from inbox.models.util import get_accounts_to_delete, batch_delete_namespaces
 
     account_1 = add_completely_fake_account(db, "test5@nylas.com")
     account_1_id = account_1.id
@@ -234,12 +234,12 @@ def test_deletion_time_throttle(db, patch_requests_no_throttle):
     account_2 = add_completely_fake_account(db, "test6@nylas.com")
     account_2_id = account_2.id
 
-    account_1.mark_deleted()
-    account_2.mark_deleted()
+    account_1.mark_for_deletion()
+    account_2.mark_for_deletion()
     db.session.commit()
 
     to_delete = get_accounts_to_delete(0)
-    greenlet = gevent.spawn(delete_marked_accounts, 0, to_delete, throttle=True)
+    greenlet = gevent.spawn(batch_delete_namespaces, to_delete, throttle=True)
     greenlet.join()
 
     alive_accounts = [acc.id for acc in db.session.query(Account).all()]
@@ -288,7 +288,11 @@ def test_namespace_deletion(db, default_account):
 
     # Delete namespace, verify data corresponding to this namespace /only/
     # is deleted
-    delete_namespace(account_id, namespace_id)
+
+    account = db.session.query(Account).join(Namespace).filter(Namespace.id == namespace_id).one()
+    account.mark_for_deletion()
+
+    delete_namespace(namespace_id)
     db.session.commit()
 
     assert len(db.session.query(Namespace).filter(Namespace.id == namespace_id).all()) == 0
@@ -376,7 +380,8 @@ def test_fake_accounts(empty_db):
         Account.id == account.id).count() == 1
 
     # Try the dry-run mode:
-    delete_namespace(account.id, account.namespace.id, dry_run=True)
+    account.mark_for_deletion()
+    delete_namespace(account.namespace.id, dry_run=True)
 
     for m in models:
         c = db.session.query(m).filter(
@@ -391,7 +396,7 @@ def test_fake_accounts(empty_db):
     assert db.session.query(ImapUid).count() != 0
 
     # Now delete the account for reals.
-    delete_namespace(account.id, account.namespace.id)
+    delete_namespace(account.namespace.id)
 
     for m in models:
         c = db.session.query(m).filter(
@@ -439,10 +444,11 @@ def test_multiple_fake_accounts(empty_db):
                 model.namespace_id == account.namespace.id).count()
 
     # now delete the third account.
-    last_account_id = accounts[2].id
     last_namespace_id = accounts[2].namespace.id
+    accounts[2].mark_for_deletion()
 
-    delete_namespace(last_account_id, last_namespace_id)
+    delete_namespace(last_namespace_id)
+
     for account in accounts[:2]:
         for model in models:
             clsname = model.__name__

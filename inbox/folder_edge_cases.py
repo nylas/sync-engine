@@ -29,4 +29,5 @@ localized_folder_names = {
              'INBOX.Sent Messages', 'Odeslan\xc3\xa9', 'mail/sent-mail',
              'Ko\xc5\xa1', 'INBOX.SentMail', 'Gesendet',
              'Ko\xc5\xa1/Sent Items', 'Gesendete Elemente',
-             'INBOX.\xc9l\xe9ments envoy\xe9s', 'INBOX.INBOX.Sent',}}
+             'INBOX.\xc9l\xe9ments envoy\xe9s', 'INBOX.INBOX.Sent',
+             'Objets envoy\xe9s', }}

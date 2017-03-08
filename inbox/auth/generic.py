@@ -332,7 +332,6 @@ def _auth_is_invalid(exc):
     AUTH_INVALID_PREFIXES = (
         '[authenticationfailed]',
         'incorrect username or password',
-        'login failed',
         'invalid login or password',
         'login login error password error',
         '[auth] authentication failed.',
@@ -348,6 +347,8 @@ def _auth_is_invalid(exc):
         'LOGIN GroupWise login failed',
         'authentication failed',
         'LOGIN bad',  # LOGIN bad username or password
+        '[AUTHORIZATIONFAILED]',
+        'incorrect password',
     )
     return any(exc.message.lower().startswith(msg.lower()) for msg in
                AUTH_INVALID_PREFIXES)

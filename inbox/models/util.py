@@ -4,9 +4,10 @@ import gevent
 import requests
 import datetime
 from collections import OrderedDict
+from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.config import config
-from inbox.models import Account
+from inbox.models import Account, Namespace
 from inbox.util.stats import statsd_client
 from inbox.models.session import session_scope
 from nylas.logging.sentry import log_uncaught_errors
@@ -97,57 +98,40 @@ def get_accounts_to_delete(shard_id):
     ids_to_delete = []
     with session_scope_by_shard_id(shard_id) as db_session:
         ids_to_delete = [(acc.id, acc.namespace.id) for acc
-                         in db_session.query(Account) if acc.is_deleted]
+                         in db_session.query(Account) if acc.is_marked_for_deletion]
     return ids_to_delete
 
 
-def delete_marked_accounts(shard_id, ids_to_delete, throttle=False,
-                           dry_run=False):
+class AccountDeletionErrror(Exception):
+    pass
+
+
+def batch_delete_namespaces(ids_to_delete, throttle=False,
+                                           dry_run=False):
+
     start = time.time()
 
     deleted_count = 0
     for account_id, namespace_id in ids_to_delete:
+        # try:
         try:
-            with session_scope(namespace_id) as db_session:
-                account = db_session.query(Account).get(account_id)
-                if not account:
-                    log.critical('Account with does not exist',
-                                 account_id=account_id)
-                    continue
-
-                if account.sync_should_run or not account.is_deleted:
-                    log.warn('Account NOT marked for deletion. '
-                             'Will not delete', account_id=account_id)
-                    continue
-
-            log.info('Deleting account', account_id=account_id)
-            start_time = time.time()
-            # Delete data in database
-            try:
-                log.info('Deleting database data', account_id=account_id)
-                delete_namespace(account_id, namespace_id, throttle=throttle,
-                                 dry_run=dry_run)
-            except Exception as e:
-                log.critical('Database data deletion failed', error=e,
-                             account_id=account_id)
-                continue
-
-            # Delete liveness data
-            log.debug('Deleting liveness data', account_id=account_id)
-            clear_heartbeat_status(account_id)
-
-            deleted_count += 1
-            statsd_client.timing('mailsync.account_deletion.queue.deleted',
-                                 time.time() - start_time)
+            delete_namespace(namespace_id,
+                             throttle=throttle,
+                             dry_run=dry_run)
+        except AccountDeletionErrror as e:
+            log.critical('AccountDeletionErrror', error_message=e.message)
         except Exception:
             log_uncaught_errors(log, account_id=account_id)
 
+        deleted_count += 1
+
     end = time.time()
-    log.info('All data deleted successfully', shard_id=shard_id,
+    log.info('All data deleted successfully for ids',
+             ids_to_delete=ids_to_delete,
              time=end - start, count=deleted_count)
 
 
-def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
+def delete_namespace(namespace_id, throttle=False, dry_run=False):
     """
     Delete all the data associated with a namespace from the database.
     USE WITH CAUTION.
@@ -155,34 +139,50 @@ def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
     NOTE: This function is only called from bin/delete-account-data.
     It prints to stdout.
 
+    Raises AccountDeletionErrror with message if there are problems
     """
-    from inbox.ignition import engine_manager
 
-    # Bypass the ORM for performant bulk deletion;
-    # we do /not/ want Transaction records created for these deletions,
-    # so this is okay.
-    engine = engine_manager.get_for_id(namespace_id)
+    with session_scope(namespace_id) as db_session:
+        try:
+            account = db_session.query(Account).join(Namespace).filter(Namespace.id == namespace_id).one()
+        except NoResultFound:
+            raise AccountDeletionErrror(
+                'Could not find account in database')
 
-    # Chunk delete for tables that might have a large concurrent write volume
-    # to prevent those transactions from blocking.
-    # NOTE: ImapFolderInfo does not fall into this category but we include it
-    # here for simplicity.
+        if not account.is_marked_for_deletion:
+            raise AccountDeletionErrror(
+                'Account is_marked_for_deletion is False. '
+                'Change this to proceed with deletion.')
+        account_id = account.id
+        account_discriminator = account.discriminator
+
+    log.info('Deleting account', account_id=account_id)
+    start_time = time.time()
+
+    # These folders are used to configure batch deletion in chunks for
+    # specific tables that are prone to transaction blocking during
+    # large concurrent write volume.  See _batch_delete
+    # NOTE: ImapFolderInfo doesn't reall fall into this category but
+    # we include here for simplicity anyway.
 
     filters = OrderedDict()
-
     for table in ['message', 'block', 'thread', 'transaction', 'actionlog',
                   'contact', 'event', 'dataprocessingcache']:
         filters[table] = ('namespace_id', namespace_id)
 
-    with session_scope(namespace_id) as db_session:
-        account = db_session.query(Account).get(account_id)
-        if account.discriminator != 'easaccount':
-            filters['imapuid'] = ('account_id', account_id)
-            filters['imapfoldersyncstatus'] = ('account_id', account_id)
-            filters['imapfolderinfo'] = ('account_id', account_id)
-        else:
-            filters['easuid'] = ('easaccount_id', account_id)
-            filters['easfoldersyncstatus'] = ('account_id', account_id)
+    if account_discriminator == 'easaccount':
+        filters['easuid'] = ('easaccount_id', account_id)
+        filters['easfoldersyncstatus'] = ('account_id', account_id)
+    else:
+        filters['imapuid'] = ('account_id', account_id)
+        filters['imapfoldersyncstatus'] = ('account_id', account_id)
+        filters['imapfolderinfo'] = ('account_id', account_id)
+
+    from inbox.ignition import engine_manager
+    # Bypass the ORM for performant bulk deletion;
+    # we do /not/ want Transaction records created for these deletions,
+    # so this is okay.
+    engine = engine_manager.get_for_id(namespace_id)
 
     for cls in filters:
         _batch_delete(engine, cls, filters[cls], throttle=throttle,
@@ -228,10 +228,17 @@ def delete_namespace(account_id, namespace_id, throttle=False, dry_run=False):
             db_session.delete(account)
             db_session.commit()
 
+    # Delete liveness data ( heartbeats)
+    log.debug('Deleting liveness data', account_id=account_id)
+    clear_heartbeat_status(account_id)
 
-def _batch_delete(engine, table, xxx_todo_changeme, throttle=False,
+    statsd_client.timing('mailsync.account_deletion.queue.deleted',
+                         time.time() - start_time)
+
+
+def _batch_delete(engine, table, column_id_filters, throttle=False,
                   dry_run=False):
-    (column, id_) = xxx_todo_changeme
+    (column, id_) = column_id_filters
     count = engine.execute(
         'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
         scalar()

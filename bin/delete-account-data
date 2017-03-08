@@ -42,7 +42,7 @@ def delete_account_data(account_id, dry_run, yes):
         email_address = account.email_address
         namespace_id = account.namespace.id
 
-        if account.sync_should_run or not account.is_deleted:
+        if account.sync_should_run or not account.is_marked_for_deletion:
             print 'Account with id {} NOT marked for deletion.\n'\
                   'Will NOT delete, goodbye.'.format(account_id)
             return -1

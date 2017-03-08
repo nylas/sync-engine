@@ -17,6 +17,7 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, func
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import joinedload, load_only
 
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
@@ -181,7 +182,8 @@ def before_remote_request():
         if g.namespace:
             # Logging provider here to ensure that the provider is only logged for
             # requests that modify data or are proxied to remote servers.
-            request.environ['log_context']['provider'] = g.namespace.account.provider
+            request.environ['log_context']['provider'] = \
+                    g.namespace.account.provider
 
         valid_account(g.namespace)
 
@@ -232,7 +234,8 @@ def handle_input_error(error):
 @app.errorhandler(Exception)
 def handle_generic_error(error):
     log_exception(sys.exc_info())
-    response = flask_jsonify(message="An internal error occured. If this issue persists, please contact support@nylas.com and include this request_uid: {}".format(request.headers.get('X-Unique-ID'), type='api_error'))
+    response = flask_jsonify(message="An internal error occured. If this issue persists, please contact support@nylas.com and include this request_uid: {}".format(
+        request.headers.get('X-Unique-ID'), type='api_error'))
     response.status_code = 500
     return response
 
@@ -365,8 +368,8 @@ def thread_api(public_id):
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
-            Thread.public_id == public_id,
-            Thread.deleted_at == None,
+            Thread.public_id == public_id,  # noqa
+            Thread.deleted_at == None,  # noqa
             Thread.namespace_id == g.namespace.id).one()
         return encoder.jsonify(thread)
     except NoResultFound:
@@ -381,8 +384,8 @@ def thread_api_update(public_id):
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
-            Thread.public_id == public_id,
-            Thread.deleted_at == None,
+            Thread.public_id == public_id,  # noqa
+            Thread.deleted_at == None,  # noqa
             Thread.namespace_id == g.namespace.id).one()
     except NoResultFound:
         raise NotFoundError("Couldn't find thread `{0}` ".format(public_id))
@@ -549,7 +552,8 @@ def message_read_api(public_id):
                     contents = get_raw_from_provider(message)
                 statsd_client.incr('{}.successes'.format(statsd_string))
             except TemporaryEmailFetchException:
-                statsd_client.incr('{}.temporary_failure'.format(statsd_string))
+                statsd_client.incr(
+                    '{}.temporary_failure'.format(statsd_string))
                 log.warning('Exception when fetching email',
                             account_id=account.id, provider=account.provider,
                             logstash_tag='direct_fetching', exc_info=True)
@@ -833,11 +837,15 @@ def contact_api():
     if args['filter']:
         results = results.filter(Contact.email_address == args['filter'])
     results = results.with_hint(
-        Contact, 'USE INDEX (ix_contact_ns_uid_provider_name)')\
-        .order_by(asc(Contact.created_at))
+            Contact, 'USE INDEX (idx_namespace_created)')\
+            .order_by(asc(Contact.created_at))
 
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.scalar()})
+
+    if args['view'] != 'ids':
+        results = results.options(load_only('public_id', '_raw_address', 'name'),
+                                  joinedload(Contact.phone_numbers))
 
     results = results.limit(args['limit']).offset(args['offset']).all()
     if args['view'] == 'ids':
@@ -946,6 +954,7 @@ def event_create_api():
         participants = []
 
     for p in participants:
+        p['email'] = p['email'].lower()
         if 'status' not in p:
             p['status'] = 'noreply'
 
@@ -1007,7 +1016,8 @@ def event_update_api(public_id):
     # iCalendar-imported files are read-only by default but let's give a
     # slightly more helpful error message.
     if event.calendar == g.namespace.account.emailed_events_calendar:
-        raise InputError('Can not update an event imported from an iCalendar file.')
+        raise InputError(
+            'Can not update an event imported from an iCalendar file.')
 
     if event.read_only:
         raise InputError('Cannot update read_only event.')
@@ -1025,6 +1035,7 @@ def event_update_api(public_id):
     cancelled_participants = []
     if 'participants' in data:
         for p in data['participants']:
+            p['email'] = p['email'].lower()
             if 'status' not in p:
                 p['status'] = 'noreply'
 
@@ -1035,6 +1046,7 @@ def event_update_api(public_id):
         # db. With MySQL, this means that the column will be 64k.
         # Drop the latest participants until it fits in the column.
         while len(json.dumps(cancelled_participants)) > 63000:
+            log.warning("Truncating cancelled participants", cancelled_participants=cancelled_participants)
             cancelled_participants.pop()
 
     # Don't update an event if we don't need to.
@@ -1064,7 +1076,8 @@ def event_update_api(public_id):
                       notify_participants=notify_participants)
 
         if len(json.dumps(kwargs)) > 2 ** 16 - 12:
-            raise InputError('Event update too big --- please break it in parts.')
+            raise InputError(
+                'Event update too big --- please break it in parts.')
 
         if event.calendar != account.emailed_events_calendar:
             schedule_action('update_event', event, g.namespace.id, g.db_session,
@@ -1090,7 +1103,8 @@ def event_delete_api(public_id):
         raise NotFoundError("Couldn't find event {0}".format(public_id))
 
     if event.calendar == g.namespace.account.emailed_events_calendar:
-        raise InputError('Can not update an event imported from an iCalendar file.')
+        raise InputError(
+            'Can not update an event imported from an iCalendar file.')
 
     if event.calendar.read_only:
         raise InputError('Cannot delete event {} from read_only calendar.'.
@@ -1099,7 +1113,8 @@ def event_delete_api(public_id):
     if g.api_features.optimistic_updates:
         # Set the local event status to 'cancelled' rather than deleting it,
         # in order to be consistent with how we sync deleted events from the
-        # remote, and consequently return them through the events, delta sync APIs
+        # remote, and consequently return them through the events, delta sync
+        # APIs
         event.sequence_number += 1
         event.status = 'cancelled'
         g.db_session.commit()
@@ -1528,9 +1543,11 @@ def draft_delete_api(public_id):
 
 
 @app.route('/send', methods=['POST'])
+@app.route('/send-with-features', methods=['POST'])  # TODO deprecate this URL
 def draft_send_api():
     request_started = time.time()
     account = g.namespace.account
+
     if request.content_type == "message/rfc822":
         draft = create_draft_from_mime(account, request.data,
                                        g.db_session)
@@ -1542,6 +1559,10 @@ def draft_send_api():
         return resp
 
     data = request.get_json(force=True)
+
+    # Check if using tracking
+    tracking_options = data.get('tracking', {})
+
     draft_public_id = data.get('draft_id')
     if draft_public_id is not None:
         draft = get_draft(draft_public_id, data.get('version'),
@@ -1550,6 +1571,25 @@ def draft_send_api():
         draft = create_message_from_json(data, g.namespace,
                                          g.db_session, is_draft=False)
     validate_draft_recipients(draft)
+
+    if tracking_options:  # Open/Link/Reply tracking set
+        try:
+            from redwood.api.tracking import handle_tracking_options
+        except ImportError:
+            return err(501,
+                       'Tracking is not implemented in the open source '
+                       'Nylas Cloud API. See our hosted version for this '
+                       'feature. https://nylas.com/cloud')
+
+        assert hasattr(g, 'application_id'), \
+            'Tracking requires application ID'
+
+        handle_tracking_options(
+                mailsync_db_session=g.db_session,
+                tracking_options=tracking_options,
+                draft=draft,
+                application_id=g.application_id)
+
     if isinstance(account, GenericAccount):
         schedule_action('save_sent_email', draft, draft.namespace.id,
                         g.db_session)

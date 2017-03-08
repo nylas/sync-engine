@@ -30,30 +30,6 @@ def or_none(value, selector):
         return selector(value)
 
 
-def strip_plaintext_quote(text):
-    """
-    Strip out quoted text with no inline responses.
-
-    TODO: Make sure that the line before the quote looks vaguely like
-    a quote header. May be hard to do in an internationalized manner?
-
-    """
-    found_quote = False
-    lines = text.strip().splitlines()
-    quote_start = None
-    for i, line in enumerate(lines):
-        if line.startswith('>'):
-            found_quote = True
-            if quote_start is None:
-                quote_start = i
-        else:
-            found_quote = False
-    if found_quote:
-        return '\n'.join(lines[:quote_start - 1])
-    else:
-        return text
-
-
 def parse_ml_headers(headers):
     """
     Parse the mailing list headers described in RFC 4021,
@@ -197,14 +173,17 @@ def register_backends(base_name, base_path):
 
 
 def cleanup_subject(subject_str):
-    """Clean-up a message subject-line.
-    For instance, 'Re: Re: Re: Birthday party' becomes 'Birthday party'"""
+    """Clean-up a message subject-line, including whitespace.
+    For instance, 'Re: Re: Re: Birthday   party' becomes 'Birthday party'"""
     if subject_str is None:
         return ''
     # TODO consider expanding to all
     # http://en.wikipedia.org/wiki/List_of_email_subject_abbreviations
-    cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg|undeliverable|undelivered):\s*)+"
-    return re.sub(cleanup_regexp, "", subject_str)
+    prefix_regexp = "(?i)^((re|fw|fwd|aw|wg|undeliverable|undelivered):\s*)+"
+    subject = re.sub(prefix_regexp, "", subject_str)
+
+    whitespace_regexp = "\s+"
+    return re.sub(whitespace_regexp, " ", subject)
 
 
 # IMAP doesn't support nested folders and instead encodes paths inside folder

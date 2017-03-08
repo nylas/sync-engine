@@ -39,8 +39,10 @@ def jitter_for_deadline(timespan):
 
 
 def is_account_on_debug_host(account_id, debug_hosts):
-    with session_scope(account_id) as db_session:
-        sync_host = db_session.query(Account.sync_host).get(account_id)
+    with session_scope(int(account_id)) as db_session:
+        sync_host = db_session.query(Account.sync_host).filter(Account.id == int(account_id)).one_or_none()
+        if sync_host is None:
+            return False
         return sync_host in debug_hosts
 
 

@@ -30,18 +30,15 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
             match_bcc = match.bcc_addr if match.bcc_addr else []
             message_bcc = message.bcc_addr if message.bcc_addr else []
 
-            match_emails = [t[1] for t in match.participants
-                            if t not in match_bcc]
-            message_emails = [t[1] for t in message.participants
-                              if t not in message_bcc]
+            match_emails = set([t[1].lower() for t in match.participants
+                                if t not in match_bcc])
+            message_emails = set([t[1].lower() for t in message.participants
+                                  if t not in message_bcc])
 
             # A conversation takes place between two or more persons.
             # Are there more than two participants in common in this
             # thread? If yes, it's probably a related thread.
-            match_participants_set = set(match_emails)
-            message_participants_set = set(message_emails)
-
-            if len(match_participants_set & message_participants_set) >= 2:
+            if len(match_emails & message_emails) >= 2:
                 # No need to loop through the rest of the messages
                 # in the thread
                 if len(thread.messages) >= MAX_THREAD_LENGTH:

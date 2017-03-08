@@ -216,6 +216,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
             email = participant.get('email')
             name = participant.get('name')
             if email is not None:
+                participant['email'] = participant['email'].lower()
                 self_hash[email] = participant
             elif name is not None:
                 # We have a name without an email.
@@ -232,6 +233,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID, UpdatedAtMixin,
             # always have an email address.
             # - karim
             if email is not None:
+                participant['email'] = participant['email'].lower()
                 if email in self_hash:
                     self_hash[email] =\
                         self._merge_participant_attributes(self_hash[email],

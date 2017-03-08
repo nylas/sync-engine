@@ -45,6 +45,8 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress,
 
     __table_args__ = (UniqueConstraint('uid', 'namespace_id',
                                        'provider_name'),
+                      Index('idx_namespace_created', 'namespace_id',
+                            'created_at'),
                       Index('ix_contact_ns_uid_provider_name',
                             'namespace_id', 'uid', 'provider_name'))
 

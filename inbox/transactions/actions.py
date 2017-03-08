@@ -154,8 +154,9 @@ class SyncbackService(gevent.Greenlet):
             else:
                 assert account_id is namespace.account.id
 
-            if namespace.account.sync_state == 'invalid':
-                self.log.warning('Skipping action for invalid account',
+            if namespace.account.sync_state in ('invalid', 'stopped'):
+                sync_state = namespace.account.sync_state
+                self.log.warning('Skipping action for {} account'.format(sync_state),
                                  account_id=account_id,
                                  action_log_id=log_entry.id,
                                  action=log_entry.action)
@@ -166,15 +167,12 @@ class SyncbackService(gevent.Greenlet):
                 if action_age > INVALID_ACCOUNT_GRACE_PERIOD:
                     log_entry.status = 'failed'
                     db_session.commit()
-                    self.log.warning('Marking action as failed for '
-                                     'invalid account, older than '
-                                     'grace period',
+                    self.log.warning('Marking action as failed for {} account, older than grace period'.format(sync_state),
                                      account_id=account_id,
                                      action_log_id=log_entry.id,
                                      action=log_entry.action)
-                    statsd_client.incr('syncback.invalid_failed.total')
-                    statsd_client.incr('syncback.invalid_failed.{}'.
-                                       format(account_id))
+                    statsd_client.incr('syncback.{}_failed.total'.format(sync_state))
+                    statsd_client.incr('syncback.{}_failed.{}'.format(sync_state, account_id))
                 continue
 
             if semaphore is None:

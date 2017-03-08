@@ -169,7 +169,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 if 'CN' in organizer.params:
                     organizer_name = organizer.params['CN']
 
-                owner = formataddr([organizer_name, organizer_email])
+                owner = formataddr([organizer_name, organizer_email.lower()])
             else:
                 owner = None
 
@@ -213,7 +213,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 except KeyError:
                     pass
 
-                participants.append({'email': email,
+                participants.append({'email': email.lower(),
                                      'name': name,
                                      'status': status,
                                      'notes': notes,

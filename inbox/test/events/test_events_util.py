@@ -31,6 +31,7 @@ def test_removed_participants():
     helena = {'email': 'helena@nylas.com', 'name': 'Helena Handbasket'}
     ben = {'email': 'ben@nylas.com', 'name': 'Ben Handbasket'}
     paul = {'email': 'paul@nylas.com', 'name': 'Paul Hochon'}
+    helena_case_change = {'email': 'HELENA@nylas.com', 'name': 'Helena Handbasket'}
 
     assert removed_participants([], []) == []
     assert removed_participants([helena], [ben]) == [helena]
@@ -39,6 +40,9 @@ def test_removed_participants():
     assert len(removed_participants([helena, ben, paul], [helena])) == 2
     assert ben in removed_participants([helena, ben, paul], [helena])
     assert paul in removed_participants([helena, ben, paul], [helena])
+    assert removed_participants([helena, ben], [helena_case_change, ben]) == []
+    removed = removed_participants([helena, ben], [helena_case_change, paul])
+    assert ben in removed and len(removed) == 1
 
 
 def test_unicode_event_truncation(db, default_account):

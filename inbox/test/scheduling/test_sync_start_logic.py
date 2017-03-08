@@ -131,7 +131,7 @@ def test_external_sync_disabling(monkeypatch, db):
     s.poll_shared_queue({'queue_name': 'foo', 'id': other_account.id})
     assert len(s.syncing_accounts) == 2
 
-    account.mark_deleted()
+    account.mark_for_deletion()
     db.session.commit()
     assert account.sync_should_run is False
     assert account._sync_status['sync_disabled_reason'] == 'account deleted'

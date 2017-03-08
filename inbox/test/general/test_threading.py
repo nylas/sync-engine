@@ -11,6 +11,7 @@ def test_message_cleanup():
     assert cleanup_subject("Re: Birthday") == "Birthday"
     assert cleanup_subject("Re:Birthday") == "Birthday"
     assert cleanup_subject("Re:FWD:   Birthday") == "Birthday"
+    assert cleanup_subject("RE:FWD: My\tBirthday\n   Party") == "My Birthday Party"
     assert (cleanup_subject("Re: RE: Alors, comment ça s'est passé ?") ==
             "Alors, comment ça s'est passé ?")
     assert cleanup_subject("Re: FWD:FWD: Re:La chaise") == "La chaise"

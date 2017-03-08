@@ -14,7 +14,7 @@ default_params = dict(raw_data='',
                       start=datetime(2015, 2, 22, 11, 11),
                       end=datetime(2015, 2, 22, 22, 22),
                       is_owner=True,
-                      participants=[])
+                      participants=[{'email': 'japandroids@example.com', 'name': 'Japandroids'}])
 
 
 # Mock responses from the provider with adds/updates/deletes
@@ -79,6 +79,15 @@ def event_response_with_update(calendar_uid, sync_from_time):
         return [Event(uid='first_event_uid',
                       title='Top Secret Plotting Meeting',
                       **default_params)]
+
+
+def event_response_with_participants_update(calendar_uid, sync_from_time):
+    if calendar_uid == 'first_calendar_uid':
+        new_events = [Event(uid='first_event_uid',
+                     **default_params)]
+        new_events[0].participants = [{'name': 'Johnny Thunders',
+                                       'email': 'johnny@thunde.rs'}]
+        return new_events
 
 
 def event_response_with_delete(calendar_uid, sync_from_time):
@@ -156,6 +165,20 @@ def test_handle_changes(db, generic_account):
         Event.calendar_id == first_calendar.id,
         Event.uid == 'first_event_uid').one()
     assert first_event.title == 'Top Secret Plotting Meeting'
+
+    # Sync a participant update
+    event_sync.provider.sync_events = event_response_with_participants_update
+    event_sync.sync()
+
+    # Make sure the update was persisted
+    first_event = db.session.query(Event).filter(
+        Event.namespace_id == namespace_id,
+        Event.calendar_id == first_calendar.id,
+        Event.uid == 'first_event_uid').one()
+
+    db.session.refresh(first_event)
+    assert first_event.participants == [{'name': 'Johnny Thunders',
+                                         'email': 'johnny@thunde.rs'}]
 
     # Sync an event delete
     event_sync.provider.sync_events = event_response_with_delete
