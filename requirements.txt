@@ -67,3 +67,4 @@ tldextract==1.7.5
 tox==2.3.1
 nylas==1.2.3
 cffi>=1.6
+pyasn1==0.2.3
