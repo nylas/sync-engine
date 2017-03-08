@@ -56,9 +56,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   # See: https://stackoverflow.com/questions/14715678/vagrant-insecure-by-default
-  unless Vagrant.has_plugin?("vagrant-rekey-ssh")
+  unless (Gem::Version.new(Vagrant::VERSION) >= Gem::Version.new('1.7.0') ||
+          Vagrant.has_plugin?("vagrant-rekey-ssh"))
     warn "------------------- SECURITY WARNING -------------------"
-    warn "Vagrant is insecure by default.  To secure your VM, run:"
+    warn "Vagrant versions older than 1.7 are insecure by default."
+    warn "Please upgrade Vagrant to 1.7.0 or newer, or run:"
     warn "    vagrant plugin install vagrant-rekey-ssh"
     warn "--------------------------------------------------------"
   end
