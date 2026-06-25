@@ -1,16 +1,19 @@
+> [!CAUTION]
+> 🛑 **This repository is archived and no longer maintained.**
+>
+> The **Nylas Sync Engine** was an open-source email sync platform exposing a RESTful API on top of IMAP/SMTP; its capabilities now live on in the fully-hosted [Nylas API](https://developer.nylas.com/). Do not use it for new projects — see current Nylas resources below.
+
 <div align="center">
   <a href="https://www.nylas.com/">
     <img width="100%" alt="Nylas" src="https://github.com/user-attachments/assets/137517ae-244d-47a5-8ca7-b12984971fc4" />
   </a>
 
   <h1>Nylas Sync Engine</h1>
+
+  <p><img src="https://img.shields.io/badge/Status-Archived-critical?style=for-the-badge" alt="Status: Archived" /></p>
 </div>
 
 <br />
-
-> ## ⚠️ This repository is archived and no longer maintained
->
-> The **Nylas Sync Engine** was an open-source email sync platform that exposed a RESTful API on top of IMAP/SMTP. It is preserved here for historical reference and is no longer developed or supported. Its capabilities live on in the fully-hosted [Nylas API](https://developer.nylas.com/) — no self-hosting, no Vagrant, no infrastructure to run.
 
 ## Use the hosted Nylas API instead
 
