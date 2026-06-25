@@ -5,11 +5,11 @@
 
 ---
 
-# Nylas Sync Engine [![Build Status](https://travis-ci.org/nylas/sync-engine.svg?branch=master)](https://travis-ci.org/nylas/sync-engine)
+# Nylas Sync Engine
 
 The Nylas Sync Engine provides a RESTful API on top of a powerful email sync platform, making it easy to build apps on top of email. See the [full API documentation](https://www.nylas.com/docs/) for more details.
 
-Need help? [Join our Slack channel ![Slack Invite Button](http://slack-invite.nylas.com/badge.svg)](http://slack-invite.nylas.com)
+Need help? Join the [Nylas community forum](https://forums.nylas.com).
 
 
 ### Installation and Setup
@@ -70,7 +70,7 @@ We provide a fully managed and supported version of the Nylas sync engine for pr
 
 We'd love your help making Nylas better! Please sign-up for a [developer account](https://nylas.com/register) for project updates and the latest news. Feel free to create issues or pull requests to start discussions.
 
-We require all authors sign our [Contributor License Agreement](https://www.nylas.com/cla.html) when submitting pull requests. (It's similar to other projects, like NodeJS or Meteor.)
+We require all authors sign our Contributor License Agreement when submitting pull requests. (It's similar to other projects, like NodeJS or Meteor.)
 
 ## Security
 
